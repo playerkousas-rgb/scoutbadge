@@ -1,0 +1,307 @@
+{
+  "meta": {
+    "version": "1.0 Scout 2026",
+    "base": "2017年第1次修訂版 + 2026年1月專科徽章更新 + 2026支部檢討",
+    "updated": "2026-07-10 Scout v1.0"
+  },
+  "badges": [
+    {
+      "id": "L1",
+      "icon": "⚜️",
+      "name": "會員章",
+      "en": "Membership Badge",
+      "color": "#2E7D32",
+      "purpose": "幫助新成員認識童軍運動及小隊制度",
+      "description": "入團後1.5個月內完成，由團長簽發",
+      "segments": [
+        {
+          "code": "L1-UNDER",
+          "name": "認識",
+          "items": [
+            {"id": "L1-UND-01", "name": "明瞭童軍運動目的及童軍誓詞規律", "detail": "能背誦誓詞規律並解釋含意", "assessedBy": "troop"},
+            {"id": "L1-UND-02", "name": "認識小隊制度及小隊呼聲", "detail": "所屬小隊隊名、隊色、呼聲", "assessedBy": "troop"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L2",
+      "icon": "🧭",
+      "name": "童軍探索獎章",
+      "en": "Scout Pathfinder Award",
+      "color": "#33691E",
+      "purpose": "經歷體驗，初步接觸童軍運動，建議6個月完成",
+      "description": "11歲起，年滿13歲可跳至只完成探索+標準之戶外挑戰部分後直接考高級",
+      "segments": [
+        {
+          "code": "L2-OUTDOOR",
+          "name": "戶外挑戰",
+          "desc": "露營、烹飪、探險",
+          "items": [
+            {"id": "L2-OUT-CAMP", "name": "露營 - 參與一次小隊露營，學習營地建設及營火", "detail": "需要露營紀錄", "assessedBy": "troop"},
+            {"id": "L2-OUT-COOK", "name": "烹飪 - 準備簡單小隊餐單及煮食", "detail": "營地輕便炊事", "assessedBy": "troop"},
+            {"id": "L2-OUT-EXPLORE", "name": "探險 - 完成一次遠足及地圖閱讀", "detail": "認識地圖、指南針", "assessedBy": "troop"}
+          ]
+        },
+        {
+          "code": "L2-EXPERIENCE",
+          "name": "經歷與文化",
+          "items": [
+            {"id": "L2-EXP-CULTURE", "name": "文化藝術 - 參與一次文化活動或展覽", "detail": "博物館、藝術展等", "assessedBy": "member"},
+            {"id": "L2-EXP-COMM", "name": "社區 - 參與一次社區服務或探訪", "detail": "2小時服務", "assessedBy": "member"}
+          ]
+        },
+        {
+          "code": "L2-SPECIAL",
+          "name": "專科徽章",
+          "desc": "至少1個興趣組",
+          "items": [
+            {"id": "L2-SPEC-01", "name": "考獲至少1個興趣組專科徽章 (由旅團考)", "detail": "釣魚、藝術、攝影等綠底章，旅團主考", "assessedBy": "troop"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L3",
+      "icon": "⛺",
+      "name": "童軍標準獎章",
+      "en": "Scout Standard Award",
+      "color": "#558B2F",
+      "purpose": "知識認知，建立成功感，建議6個月完成",
+      "segments": [
+        {
+          "code": "L3-OUTDOOR",
+          "name": "戶外挑戰進階",
+          "items": [
+            {"id": "L3-OUT-ADV", "name": "露營進階 - 策劃及執行小隊露營，含營火會", "detail": "需提交計劃書", "assessedBy": "member"},
+            {"id": "L3-OUT-EXPLORE", "name": "探險進階 - 完成遠足及露營的結合", "detail": "10公里遠足+露營", "assessedBy": "member"}
+          ]
+        },
+        {
+          "code": "L3-LEAD",
+          "name": "領導與服務",
+          "items": [
+            {"id": "L3-LEAD-PATROL", "name": "小隊活動 - 策劃一次小隊活動", "detail": "由隊長帶領", "assessedBy": "troop"},
+            {"id": "L3-LEAD-SERVICE", "name": "服務 - 參與社區服務4小時", "detail": "服務紀錄", "assessedBy": "member"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L4",
+      "icon": "🏕️",
+      "name": "童軍高級獎章",
+      "en": "Scout Advanced Award",
+      "color": "#8BC34A",
+      "purpose": "知識深化，培養責任感，建議12個月完成",
+      "segments": [
+        {
+          "code": "L4-SELF",
+          "name": "自立及服務",
+          "items": [
+            {"id": "L4-SELF-CAMP", "name": "自立 - 獨立照顧自己及小隊", "detail": "包括個人裝備管理", "assessedBy": "member"},
+            {"id": "L4-SERVICE", "name": "服務他人 - 持續服務8小時", "detail": "可服務旅團或社區", "assessedBy": "member"}
+          ]
+        },
+        {
+          "code": "L4-SKILL",
+          "name": "技能深化",
+          "items": [
+            {"id": "L4-SKILL-01", "name": "考獲一個技能組或服務組專科徽章", "detail": "藍底或紅底章，由區主考", "assessedBy": "member"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L5",
+      "icon": "👑",
+      "name": "總領袖獎章",
+      "en": "Chief Scout's Award",
+      "color": "#FFD700",
+      "purpose": "童軍支部最高獎章，培訓策劃及領導才能，建議12個月",
+      "description": "需年滿14歲、考獲會員章及完成探索、標準、高級之技能、歷險、承諾、專科等項目方可考取",
+      "segments": [
+        {
+          "code": "L5-LEAD",
+          "name": "領導才",
+          "items": [
+            {"id": "L5-LEAD-01", "name": "教授隊員技能 - 教授至少一項專科徽章給其他童軍 (3個月後)", "detail": "教導組要求", "assessedBy": "member"},
+            {"id": "L5-LEAD-02", "name": "策劃活動 - 策劃一次小隊或團活動", "detail": "包括財政、程序", "assessedBy": "member"}
+          ]
+        },
+        {
+          "code": "L5-COMMIT",
+          "name": "承諾",
+          "items": [
+            {"id": "L5-COMMIT-01", "name": "履行童軍誓詞規律，成為模範", "detail": "團長評核", "assessedBy": "troop"}
+          ]
+        }
+      ]
+    }
+  ],
+  "otherBadges": [
+    {
+      "id": "INT-ANGLER",
+      "name": "釣魚章 (興趣組) (旅團考 - 領袖剔)",
+      "icon": "🎣",
+      "desc": "興趣組綠底，旅團主考，領袖直接剔/填日子",
+      "group": "interest",
+      "assessedBy": "troop"
+    },
+    {
+      "id": "INT-ARTIST",
+      "name": "藝術章 (興趣組) (旅團考)",
+      "icon": "🎨",
+      "desc": "綠底興趣組，旅團考",
+      "group": "interest",
+      "assessedBy": "troop"
+    },
+    {
+      "id": "INT-CAMPCOOK",
+      "name": "營地烹飪章 (興趣組)",
+      "icon": "🍳",
+      "desc": "興趣組，旅團考",
+      "group": "interest",
+      "assessedBy": "troop"
+    },
+    {
+      "id": "INT-PHOTOGRAPHER",
+      "name": "攝影章 (興趣組)",
+      "icon": "📸",
+      "desc": "興趣組，旅團考",
+      "group": "interest",
+      "assessedBy": "troop"
+    },
+    {
+      "id": "INT-COMPUTER",
+      "name": "電腦章 (興趣組) 2022更新",
+      "icon": "💻",
+      "desc": "綠底，旅團考",
+      "group": "interest",
+      "assessedBy": "troop"
+    },
+    {
+      "id": "PUR-CAMPER",
+      "name": "露營章 (技能組) (區主考 - 成員填日子領袖審批)",
+      "icon": "🏕️",
+      "desc": "技能組藍底，區會安排主考，成員填日子領袖審批=知會",
+      "group": "pursuit",
+      "assessedBy": "member"
+    },
+    {
+      "id": "PUR-MAPREADER",
+      "name": "地圖閱讀章 (技能組)",
+      "icon": "🗺️",
+      "desc": "技能組，區考，成員填日子",
+      "group": "pursuit",
+      "assessedBy": "member"
+    },
+    {
+      "id": "PUR-PIONEER",
+      "name": "先鋒工程章 (技能組)",
+      "icon": "🪢",
+      "desc": "技能組，成員填日子",
+      "group": "pursuit",
+      "assessedBy": "member"
+    },
+    {
+      "id": "PUR-PROGRAMMER",
+      "name": "編程章 (技能組) 2022新",
+      "icon": "👨‍💻",
+      "desc": "技能組藍底，區考",
+      "group": "pursuit",
+      "assessedBy": "member"
+    },
+    {
+      "id": "SER-FIRSTAIDER",
+      "name": "急救章 (服務組)",
+      "icon": "🩹",
+      "desc": "服務組紅底，區考，成員填日子",
+      "group": "service",
+      "assessedBy": "member"
+    },
+    {
+      "id": "SER-FIREMAN",
+      "name": "消防章 (服務組)",
+      "icon": "🧯",
+      "desc": "服務組，區考",
+      "group": "service",
+      "assessedBy": "member"
+    },
+    {
+      "id": "INS-CAMPCOOK",
+      "name": "營地烹飪章 (教導組) - 考獲3個月後教授他人",
+      "icon": "👨‍🏫",
+      "desc": "教導組黃底，需先考獲同項興趣/技能/服務章3個月後，教授其他童軍",
+      "group": "instructor",
+      "assessedBy": "member"
+    },
+    {
+      "id": "SEA-BOATMAN",
+      "name": "水手章 (海上活動)",
+      "icon": "⛵",
+      "desc": "海上活動，成員填日子",
+      "group": "sea",
+      "assessedBy": "member"
+    },
+    {
+      "id": "AIR-BASIC",
+      "name": "初級航空活動章",
+      "icon": "✈️",
+      "desc": "航空活動",
+      "group": "air",
+      "assessedBy": "member"
+    },
+    {
+      "id": "OT-COMMUNITY",
+      "name": "社區參與章",
+      "icon": "🤝",
+      "desc": "其他獎章",
+      "group": "other",
+      "assessedBy": "member"
+    },
+    {
+      "id": "OT-AYP-BRONZE",
+      "name": "香港青年獎勵計劃銅章",
+      "icon": "🥉",
+      "desc": "AYP",
+      "group": "other",
+      "assessedBy": "member"
+    }
+  ],
+  "trainingPlan": {
+    "title": "童軍支部的訓練計劃 (2017第1次修訂版 + 2026專科更新)",
+    "purpose": "童軍支部(11-16歲)旨在促進身心精神陶冶，透過進度性獎章及專科徽章制度，配合小隊制度，從實踐中學習",
+    "method": [
+      "小隊制度：小隊為基本單位，由隊長帶領",
+      "進度性獎章：探索→標準→高級→總領袖，循序漸進",
+      "專科徽章：興趣組(綠底，旅團考，領袖剔)、技能組(藍底，區考，成員填日子領袖審批)、服務組(紅底，區考)、教導組(黃底，考獲3個月後教授他人)"
+    ],
+    "expected": [
+      "德智體群美靈六育發展",
+      "小隊合作及領導",
+      "戶外技能及服務"
+    ],
+    "progressFlow": "會員章→探索獎章→標準獎章→高級獎章→總領袖獎章",
+    "assessmentPrinciples": "會員章及興趣組由旅團團長主考，技能組/服務組/教導組及高級以上由區會安排主考。興趣組領袖直接剔/填日子，其他由成員填日子領袖審批=知會。",
+    "links": [
+      {"title": "童軍資訊站 - 2026專科徽章更新", "url": "https://scoutsinfohub.org.hk/notice/tong-jun-zhi-bu-zhuan-ke-hui-zhang-geng-xin"},
+      {"title": "童軍訓練綱要 2015/2017版 PDF", "url": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/FullVersion-zh.pdf"},
+      {"title": "香港童軍獎章列表 維基", "url": "https://zh.wikipedia.org/wiki/香港童軍總會獎章列表"}
+    ]
+  },
+  "safeFromHarm": {
+    "title": "保護童軍成員免受傷害 Safe from Harm",
+    "policy": "所有童軍活動須在安全環境進行",
+    "learning": [
+      {"title": "保護童軍成員免受傷害 網上自學課程", "url": "https://sfh.scout.org.hk", "mandatory": true}
+    ],
+    "prevention": ["兩人同行", "保持界限"],
+    "handling": ["聆聽", "記錄", "報告"],
+    "hotlines": [{"name": "童軍總會", "tel": "2957 6414"}]
+  },
+  "forms": {
+    "PT18": {"name": "總領袖獎章及證書申請表 PT/18", "code": "PT/18"},
+    "PT120A": {"name": "童軍專科徽章證書 (綠表->白表)", "code": "PT120A"}
+  }
+}
