@@ -83,7 +83,7 @@ export default function handler(req, res) {
       troops[id] = {
         name: name,
         backend: backend,
-        apikey: apikey // 前端若拿到會一併送 backend 做防爬虫第一層，空亦可，靠 token
+        // API key 永不回傳前端；由後端代理／Apps Script token 驗證
       };
     }
   });
@@ -91,5 +91,5 @@ export default function handler(req, res) {
   // 4. 回應
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.status(200).json({ troops, _note: 'backend from troops.json public, apikey from TROOP_{ID}_APIKEY env var anti-crawler, human protected by login token' });
+  res.status(200).json({ troops, _note: 'backend URL is public configuration; API key remains server-side and is never returned to browser' });
 }
