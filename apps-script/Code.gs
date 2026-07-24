@@ -41,13 +41,13 @@ function now(){ return Utilities.formatDate(new Date(), 'Asia/Hong_Kong', 'yyyy-
 function formatDate(d){ if(!d) return ''; if(d instanceof Date) return Utilities.formatDate(d,'Asia/Hong_Kong','yyyy-MM-dd'); return d.toString().split(' ')[0]; }
 function jsonResponse(obj){ return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
 
-const ROLE_HIERARCHY = { 'super_admin':100,'admin':80,'group_leader':60,'branch_leader':40,'exec_committee':20,'member':0 };
-const CAN_TICK_ROLES = ['admin','group_leader','branch_leader','exec_committee','super_admin'];
+const ROLE_HIERARCHY = { 'super_admin':100,'admin':80,'group_leader':60,'branch_leader':40,'member':0 };
+const CAN_TICK_ROLES = ['admin','group_leader','branch_leader','super_admin'];
 const CAN_MANAGE_ROLES = { 
-  'super_admin': ['admin','group_leader','branch_leader','exec_committee','member'],
-  'admin': ['group_leader','branch_leader','exec_committee','member'], 
-  'group_leader': ['branch_leader','exec_committee','member'], 
-  'branch_leader': ['exec_committee','member'] 
+  'super_admin': ['admin','group_leader','branch_leader','member'],
+  'admin': ['group_leader','branch_leader','member'], 
+  'group_leader': ['branch_leader','member'], 
+  'branch_leader': ['member'] 
 };
 function canUserTick(r){ return CAN_TICK_ROLES.indexOf(r)>=0; }
 function getRoleLevel(r){ return ROLE_HIERARCHY[r]||0; }
@@ -413,7 +413,7 @@ function handleReviewApplication(appId,decision,note,reviewer){
 function handleUpdateUserRole(targetYmis,newRole,canTick,managerYmis, allowedBadges, squad, squadRole){
   const manager=getUser(managerYmis);
   if(!manager) return jsonResponse({success:false,error:'找不到管理員'});
-  // super_admin 可以改任何人，admin 可以改團長/支部領袖/執委/成員，團長可改支部領袖/執委/成員，支部領袖可改執委/成員
+  // super_admin 可以改任何人，admin 可以改團長/支部領袖/成員，團長可改支部領袖/成員，支部領袖可改成員
   if(manager.role!=='super_admin' && !canManageRole(manager.role,newRole) && manager.role!=='admin') return jsonResponse({success:false,error:'權限不足，你的等級不可設定此角色'});
   const sheet=getSheet().getSheetByName('Users'); const data=sheet.getDataRange().getValues();
   for(let i=1;i<data.length;i++){
@@ -429,11 +429,10 @@ function handleUpdateUserRole(targetYmis,newRole,canTick,managerYmis, allowedBad
         if(allowedBadges!==undefined && allowedBadges!==null){
           sheet.getRange(i+1,13).setValue(allowedBadges);
         } else {
-          // 默認：領袖全部 (*)，成員無，執委默認 L1, L3-ACT, OTHER部分
+          // 默認：領袖全部 (*)，成員無
           if(!data[i][12]){
             let def='*';
             if(newRole==='member') def='';
-            else if(newRole==='exec_committee') def='L1,L3-ACT,OTHER';
             else def='*';
             sheet.getRange(i+1,13).setValue(def);
           }

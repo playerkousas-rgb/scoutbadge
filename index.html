@@ -233,7 +233,6 @@ a:hover{text-decoration:underline}
 .role-admin{background:#8B0000;color:#fff}
 .role-group_leader{background:#D63384;color:#fff}
 .role-branch_leader{background:#198754;color:#fff}
-.role-exec_committee{background:#FFC107;color:#333}
 .role-member{background:#6C757D;color:#fff}
 .role-super_admin{background:#000;color:var(--gold)}
 
@@ -363,8 +362,7 @@ a:hover{text-decoration:underline}
         <h3>👥 角色功能教學（登入後）</h3>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;margin-top:8px">
           <div style="background:var(--bg);padding:10px;border-radius:8px;border-left:3px solid var(--green)"><b>👤 成員 member</b><ul style="font-size:11px;margin:6px 0 0 16px"><li>只能看自己進度</li><li>不能直接剔，按📝申請</li><li>待批查看自己申請</li><li>其他獎章只讀自己</li><li>表格列印官方格式</li><li>資料庫看綱要及安全指引</li></ul></div>
-          <div style="background:var(--bg);padding:10px;border-radius:8px;border-left:3px solid #D63384"><b>🎖️ 執委 exec</b><ul style="font-size:11px;margin:6px 0 0 16px"><li>成員全部功能</li><li>可勾選（需授權範圍）</li><li>默認：會員章+活動進度項目(細項不用)+其他逐個勾</li><li>可選成員查看紀錄</li><li>全團批量剔（若授權）</li><li>待批批准（若授權）</li></ul></div>
-          <div style="background:var(--bg);padding:10px;border-radius:8px;border-left:3px solid var(--maroon)"><b>👨‍💼 領袖 leader</b><ul style="font-size:11px;margin:6px 0 0 16px"><li>全部功能</li><li>我的進度選任何成員看紀錄</li><li>全團一眼睇會員章+百分比</li><li>考驗營批量一鍵幫全團剔</li><li>離線暫存確認寫入</li><li>待批批量批准</li><li>用戶管理改成員為執委+⚙️權限設定</li><li>領袖默認全部，團長/管理員可改低層級</li><li>審批新帳號</li></ul></div>
+          <div style="background:var(--bg);padding:10px;border-radius:8px;border-left:3px solid var(--maroon)"><b>👨‍💼 領袖 leader</b><ul style="font-size:11px;margin:6px 0 0 16px"><li>全部功能</li><li>我的進度選任何成員看紀錄</li><li>全團一眼睇會員章+百分比</li><li>考驗營批量一鍵幫全團剔</li><li>離線暫存確認寫入</li><li>待批批量批准</li><li>用戶管理及⚙️權限設定</li><li>領袖默認全部，團長/管理員可改低層級</li><li>審批新帳號</li></ul></div>
         </div>
       </div>
     </div>
@@ -488,7 +486,7 @@ a:hover{text-decoration:underline}
 <div id="permissionModal" class="modal">
   <div class="modal-content" style="max-width:650px">
     <h3>⚙️ 設定可勾選權限 - <span id="permUserName"></span></h3>
-    <p style="font-size:12px;color:var(--text-light);margin-bottom:10px">領袖默認全部 (*)，團長/管理員可更改。執委可按個別成員勾選可考核範圍。<br>成員改為執委後，可設定其可考核：會員章、活動進度項目(細項不用)、其他獎章逐個勾。</p>
+    <p style="font-size:12px;color:var(--text-light);margin-bottom:10px">設定該用戶可勾選之權限範圍。領袖默認全部 (*)，團長/管理員可設定及更改可考核之項目範圍。</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-height:50vh;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px">
       <div>
         <b style="font-size:12px">進度性獎章 (進度項目層級)</b>
@@ -502,7 +500,6 @@ a:hover{text-decoration:underline}
     <div style="margin-top:10px;display:flex;gap:8px">
       <button class="btn btn-sm btn-secondary" onclick="permSelectAll(true)">全選</button>
       <button class="btn btn-sm btn-secondary" onclick="permSelectAll(false)">全不選</button>
-      <button class="btn btn-sm btn-warning" onclick="permSetExecDefault()">設為執委默認 (會員章+活動進度項目+其他部分)</button>
       <button class="btn btn-sm btn-success" onclick="permSetAll()">設為領袖全部 (*)</button>
     </div>
     <div class="modal-actions">
@@ -644,7 +641,7 @@ async function handlePortalParams(){
       ymis: ymis,
       name: nameParam,
       role: role,
-      can_tick: ['admin','group_leader','branch_leader','exec_committee','super_admin'].includes(role),
+      can_tick: ['admin','group_leader','branch_leader','super_admin'].includes(role),
       allowed_badges: '*',
       email: params.get('email')||'',
       isPortal: true
@@ -845,7 +842,7 @@ function setupTabsByRole(){
     showToast('成員模式：只能查看自己進度，其他獎章及申請','warning');
   }
 }
-function getRoleName(r){ const m={'super_admin':'超管','admin':'管理員','group_leader':'團長','branch_leader':'童軍團長','exec_committee':'執委(此支部不適用)','member':'童軍成員'}; return m[r]||r; }
+function getRoleName(r){ const m={'super_admin':'超管','admin':'管理員','group_leader':'團長','branch_leader':'童軍團長','member':'童軍成員'}; return m[r]||r; }
 function canUserTickRole(role){ return ['admin','group_leader','branch_leader','super_admin'].includes(role); } // 童軍無執委，全部領袖
 
 function canCurrentUserTickItem(itemId){
@@ -856,7 +853,7 @@ function canCurrentUserTickItem(itemId){
   const allowed = currentUser.allowed_badges || '';
   if(allowed==='*' || allowed==='') {
     // 領袖默認全部，成員默認無
-    if(['admin','group_leader','branch_leader','exec_committee','super_admin'].includes(currentUser.role)) return true;
+    if(['admin','group_leader','branch_leader','super_admin'].includes(currentUser.role)) return true;
     return false;
   }
   const list = allowed.split(',').map(s=>s.trim()).filter(Boolean);
@@ -2110,13 +2107,13 @@ function generatePrintableForm(type){
         <tr><td>探險<br>Exploration</td><td>必修 Compulsory</td><td>E-A001 地圖閱讀<br>E-A002 遠足訓練</td><td>訓練班</td><td><input value="${getDoneDate(['L3-EXP-01','L3-EXP-02'])}" style="width:90px"></td></tr>
         <tr><td></td><td>選修 Elective</td><td>E-A003~E-A009 40km等</td><td>3日2夜</td><td><input value="${segDates['L3-EXP']||''}" style="width:90px"></td></tr>
       </table>
-      <div style="margin-top:12px;font-size:11px;display:grid;grid-template-columns:1fr 1fr;gap:20px"><div>申請者簽署 Applicant’s Signature<br><br>簽署 Signature：__________________ 日期 Date：${today}</div><div>提名 Nomination 旅長/童軍團長 GSL/VSL<br>姓名 Name：__________ 日期 Date：__________<br>旅印 Group Stamp</div></div>
+      <div style="margin-top:12px;font-size:11px;display:grid;grid-template-columns:1fr 1fr;gap:20px"><div>申請者簽署 Applicant’s Signature<br><br>簽署 Signature：__________________ 日期 Date：${today}</div><div>提名 Nomination 旅長/童軍團長 GSL/SL<br>姓名 Name：__________ 日期 Date：__________<br>旅印 Group Stamp</div></div>
       <div style="margin-top:12px;font-size:11px;display:grid;grid-template-columns:1fr 1fr;gap:20px;border-top:1px solid #000;padding-top:8px"><div>推薦 Recommendation 區總監 District Commissioner<br>姓名：__________ 日期：__________<br>區印 District Stamp</div><div>批核 Approval 地域總監 Regional Commissioner / 青少年活動總監<br>姓名：__________ 日期：__________<br>地域印/署印</div></div>
       <div style="margin-top:10px;font-size:9px;color:#666">同一張紙雙面列印，附紀錄冊影印及證書，經地域交總會。表格2年後銷毀。</div>
       <div class="no-print" style="margin-top:14px;text-align:center"><button class="btn btn-primary" onclick="downloadPrintableArea()">⬇️ 下載 HTML</button><button class="btn btn-primary" onclick="window.print()">🖨️ 列印 (官方格式)</button></div>
     </div>`;
   }else{
-    const vsAwardDate=getDoneDate(badgeIds('L3'));
+    const standardBadgeAwardDate=getDoneDate(badgeIds('L3'));
     html=`<div class="print-area" id="officialPT120A">
       <div style="text-align:center;border-bottom:3px double #000;padding-bottom:10px;margin-bottom:12px">
         <div style="font-size:12px;font-weight:700">香港童軍總會 Scout Association of Hong Kong</div>
@@ -2127,7 +2124,7 @@ function generatePrintableForm(type){
         <tr><td style="width:20%">姓名 Name (中/英)</td><td colspan="2"><input value="${member.name}" style="width:95%"></td><td rowspan="3" style="width:90px;text-align:center">近照<div style="width:80px;height:100px;border:1px dashed #999;margin:4px auto"></div></td></tr>
         <tr><td>出生日期/年齡/性別<br>Scout ID ${member.ymis}</td><td><input type="date" style="width:100px"> Age <input style="width:30px"> Gender <select style="width:50px"><option>男</option><option>女</option></select></td><td>單位 Unit ${currentTroopName}</td></tr>
         <tr><td>地址 Address / 電話 Contact</td><td colspan="2"><input style="width:95%"></td></tr>
-        <tr><td>童軍獎章證書號碼 Cert No. / 發出日期</td><td><input style="width:50%"> Date <input value="${vsAwardDate}" style="width:80px"></td><td colspan="2">HKID首4位* <input placeholder="A123" style="width:60px"></td></tr>
+        <tr><td>童軍獎章證書號碼 Cert No. / 發出日期</td><td><input style="width:50%"> Date <input value="${standardBadgeAwardDate}" style="width:80px"></td><td colspan="2">HKID首4位* <input placeholder="A123" style="width:60px"></td></tr>
       </table>
       <div style="font-size:12px;font-weight:700;background:#F0F0F0;padding:4px 8px;border:1px solid #000;margin-top:10px">(2) 完成項目 Completed Items</div>
       <table class="print-table" style="font-size:11px">
@@ -2173,26 +2170,14 @@ const EMBEDDED_GUIDES={
   <h4>為何看不到其他成員？</h4>
   <p>預設私隱，成員只看自己。團長可在用戶管理開啟「允許成員互相查看進度」。</p>`,
 
-  exec: `<h2>🎖️ 執委使用教學 (Exec)</h2>
-  <blockquote>你由成員晉升為執委，擁有部分領袖權限</blockquote>
-  <ul>
-    <li>成員功能全部</li>
-    <li><b>可勾選進度</b>（需授權），默認：會員章+活動進度項目(細項不用)+其他逐個勾</li>
-    <li>可在我的進度選其他成員看紀錄</li>
-    <li>可在全團總覽使用批量剔選</li>
-    <li>可在待批批准申請（若授權）</li>
-  </ul>
-  <h3>如何幫成員勾選？</h3>
-  <ol><li>我的進度選成員</li><li>找到項目直接勾選+改日期</li><li>底部確認寫入</li></ol>`,
-
   leader: `<h2>👨‍💼 領袖使用教學 (Leader)</h2>
   <blockquote>你擁有全部權限</blockquote>
   <h3>1. 我的進度</h3><ul><li>選任何成員看所有紀錄</li><li>直接勾選+日期，離線暫存確認寫入</li></ul>
   <h3>2. 全團總覽</h3><ul><li>卡片一眼睇會員章✓</li><li>表格矩陣最多30欄</li><li>🚀考驗營批量：選成員+選項目→一鍵標記→暫存→確認寫入</li><li>子切換：按成員/按項目</li></ul>
   <h3>3. 審批中心</h3><ul><li>🏅獎章審批+👤用戶審批合併</li></ul>
   <h3>4. 表格列印</h3><p>自動填入，官方PT/18/PT/120A格式</p>
-  <h3>5. 用戶管理</h3><ul><li>成員改執委</li><li>⚙️權限：領袖默認全部，成員無，執委默認L1+活動進度項目+OTHER</li><li>可按個別成員設定可考核範圍</li></ul>
-  <h3>6. 系統設定</h3><p>允許成員互相查看進度：預設關，團長可開</p>`
+  <h3>5. 用戶管理</h3><ul><li>更變成員角色</li><li>⚙️權限設定：預設領袖全部 (*)，可按個別成員設定可考核範圍</li></ul>
+  <h3>6. 系統設定</h3><p>允許成員互相查看進度：預設關，團長可開</p>
 };
 
 async function renderHelpTab(){
@@ -2201,25 +2186,23 @@ async function renderHelpTab(){
   const role=currentUser?.role||'member';
   const roleName=getRoleName(role);
   let key='member';
-  if(role==='exec_committee') key='exec';
-  else if(['branch_leader','group_leader','admin','super_admin'].includes(role)) key='leader';
+  if(['branch_leader','group_leader','admin','super_admin'].includes(role)) key='leader';
 
   let html=`<div class="info-section" style="border-left-color:var(--orange);background:#FFFBEB">
     <h3>❓ 教學 - 按角色分開 (你當前：${roleName} ${role})</h3>
     <p style="font-size:12px;color:var(--text-light)">此頁只顯示你關心的功能，成員不會看到領袖的複雜操作。已改為內嵌版，不會再出現 NOT_FOUND 或 404。</p>
     <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-sm ${key==='member'?'btn-primary':'btn-secondary'}" onclick="switchHelpRole('member')">👤 成員教學</button>
-      <button class="btn btn-sm ${key==='exec'?'btn-primary':'btn-secondary'}" onclick="switchHelpRole('exec')">🎖️ 執委教學</button>
       <button class="btn btn-sm ${key==='leader'?'btn-primary':'btn-secondary'}" onclick="switchHelpRole('leader')">👨‍💼 領袖教學</button>
     </div>
   </div>
   <div class="info-section" id="helpContent"><div style="font-size:14px;line-height:1.8">${EMBEDDED_GUIDES[key]||EMBEDDED_GUIDES.member}</div></div>
-  <div class="info-section" style="background:var(--bg)"><h4>📚 完整文件 (vercel.json已開放docs/，若仍404請重新部署)</h4><div style="font-size:11px"><a href="docs/MEMBER_GUIDE.md" target="_blank">成員MD</a> | <a href="docs/EXEC_GUIDE.md" target="_blank">執委MD</a> | <a href="docs/LEADER_GUIDE.md" target="_blank">領袖MD</a></div></div>`;
+  <div class="info-section" style="background:var(--bg)"><h4>📚 完整文件 (vercel.json已開放docs/，若仍404請重新部署)</h4><div style="font-size:11px"><a href="docs/MEMBER_GUIDE.md" target="_blank">成員MD</a> | <a href="docs/LEADER_GUIDE.md" target="_blank">領袖MD</a></div></div>`;
 
   c.innerHTML=html;
 }
 function switchHelpRole(r){
-  const map={member:'member', exec_committee:'exec', exec:'exec', leader:'leader'};
+  const map={member:'member', leader:'leader'};
   const key=map[r]||'member';
   const el=document.getElementById('helpContent');
   if(el){
@@ -2228,7 +2211,6 @@ function switchHelpRole(r){
   // 更新按鈕樣式
   document.querySelectorAll('#tab-help .btn').forEach(b=>{
     if(b.textContent.includes('成員') && key==='member') b.className='btn btn-sm btn-primary';
-    else if(b.textContent.includes('執委') && key==='exec') b.className='btn btn-sm btn-primary';
     else if(b.textContent.includes('領袖') && key==='leader') b.className='btn btn-sm btn-primary';
     else if(b.textContent.includes('教學')) b.className='btn btn-sm btn-secondary';
   });
@@ -2242,7 +2224,7 @@ function renderInfoTab(){
   if(!itemsData){ c.innerHTML='載入中...'; return; }
   const tp=itemsData.trainingPlan; const sfh=itemsData.safeFromHarm;
   let html=`<div class="info-section" style="border-left-color:var(--blue);background:var(--blue-light)">
-    <h3>👥 登入後各功能教學 - 成員 / 執委 / 領袖</h3>
+    <h3>👥 登入後各功能教學 - 成員 / 領袖</h3>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:8px">
       <div style="background:#fff;border-radius:8px;padding:12px;border:1px solid var(--border)">
         <h4 style="color:var(--green);font-size:14px">👤 成員 (member) 可以做什麼</h4>
@@ -2256,26 +2238,15 @@ function renderInfoTab(){
         </ul>
       </div>
       <div style="background:#fff;border-radius:8px;padding:12px;border:1px solid var(--border)">
-        <h4 style="color:#D63384;font-size:14px">🎖️ 執委 (exec_committee) 可以做什麼</h4>
-        <ul style="font-size:12px;line-height:1.8;padding-left:16px;color:var(--text-light);margin-top:6px">
-          <li>成員的所有功能</li>
-          <li>可勾選進度（需領袖授權可勾選範圍）</li>
-          <li>默認可考核：會員章、活動進度項目(細項不用打勾，勾進度項目即可)、其他獎章逐個勾</li>
-          <li>可在「我的進度」選其他成員查看其紀錄</li>
-          <li>可在「👥全團總覽」使用批量剔選（若被授權）</li>
-          <li>可在「📝待批」批准成員的申請（若被授權）</li>
-        </ul>
-      </div>
-      <div style="background:#fff;border-radius:8px;padding:12px;border:1px solid var(--border)">
         <h4 style="color:var(--maroon);font-size:14px">👨‍💼 領袖 (branch_leader / group_leader / admin) 可以做什麼</h4>
         <ul style="font-size:12px;line-height:1.8;padding-left:16px;color:var(--text-light);margin-top:6px">
-          <li>所有成員及執委功能</li>
+          <li>所有成員功能</li>
           <li>可在「我的進度」選任何成員看其所有紀錄</li>
           <li>可在「👥全團總覽」一眼睇邊個已完成會員章/肩章等（卡片百分比+會員章✓標籤）</li>
           <li>可使用「🚀考驗營批量完成」：選成員+選項目+日期，一鍵幫全團剔，不用逐個跳轉</li>
           <li>可直接勾選+輸入日期，離線暫存按確認批量寫入，過程有提示</li>
           <li>可在「📝待批」批量批准/拒絕成員申請</li>
-          <li>可在「👥用戶管理」將成員改為執委，並按個別成員設定可考核什麼（會員章/活動進度項目/其他獎章逐個勾）</li>
+          <li>可在「👥用戶管理」設定個別成員可考核什麼（會員章/活動進度項目/其他獎章逐個勾）</li>
           <li>領袖默認全部權限，團長/管理員可更改低層級可勾選範圍</li>
           <li>團長/管理員可在「👥用戶管理」授權/收回勾選權限，設定細緻權限</li>
           <li>團長/管理員可在「📋審批申請」審批新帳號</li>
@@ -2358,7 +2329,7 @@ async function loadUsers(){
           • <span class="role-badge role-admin">管理員 admin</span> = 領袖<br>
           ${isSuper?`• <span class="role-badge role-super_admin">超管 super_admin (SHEEP)</span> = 系統管理員<br><br>`:''}
           <b>成員</b> = role=member 的人，不包括領袖。<br>
-          <b>領袖</b> = 團長/支部領袖/執委/管理員${isSuper?'/超管':''}，可勾選及管理。<br>
+          <b>領袖</b> = 團長/支部領袖/管理員${isSuper?'/超管':''}，可勾選及管理。<br>
           <b>USER 總數</b> = 成員 + 領袖 全部。
         </div>
       </div>`;
@@ -2384,12 +2355,12 @@ async function loadUsers(){
         const allowOthers = appConfig.allow_member_view_others==='true';
         systemSettingHtml=`<div class="info-section" style="border-left-color:var(--green);background:#F0FFF4">
           <h3>🔒 私隱設定 (僅團長/管理員可見)</h3>
-          <p style="font-size:11px;color:var(--text-light)">普通成員預設只看自己，能否看其他成員由團長開放。有些旅團重私隱，有些想互相鼓勵，執委要按進度策劃活動。</p>
+          <p style="font-size:11px;color:var(--text-light)">普通成員預設只看自己，能否看其他成員由團長開放。有些旅團重私隱，有些想互相鼓勵，領袖及小隊長要按進度策劃活動。</p>
           <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
             <label style="font-size:13px;display:flex;align-items:center;gap:6px"><input type="checkbox" id="allowMemberViewOthers" ${allowOthers?'checked':''} onchange="toggleAllowMemberViewOthers(this.checked)"> 允許成員互相查看進度 (鼓勵模式)</label>
             <span style="font-size:11px;color:var(--text-light)">當前：${allowOthers?'已開啟 - 成員可看全團':'已關閉 - 成員只看自己 (私隱)'}</span>
           </div>
-          <div style="font-size:10px;color:var(--text-light);margin-top:6px">說明：「只限隊長／副隊長」模式須在 Users 填寫 squad_role；隊員仍只能看自己。關閉時成員「我的進度」不能選其他人，全團總覽隱藏；開啟時成員可看全團但不能編輯。</div>
+          <div style="font-size:10px;color:var(--text-light);margin-top:6px">說明：「只限隊長／副隊長」模式須在 Users 填寫 squad_role；隊員仍只能看自己。關閉時成員「我的進度」不能選其他人，全團總覽隱藏；開啟時成員可看全團 but 不能編輯。</div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;font-size:12px">
             <label>成員可查看範圍：<select id="memberProgressScope" onchange="setMemberProgressScope(this.value)"><option value="private" ${appConfig.member_progress_scope==='private'?'selected':''}>只看自己</option><option value="team" ${appConfig.member_progress_scope==='team'?'selected':''}>全隊（同小隊）</option><option value="team_leaders" ${appConfig.member_progress_scope==='team_leaders'?'selected':''}>只限隊長／副隊長查看小隊</option><option value="troop" ${appConfig.member_progress_scope==='troop'?'selected':''}>全團</option></select></label>
             <label><input type="checkbox" ${appConfig.allow_squad_comparison==='true'?'checked':''} onchange="setSquadComparison(this.checked)"> 開啟小隊完成率比較</label>
@@ -2398,7 +2369,7 @@ async function loadUsers(){
       }
 
       let h=roleExplain+systemSettingHtml+mockTool+'<div class="filter-bar"><button class="btn btn-sm btn-primary" onclick="addMemberFromApp()">➕ 新增成員</button><button class="btn btn-sm btn-secondary" onclick="downloadSquadReport()">⬇️ 小隊報表</button><button class="btn btn-sm btn-outline" onclick="loadAuditHistory()">🧾 操作紀錄</button><button class="btn btn-sm btn-outline" onclick="loadApprovalHistory()">✅ 審批歷史</button><label class="btn btn-sm btn-secondary">📥 匯入 CSV<input type="file" accept=".csv" onchange="importMembersCSV(this.files[0])" style="display:none"></label><input type="text" id="userSearch" placeholder="搜尋姓名/ YMIS/ Email" oninput="filterUsers()" style="flex:1"></div><div id="userList">';
-      h+=d.users.map(u=>`<div class="user-item" data-search="${(u.name+u.ymis+u.email).toLowerCase()}"><div class="user-item-info"><b>${u.name}</b> ${u.ymis?`(${u.ymis})`:''} ${u.email?` - ${u.email}`:''}<span class="role-badge role-${u.role}">${getRoleName(u.role)}</span> ${u.can_tick?'<span style="background:var(--green-light);color:var(--green);padding:1px 6px;border-radius:999px;font-size:9px">可勾選</span>':''}<br><small style="font-size:10px;color:var(--text-light)">權限: ${u.allowed_badges|| (u.role==='member'?'無':(u.role==='exec_committee'?'L1,活動進度項目,其他部分':'全部(*)'))}</small></div><div class="user-item-actions">`+
+      h+=d.users.map(u=>`<div class="user-item" data-search="${(u.name+u.ymis+u.email).toLowerCase()}"><div class="user-item-info"><b>${u.name}</b> ${u.ymis?`(${u.ymis})`:''} ${u.email?` - ${u.email}`:''}<span class="role-badge role-${u.role}">${getRoleName(u.role)}</span> ${u.can_tick?'<span style="background:var(--green-light);color:var(--green);padding:1px 6px;border-radius:999px;font-size:9px">可勾選</span>':''}<br><small style="font-size:10px;color:var(--text-light)">權限: ${u.allowed_badges|| (u.role==='member'?'無':'全部(*)')}</small></div><div class="user-item-actions">`+
         (['admin','group_leader','branch_leader','super_admin'].includes(currentUser.role)&&u.ymis!==currentUser.ymis?`<select onchange="updateUserRole('${u.ymis}',this.value)"><option value="member" ${u.role==='member'?'selected':''}>團員</option><!-- 童軍無執委 --><option value="branch_leader" ${u.role==='branch_leader'?'selected':''}>支部領袖</option><option value="group_leader" ${u.role==='group_leader'?'selected':''}>團長</option><option value="admin" ${u.role==='admin'?'selected':''}>管理員</option></select><button class="btn btn-sm ${u.can_tick?'btn-danger':'btn-success'}" onclick="toggleCanTick('${u.ymis}',${!u.can_tick})">${u.can_tick?'收回勾選':'授權勾選'}</button><button class="btn btn-sm btn-warning" onclick="openPermissionModal('${u.ymis}','${u.name.replace(/'/g,"\'") }','${u.role}','${(u.allowed_badges||'').replace(/'/g,"")}')">⚙️ 權限</button><button class="btn btn-sm btn-warning" onclick="resetMemberPassword('${u.ymis}')">🔑 重設密碼</button><button class="btn btn-sm btn-outline" onclick="editSquad('${u.ymis}','${(u.squad||'').replace(/'/g,"\'")}','${(u.squad_role||'member').replace(/'/g,"\'")}')">🧭 小隊</button>`:'' )+
         `</div></div>`).join('');
       h+='</div>';
@@ -2492,13 +2463,7 @@ function openPermissionModal(ymis, name, role, allowed){
 function permSelectAll(checked){
   document.querySelectorAll('.permCheck').forEach(cb=>cb.checked=checked);
 }
-function permSetExecDefault(){
-  // 執委默認：會員章 + 活動進度項目 (多元技能活動) + 其他部分
-  const defaults=['L1','L3-ACT-SCOUT','L3-ACT-SP','L3-ACT-INT','OTHER'];
-  document.querySelectorAll('.permCheck').forEach(cb=>{
-    cb.checked=defaults.includes(cb.value) || cb.value.startsWith('OT-');
-  });
-}
+
 function permSetAll(){
   document.querySelectorAll('.permCheck').forEach(cb=>cb.checked=true);
 }
