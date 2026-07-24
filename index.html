@@ -777,6 +777,13 @@ async function doLogin(){
     const d=await r.json();
     if(d.success){
       currentUser=d.user; currentToken=d.token;
+      if(d.force_change_password){
+        const np=prompt('首次登入／密碼已重設，請設定新密碼（至少6位）');
+        if(!np || np.length<6){ msg.textContent='必須先設定至少6位的新密碼'; msg.className='login-msg error'; return; }
+        const cp=await fetch(currentBackend,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'changePassword',token:currentToken,old_password:pw,new_password:np})});
+        const cd=await cp.json(); if(!cd.success){msg.textContent=cd.error||'更改密碼失敗';msg.className='login-msg error';return;}
+        showToast('密碼已更新','success');
+      }
       localStorage.setItem(LS.session, JSON.stringify({troopId:currentTroopId,troopName:currentTroopName,backend:currentBackend,apikey:currentApikey,token:currentToken,user:currentUser,savedAt:Date.now()}));
       msg.textContent='登入成功！載入資料...'; msg.className='login-msg success';
       setTimeout(()=>{
@@ -1469,7 +1476,7 @@ function renderOverviewTab(){
     <select id="overviewSegmentSelect" onchange="renderOverviewTable()"><option value="">全部項目</option></select>
     <select id="overviewSquadSelect" onchange="renderOverviewTable()" style="min-width:110px"><option value="">全部小隊</option></select>
     <input type="text" id="overviewSearch" placeholder="搜尋成員姓名/ YMIS" oninput="renderOverviewTable()" style="flex:1;min-width:120px">
-    <button class="btn btn-sm btn-secondary" onclick="renderOverviewTable()">🔄 刷新</button>
+    <button class="btn btn-sm btn-secondary" onclick="renderOverviewTable()">🔄 刷新</button><button class="btn btn-sm btn-outline" onclick="downloadSquadReport()">⬇️ 下載報表</button>
   </div>
   <div style="display:flex;gap:8px;margin:12px 0">
     <button class="btn btn-sm btn-primary" id="btnOverviewMember" onclick="showOverviewSubTab('member')">👥 按成員總覽 (一眼睇會員章)</button>
@@ -2032,6 +2039,7 @@ function renderFormsTab(){
     <button class="btn btn-warning" onclick="generatePrintableForm('PT120A')">🐉 產生 PT/120A 專科徽章申請表</button>
     <button class="btn btn-secondary" onclick="generateInterestCertificate()">⭐ 直出興趣章紀錄/證書清單</button>
   </div>
+  <div class="info-section" style="margin-top:12px;border-left-color:var(--green)"><h3>⏱️ 服務時數紀錄</h3><div id="servicePanel"><p style="font-size:11px">服務紀錄可由領袖在此管理。</p></div></div>
   <div id="printableArea" class="print-area"></div>`;
 }
 
@@ -2047,6 +2055,15 @@ function generateInterestCertificate(){
   const records=Object.entries(otherBadgesMap[ymis]||{}).filter(([id])=>id.startsWith('INT-')||id.startsWith('OT-'));
   const rows=records.length?records.map(([id,v])=>`<tr><td>${id}</td><td>${v.name||id}</td><td>${v.date||''}</td><td>${v.cert||''}</td><td>領袖核實：____________</td></tr>`).join(''):'<tr><td colspan="5">尚未記錄興趣章</td></tr>';
   document.getElementById('printableArea').innerHTML=`<div class="print-area"><h2 style="text-align:center">童軍支部興趣章紀錄及證書清單</h2><p>姓名：${member.name}　YMIS：${member.ymis}　單位：${currentTroopName}</p><table class="print-table"><tr><th>編號</th><th>興趣章名稱</th><th>完成日期</th><th>證書編號</th><th>領袖核實</th></tr>${rows}</table><p style="margin-top:30px">童軍團長簽署：________________　日期：____________</p><div class="no-print" style="text-align:center;margin-top:14px"><button class="btn btn-primary" onclick="downloadPrintableArea()">⬇️ 下載</button><button class="btn btn-primary" onclick="window.print()">🖨️ 列印</button></div></div>`;
+}
+
+async function addServiceFromApp(ymis){const r={ymis,name:(members.find(m=>m.ymis===ymis)||{}).name,activity:document.getElementById('srvActivity')?.value,date:document.getElementById('srvDate')?.value,hours:document.getElementById('srvHours')?.value,place:document.getElementById('srvPlace')?.value};if(!r.activity||!r.hours){showToast('請填寫活動名稱及時數','warning');return;}const x=await fetch(currentBackend,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'addServiceRecord',token:currentToken,record:r})});const d=await x.json();if(d.success){showToast('服務紀錄已加入','success');loadServicePanel(ymis);}else showToast(d.error||'新增失敗','error');}
+
+async function loadServicePanel(ymis){
+  const el=document.getElementById('servicePanel'); if(!el||!currentBackend)return;
+  try{const r=await fetch(currentBackend,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'getServiceRecords',token:currentToken,target_ymis:ymis})});const d=await r.json();
+    el.innerHTML='<p>總時數：<b>'+(d.totalHours||0)+'</b> 小時</p><ul style="font-size:11px">'+((d.records||[]).map(x=>'<li>'+ (x.date||'')+' '+(x.activity||'')+' — '+(x.hours||0)+' 小時 '+(x.place||'')+'</li>').join('')||'<li>尚無服務紀錄</li>')+'</ul>'; if(canUserTickRole(currentUser.role)) el.innerHTML += `<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px"><input id="srvActivity" placeholder="活動名稱"><input id="srvDate" type="date" value="${todayISO()}"><input id="srvHours" type="number" step="0.5" placeholder="時數" style="width:70px"><input id="srvPlace" placeholder="機構／地點"><button class="btn btn-sm btn-success" onclick="addServiceFromApp('${ymis}')">新增</button></div>`;
+  }catch(e){el.innerHTML='<p>服務紀錄暫時無法載入</p>';}
 }
 
 function generatePrintableForm(type){
@@ -2380,14 +2397,24 @@ async function loadUsers(){
         </div>`;
       }
 
-      let h=roleExplain+systemSettingHtml+mockTool+'<div class="filter-bar"><button class="btn btn-sm btn-primary" onclick="addMemberFromApp()">➕ 新增成員</button><input type="text" id="userSearch" placeholder="搜尋姓名/ YMIS/ Email" oninput="filterUsers()" style="flex:1"></div><div id="userList">';
+      let h=roleExplain+systemSettingHtml+mockTool+'<div class="filter-bar"><button class="btn btn-sm btn-primary" onclick="addMemberFromApp()">➕ 新增成員</button><button class="btn btn-sm btn-secondary" onclick="downloadSquadReport()">⬇️ 小隊報表</button><button class="btn btn-sm btn-outline" onclick="loadAuditHistory()">🧾 操作紀錄</button><button class="btn btn-sm btn-outline" onclick="loadApprovalHistory()">✅ 審批歷史</button><label class="btn btn-sm btn-secondary">📥 匯入 CSV<input type="file" accept=".csv" onchange="importMembersCSV(this.files[0])" style="display:none"></label><input type="text" id="userSearch" placeholder="搜尋姓名/ YMIS/ Email" oninput="filterUsers()" style="flex:1"></div><div id="userList">';
       h+=d.users.map(u=>`<div class="user-item" data-search="${(u.name+u.ymis+u.email).toLowerCase()}"><div class="user-item-info"><b>${u.name}</b> ${u.ymis?`(${u.ymis})`:''} ${u.email?` - ${u.email}`:''}<span class="role-badge role-${u.role}">${getRoleName(u.role)}</span> ${u.can_tick?'<span style="background:var(--green-light);color:var(--green);padding:1px 6px;border-radius:999px;font-size:9px">可勾選</span>':''}<br><small style="font-size:10px;color:var(--text-light)">權限: ${u.allowed_badges|| (u.role==='member'?'無':(u.role==='exec_committee'?'L1,活動進度項目,其他部分':'全部(*)'))}</small></div><div class="user-item-actions">`+
-        (['admin','group_leader','branch_leader','super_admin'].includes(currentUser.role)&&u.ymis!==currentUser.ymis?`<select onchange="updateUserRole('${u.ymis}',this.value)"><option value="member" ${u.role==='member'?'selected':''}>團員</option><!-- 童軍無執委 --><option value="branch_leader" ${u.role==='branch_leader'?'selected':''}>支部領袖</option><option value="group_leader" ${u.role==='group_leader'?'selected':''}>團長</option><option value="admin" ${u.role==='admin'?'selected':''}>管理員</option></select><button class="btn btn-sm ${u.can_tick?'btn-danger':'btn-success'}" onclick="toggleCanTick('${u.ymis}',${!u.can_tick})">${u.can_tick?'收回勾選':'授權勾選'}</button><button class="btn btn-sm btn-warning" onclick="openPermissionModal('${u.ymis}','${u.name.replace(/'/g,"\'") }','${u.role}','${(u.allowed_badges||'').replace(/'/g,"")}')">⚙️ 權限</button><button class="btn btn-sm btn-outline" onclick="editSquad('${u.ymis}','${(u.squad||'').replace(/'/g,"\'")}','${(u.squad_role||'member').replace(/'/g,"\'")}')">🧭 小隊</button>`:'' )+
+        (['admin','group_leader','branch_leader','super_admin'].includes(currentUser.role)&&u.ymis!==currentUser.ymis?`<select onchange="updateUserRole('${u.ymis}',this.value)"><option value="member" ${u.role==='member'?'selected':''}>團員</option><!-- 童軍無執委 --><option value="branch_leader" ${u.role==='branch_leader'?'selected':''}>支部領袖</option><option value="group_leader" ${u.role==='group_leader'?'selected':''}>團長</option><option value="admin" ${u.role==='admin'?'selected':''}>管理員</option></select><button class="btn btn-sm ${u.can_tick?'btn-danger':'btn-success'}" onclick="toggleCanTick('${u.ymis}',${!u.can_tick})">${u.can_tick?'收回勾選':'授權勾選'}</button><button class="btn btn-sm btn-warning" onclick="openPermissionModal('${u.ymis}','${u.name.replace(/'/g,"\'") }','${u.role}','${(u.allowed_badges||'').replace(/'/g,"")}')">⚙️ 權限</button><button class="btn btn-sm btn-warning" onclick="resetMemberPassword('${u.ymis}')">🔑 重設密碼</button><button class="btn btn-sm btn-outline" onclick="editSquad('${u.ymis}','${(u.squad||'').replace(/'/g,"\'")}','${(u.squad_role||'member').replace(/'/g,"\'")}')">🧭 小隊</button>`:'' )+
         `</div></div>`).join('');
       h+='</div>';
       c.innerHTML=h;
     }else c.innerHTML=`<p style="color:var(--red)">載入失敗：${d.error}</p>`;
   }catch(e){ c.innerHTML=`<p style="color:var(--red)">錯誤：${e.message}</p>`; }
+}
+async function resetMemberPassword(ymis){ if(!confirm('確定重設此成員密碼？'))return; try{const r=await fetch(currentBackend,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'resetPassword',token:currentToken,target_ymis:ymis})});const d=await r.json();if(!d.success)throw Error(d.error);alert('一次性密碼：'+d.temp_password); }catch(e){showToast('重設失敗：'+e.message,'error');}}
+async function importMembersCSV(file){ if(!file)return; const text=await file.text(); const lines=text.split(/\r?\n/).filter(Boolean); let ok=0,skip=0; const existing=new Set(members.map(m=>m.ymis)); for(const line of lines.slice(1)){const [ymis,name,squad]=line.split(',').map(x=>(x||'').trim()); if(/^\d{10}$/.test(ymis)&&name&&!existing.has(ymis)){try{const r=await fetch(currentBackend,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'addMember',token:currentToken,ymis,name,squad,squad_role:'member'})});if((await r.json()).success){ok++;existing.add(ymis);}else skip++;}catch(e){skip++;}}else if(existing.has(ymis))skip++;} showToast(`已匯入 ${ok} 名成員，略過 ${skip} 筆`,'success');loadUsers();}
+function downloadSquadReport(){
+ const rows=[...document.querySelectorAll('#overviewTableContainer table tr')]; if(!rows.length){showToast('請先開啟全團總覽','warning');return;}
+ const csv=rows.map(r=>[...r.children].map(c=>'"'+c.innerText.replace(/"/g,'""').replace(/\n/g,' ')+'"').join(',')).join('\n'); const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));a.download='scout-squad-report-'+todayISO()+'.csv';a.click();
+}
+async function loadApprovalHistory(){try{const r=await fetch(currentBackend,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'getApprovalHistory',token:currentToken})});const d=await r.json();if(!d.success)throw Error(d.error);const q=prompt('搜尋 YMIS／姓名／項目／狀態','')||'';const a=(d.records||[]).filter(x=>JSON.stringify(x).toLowerCase().includes(q.toLowerCase()));alert(a.slice(-100).map(x=>[x.type,x.ymis,x.name,x.item||'',x.status,x.reviewer||'',x.date||''].join(' | ')).join('\n')||'沒有紀錄');}catch(e){showToast('讀取審批歷史失敗：'+e.message,'error');}}
+async function loadAuditHistory(){
+ try{const r=await fetch(currentBackend,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'getAuditLog',token:currentToken})});const d=await r.json();if(!d.success)throw Error(d.error);const q=prompt('輸入搜尋字詞（可留空）','')||'';const list=(d.records||[]).filter(x=>x.join(' ').toLowerCase().includes(q.toLowerCase()));alert(list.slice(-50).map(x=>x.join(' | ')).join('\n')||'沒有紀錄');}catch(e){showToast('讀取操作紀錄失敗：'+e.message,'error');}
 }
 async function addMemberFromApp(){
   const ymis=prompt('成員 YMIS（10位數字）'); if(!ymis)return;

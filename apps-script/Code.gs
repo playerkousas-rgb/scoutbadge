@@ -23,6 +23,9 @@ function getApiKey() {
   return apiKey;
 }
 function showApiKey() {
+  let sh=ss.getSheetByName('服務紀錄'); if(!sh){ sh=ss.insertSheet('服務紀錄'); sh.appendRow(['record_id','YMIS','姓名','活動名稱','日期','時數','機構／地點','內容','核實領袖','狀態','備註']); sh.getRange(1,1,1,11).setFontWeight('bold').setBackground('#2E7D32').setFontColor('#FFFFFF'); sh.setFrozenRows(1); }
+  let ah=ss.getSheetByName('操作紀錄'); if(!ah){ ah=ss.insertSheet('操作紀錄'); ah.appendRow(['時間','操作者','操作','對象','詳情']); ah.getRange(1,1,1,5).setFontWeight('bold').setBackground('#8B0000').setFontColor('#FFFFFF'); ah.setFrozenRows(1); }
+
   const apiKey = getApiKey();
   const ui = SpreadsheetApp.getUi();
   if (ui) ui.alert('API Key', '你的 API Key：\n\n' + apiKey, ui.ButtonSet.OK);
@@ -95,6 +98,7 @@ function initializeSheets() {
     if(uSheet.getLastColumn()<13) uSheet.getRange(1,13).setValue('allowed_badges');
     if(uSheet.getLastColumn()<14) uSheet.getRange(1,14).setValue('squad');
     if(uSheet.getLastColumn()<15) uSheet.getRange(1,15).setValue('squad_role');
+    if(uSheet.getLastColumn()<16) uSheet.getRange(1,16).setValue('force_change_password');
   }
   let aSheet = ss.getSheetByName('Applications');
   if(!aSheet){
@@ -147,6 +151,9 @@ function initializeSheets() {
       cfgSheet.appendRow(['allow_squad_comparison','false',now(),'system']);
     }
   }
+
+  let sh=ss.getSheetByName('服務紀錄'); if(!sh){ sh=ss.insertSheet('服務紀錄'); sh.appendRow(['record_id','YMIS','姓名','活動名稱','日期','時數','機構／地點','內容','核實領袖','狀態','備註']); sh.getRange(1,1,1,11).setFontWeight('bold').setBackground('#2E7D32').setFontColor('#FFFFFF'); sh.setFrozenRows(1); }
+  let ah=ss.getSheetByName('操作紀錄'); if(!ah){ ah=ss.insertSheet('操作紀錄'); ah.appendRow(['時間','操作者','操作','對象','詳情']); ah.getRange(1,1,1,5).setFontWeight('bold').setBackground('#8B0000').setFontColor('#FFFFFF'); ah.setFrozenRows(1); }
 
   const apiKey = getApiKey();
   let scriptUrl=''; try{ scriptUrl=ScriptApp.getService().getUrl(); }catch(e){ scriptUrl='請部署為網頁應用程式後查看';}
@@ -299,6 +306,11 @@ function doPost(e){
 
     // 以下為高權限
     if(action==='changePassword') return handleChangePassword(ymis,body.old_password,body.new_password);
+    if(action==='resetPassword'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'}); return handleResetPassword(body.target_ymis,ymis); }
+    if(action==='addServiceRecord'){ if(!canUserTick(user.role)) return jsonResponse({success:false,error:'權限不足'}); return handleAddServiceRecord(body.record,ymis); }
+    if(action==='getServiceRecords'){ return handleGetServiceRecords(body.target_ymis||ymis); }
+    if(action==='getAuditLog'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'}); return handleGetAuditLog(); }
+    if(action==='getApprovalHistory'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'}); return handleGetApprovalHistory(); }
     if(action==='updateUserRole'){
       // 允許團長/支部領袖/管理員更新角色 + 細緻權限
       if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'});
@@ -344,12 +356,19 @@ function handleLogin(loginId,password){
       if(rowY===user.ymis || rowE===user.email.toLowerCase() || rowY===loginId){
         const token=createToken(user.ymis);
         sheet.getRange(i+1,11).setValue(now());
-        return jsonResponse({success:true,token:token,user:user});
+        const force=sheet.getLastColumn()>=16 && (data[i][15]===true || String(data[i][15]).toUpperCase()==='TRUE');
+        return jsonResponse({success:true,token:token,user:user,force_change_password:force});
       }
     }
   }
   return jsonResponse({success:false,error:'密碼錯誤'});
 }
+function handleResetPassword(targetYmis,managerYmis){ const sh=getSheet().getSheetByName('Users'); const data=sh.getDataRange().getValues(); for(let i=1;i<data.length;i++){ if(String(data[i][0])===String(targetYmis)){ const temp='Scout'+Math.floor(100000+Math.random()*900000); sh.getRange(i+1,5).setValue(hashPassword(temp)); if(sh.getLastColumn()>=16) sh.getRange(i+1,16).setValue(true); writeAudit(managerYmis,'reset_password',targetYmis,'重設為一次性密碼'); return jsonResponse({success:true,temp_password:temp}); } } return jsonResponse({success:false,error:'找不到成員'}); }
+function writeAudit(actor,action,target,detail){ const sh=getSheet().getSheetByName('操作紀錄'); if(sh) sh.appendRow([now(),actor,action,target,detail||'']); }
+function handleAddServiceRecord(r,actor){ const sh=getSheet().getSheetByName('服務紀錄'); if(!sh)return jsonResponse({success:false,error:'Sheet not found'}); const id='SRV_'+Date.now(); sh.appendRow([id,r.ymis,r.name||'',r.activity||'',r.date||'',Number(r.hours||0),r.place||'',r.detail||'',actor,'approved',r.note||'']); writeAudit(actor,'add_service',r.ymis,r.activity||''); return jsonResponse({success:true,record_id:id}); }
+function handleGetServiceRecords(ymis){ const sh=getSheet().getSheetByName('服務紀錄'); const out=[]; if(sh){const d=sh.getDataRange().getValues();for(let i=1;i<d.length;i++)if(String(d[i][1])===String(ymis))out.push({id:d[i][0],activity:d[i][3],date:formatDate(d[i][4]),hours:d[i][5],place:d[i][6],detail:d[i][7],status:d[i][9],note:d[i][10]});} return jsonResponse({success:true,records:out,totalHours:out.reduce((a,x)=>a+Number(x.hours||0),0)}); }
+function handleGetApprovalHistory(){ const out=[]; ['Applications','待批完成'].forEach(n=>{const sh=getSheet().getSheetByName(n);if(!sh)return;const d=sh.getDataRange().getValues();for(let i=1;i<d.length;i++){if(n==='Applications' && d[i][6] && d[i][6].toString()!=='pending')out.push({type:'帳戶申請',id:d[i][0],ymis:d[i][1],name:d[i][2],status:d[i][6],reviewer:d[i][8],date:d[i][9]});if(n==='待批完成' && d[i][7] && d[i][7].toString()!=='pending')out.push({type:'進度申請',id:d[i][0],ymis:d[i][1],name:d[i][2],status:d[i][7],reviewer:d[i][9],date:d[i][10],item:d[i][4]});}});return jsonResponse({success:true,records:out}); }
+function handleGetAuditLog(){ const sh=getSheet().getSheetByName('操作紀錄'); const out=[]; if(sh){const d=sh.getDataRange().getValues();for(let i=Math.max(1,d.length-200);i<d.length;i++)out.push(d[i]);} return jsonResponse({success:true,records:out}); }
 function handleChangePassword(ymis,oldP,newP){
   if(newP.length<6) return jsonResponse({success:false,error:'新密碼至少6位'});
   const sheet=getSheet().getSheetByName('Users'); const data=sheet.getDataRange().getValues();
@@ -357,6 +376,7 @@ function handleChangePassword(ymis,oldP,newP){
     if(data[i][0].toString()===ymis && data[i][11].toString()==='active'){
       if(data[i][4].toString()===hashPassword(oldP)){
         sheet.getRange(i+1,5).setValue(hashPassword(newP));
+        if(sheet.getLastColumn()>=16) sheet.getRange(i+1,16).setValue(false);
         return jsonResponse({success:true});
       }
     }
