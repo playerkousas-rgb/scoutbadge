@@ -17,7 +17,7 @@ function getApiKey() {
   const props = PropertiesService.getScriptProperties();
   let apiKey = props.getProperty('API_KEY');
   if (!apiKey) {
-    apiKey = 'vs_' + Utilities.getUuid().replace(/-/g, '').substring(0, 24);
+    apiKey = 'sc_' + Utilities.getUuid().replace(/-/g, '').substring(0, 24);
     props.setProperty('API_KEY', apiKey);
   }
   return apiKey;

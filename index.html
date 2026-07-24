@@ -356,7 +356,7 @@ a:hover{text-decoration:underline}
           <div class="step"><div class="step-number">2</div><div class="step-content"><h4>登入</h4><p>成員：YMIS 10位數字 + 密碼；領袖：Email + 密碼。首次登入預設密碼請洽管理員。</p></div></div>
           <div class="step"><div class="step-number">3</div><div class="step-content"><h4>成員操作：申請完成</h4><p>成員不可直接勾選，點擊「📝 申請完成」→選擇日期→填寫證據→提交。領袖會在「待批」頁看到。</p></div></div>
           <div class="step"><div class="step-number">4</div><div class="step-content"><h4>領袖操作：勾選+日期</h4><p>領袖可直接勾選，系統自動填今日日期，亦可手動改日期。所有勾選先存瀏覽器，底部顯示未保存數量，按「確認寫入」才批量寫入雲端，寫入時有進度提示。</p></div></div>
-          <div class="step"><div class="step-number">5</div><div class="step-content"><h4>其他功能</h4><p>全團總覽：按進度項目篩選，避免卡死；按項目統計：百分比+人數；其他獎章已併入我的進度；表格列印：VS/DRAGON FORM官方格式自動填入後列印。</p></div></div>
+          <div class="step"><div class="step-number">5</div><div class="step-content"><h4>其他功能</h4><p>全團總覽：按進度項目篩選，避免卡死；按項目統計：百分比+人數；其他獎章已併入我的進度；表格列印：童軍支部表格格式自動填入後列印。</p></div></div>
         </div>
       </div>
       <div class="info-section" style="margin-top:16px">
@@ -466,7 +466,7 @@ a:hover{text-decoration:underline}
     <div class="form-group"><label>旅團編號 *</label><input type="text" id="c_troopId" placeholder="0082"></div>
     <div class="form-group"><label>旅團名稱</label><input type="text" id="c_troopName" placeholder="第 82 旅"></div>
     <div class="form-group"><label>Apps Script URL (…/exec) *</label><input type="text" id="c_scriptUrl" placeholder="https://script.google.com/macros/s/.../exec"></div>
-    <div class="form-group"><label>API Key *</label><input type="text" id="c_apiKey" placeholder="vs_xxxxxxxx"></div>
+    <div class="form-group"><label>API Key *</label><input type="text" id="c_apiKey" placeholder="sc_xxxxxxxx"></div>
     <div class="form-group"><label>聯絡 Email / 備註</label><textarea id="c_note" placeholder="請留下聯絡方式..."></textarea></div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeContactModal()">取消</button>
@@ -553,10 +553,10 @@ let appConfig={allow_member_view_others:'false',member_progress_scope:'private',
 
 const LS = {
   session: 'scoutbadge_session_v1',
-  pending: (tid)=>`vs_pending_${tid}`,
-  requests: (tid,ymis)=>`vs_requests_${tid}_${ymis}`,
-  other: (tid)=>`vs_other_${tid}`,
-  cacheProgress: (tid)=>`vs_cache_progress_${tid}`
+  pending: (tid)=>`sc_pending_${tid}`,
+  requests: (tid,ymis)=>`sc_requests_${tid}_${ymis}`,
+  other: (tid)=>`sc_other_${tid}`,
+  cacheProgress: (tid)=>`sc_cache_progress_${tid}`
 };
 
 function todayISO(){ return new Date().toISOString().split('T')[0]; }
@@ -2023,8 +2023,8 @@ function renderFormsTab(){
     badgeDates[b.id]=dates.length? dates[dates.length-1] : '';
   });
   c.innerHTML=`<div class="info-grid">
-    <div class="info-card"><h3>🖨️ 表格自動填寫功能</h3><p>系統會根據進度自動填寫 PT/19 及 PT/20 表格所需完成日期，領袖/成員可修改後直接列印。支援雙面列印，符合總會要求。</p><ul><li>自動帶入姓名、YMIS、旅團、進度項目完成日期</li><li>可手動編輯補充服務時數、證書編號</li><li>一鍵列印，隱藏操作按鈕</li></ul></div>
-    <div class="info-card" style="border-color:var(--blue)"><h3 style="color:var(--blue)">📋 表格說明</h3><p><b>PT/18 總領袖獎章</b>：完成訓練綱要所列進度項目後申請。<br><b>PT/120A 專科徽章</b>：按現行童軍支部訓練綱要完成要求及服務紀錄，交由領袖核實後遞交。<br><b>PT/65 考驗計劃</b>：開展金帶前需提交計劃書。</p></div>
+    <div class="info-card"><h3>🖨️ 表格自動填寫功能</h3><p>系統會根據進度自動填寫 PT/18 及 PT/120A 表格所需完成日期，領袖/成員可修改後直接列印。支援雙面列印，符合總會要求。</p><ul><li>自動帶入姓名、YMIS、旅團、進度項目完成日期</li><li>可手動編輯補充服務時數、證書編號</li><li>一鍵列印，隱藏操作按鈕</li></ul></div>
+    <div class="info-card" style="border-color:var(--blue)"><h3 style="color:var(--blue)">📋 表格說明</h3><p><b>PT/18 總領袖獎章</b>：完成訓練綱要所列進度項目後申請。<br><b>PT/120A 專科徽章</b>：按現行童軍支部訓練綱要完成要求及服務紀錄，交由領袖核實後遞交。<br><b>PT/65 考驗計劃</b>：開展進度性獎章考驗前提交計劃書。</p></div>
   </div>
   <div class="filter-bar"><label>選擇成員：</label><select id="formMemberSelect" onchange="renderFormsTab()">${members.map(m=>`<option value="${m.ymis}" ${m.ymis===targetYmis?'selected':''}>${m.name} (${m.ymis})</option>`).join('')}</select></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
@@ -2103,7 +2103,7 @@ function generatePrintableForm(type){
     html=`<div class="print-area" id="officialPT120A">
       <div style="text-align:center;border-bottom:3px double #000;padding-bottom:10px;margin-bottom:12px">
         <div style="font-size:12px;font-weight:700">香港童軍總會 Scout Association of Hong Kong</div>
-        <div style="font-size:15px;font-weight:800;margin-top:4px">榮譽童軍獎章及證書申請表 (PT/120A 專科徽章</div>
+        <div style="font-size:15px;font-weight:800;margin-top:4px">童軍專科徽章紀錄／申請表 (PT/120A)</div>
       </div>
       <div style="font-size:12px;font-weight:700;background:#F0F0F0;padding:4px 8px;border:1px solid #000">(1) 個人摘要 Personal Particulars</div>
       <table class="print-table" style="font-size:11px">
@@ -2114,7 +2114,7 @@ function generatePrintableForm(type){
       </table>
       <div style="font-size:12px;font-weight:700;background:#F0F0F0;padding:4px 8px;border:1px solid #000;margin-top:10px">(2) 完成項目 Completed Items</div>
       <table class="print-table" style="font-size:11px">
-        <tr><th>進度項目/金帶 Bars</th><th>項目 Items / 單元 Module Code & Name</th><th>完成日期</th></tr>
+        <tr><th>進度項目 Progress Items</th><th>項目 Items / 單元 Module Code & Name</th><th>完成日期</th></tr>
         <tr><td>自立 Self-reliance</td><td>S-B101 活動策劃 Activity Planning / S-B201 專題研究</td><td><input style="width:90px" value="${getDoneDate(['L4-PRJ-01'])}"></td></tr>
         <tr><td>責任 Responsibility</td><td>R-B201 志願服務 / R-B202 專門技能 / R-B203 童軍及社區 (48小時)</td><td><input style="width:90px" value=""></td></tr>
         <tr><td>活動 Activity</td><td>A-103 露營技藝 Campcraft & A-104 先鋒工程實踐 Pioneering (Practice) / A-2 進階興趣 / A-3 進階體育</td><td><input style="width:90px" value=""></td></tr>
@@ -2148,7 +2148,7 @@ const EMBEDDED_GUIDES={
     <li><b>📊 我的進度</b>：預設只顯示你自己的完成度，綠色進度條=已完成，點擊獎章展開，右側ⓘ查看考驗說明，<b>不能直接剔</b>，只能按「📝申請完成」</li>
     <li><b>⭐ 其他獎章</b>：已併入我的進度最底虛線卡片</li>
     <li><b>📝 待批</b>：查看你提交的申請是否已批</li>
-    <li><b>🖨️ 表格列印</b>：自動填PT/19及PT/20日期，可編輯後列印官方格式</li>
+    <li><b>🖨️ 表格列印</b>：自動填入童軍支部進度日期，可編輯後列印官方格式</li>
     <li><b>📚 資料庫</b>：保護兒童課程連結、訓練綱要</li>
   </ul>
   <h3>如何申請完成？</h3>
@@ -2173,7 +2173,7 @@ const EMBEDDED_GUIDES={
   <h3>1. 我的進度</h3><ul><li>選任何成員看所有紀錄</li><li>直接勾選+日期，離線暫存確認寫入</li></ul>
   <h3>2. 全團總覽</h3><ul><li>卡片一眼睇會員章✓</li><li>表格矩陣最多30欄</li><li>🚀考驗營批量：選成員+選項目→一鍵標記→暫存→確認寫入</li><li>子切換：按成員/按項目</li></ul>
   <h3>3. 審批中心</h3><ul><li>🏅獎章審批+👤用戶審批合併</li></ul>
-  <h3>4. 表格列印</h3><p>自動填入，官方PT/19/PT/20格式</p>
+  <h3>4. 表格列印</h3><p>自動填入，官方PT/18/PT/120A格式</p>
   <h3>5. 用戶管理</h3><ul><li>成員改執委</li><li>⚙️權限：領袖默認全部，成員無，執委默認L1+活動進度項目+OTHER</li><li>可按個別成員設定可考核範圍</li></ul>
   <h3>6. 系統設定</h3><p>允許成員互相查看進度：預設關，團長可開</p>`
 };
@@ -2234,7 +2234,7 @@ function renderInfoTab(){
           <li>不能直接剔，只能按「📝申請完成」提交日期+證據</li>
           <li>可在「📝待批」查看自己申請是否已批</li>
           <li>可查看「⭐其他獎章」中自己的其他獎章</li>
-          <li>可使用「🖨️表格列印」自動填PT/19/PT/20後列印</li>
+          <li>可使用「🖨️表格列印」自動填PT/18/PT/120A後列印</li>
           <li>可查看「📚資料庫」內綱要、保護兒童、安全指引</li>
         </ul>
       </div>
@@ -2309,7 +2309,7 @@ function renderInfoTab(){
       • 急救章統一左袖上方AYP下方<br>
       • 拯溺布章佩戴左袖上方中央<br>
       • 世界童軍獎章最多右袖平行4枚<br>
-      • 榮譽童軍獎章可終身佩戴
+      • 童軍支部徽章須按現行制服及佩戴指引佩戴
     </div>
   </div>`;
 
@@ -2435,8 +2435,8 @@ function openPermissionModal(ymis, name, role, allowed){
     {id:'L3-ACT-SP', name:'多元技能-範疇二 康樂體育'},
     {id:'L3-ACT-INT', name:'多元技能-範疇三 新體驗 (個人興趣)'},
     {id:'L3-EXP', name:'戶外探險進度項目'},
-    {id:'L4', name:'榮譽童軍獎章 全部金帶'},
-    {id:'L4-ACT', name:'活動策劃金帶/多元技能金帶'},
+    {id:'L4', name:'總領袖獎章 全部進度項目'},
+    {id:'L4-ACT', name:'活動策劃／多元技能進度項目'},
   ];
   const allowedArr = (allowed==='*'||allowed==='') ? (role==='member'?[]:badges.map(b=>b.id)) : allowed.split(',').map(s=>s.trim()).filter(Boolean);
   // If allowed is * => all checked
