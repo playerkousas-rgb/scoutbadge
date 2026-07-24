@@ -1,8 +1,10 @@
 {
   "meta": {
-    "version": "1.0 Scout 2026",
+    "version": "Scout branch official catalogue 2026-02",
     "base": "2017年第1次修訂版 + 2026年1月專科徽章更新 + 2026支部檢討",
-    "updated": "2026-07-10 Scout v1.0"
+    "updated": "2026-07-10 Scout v1.0",
+    "note": "進度性獎章採用單一項目清單；興趣、技能、服務、教導及其他徽章獨立分類。",
+    "source": "https://scoutsinfohub.org.hk/scout-training-scheme"
   },
   "badges": [
     {
@@ -13,16 +15,26 @@
       "color": "#2E7D32",
       "purpose": "幫助新成員認識童軍運動及小隊制度",
       "description": "入團後1.5個月內完成，由團長簽發",
-      "segments": [
+      "items": [
         {
-          "code": "L1-UNDER",
-          "name": "認識",
-          "items": [
-            {"id": "L1-UND-01", "name": "明瞭童軍運動目的及童軍誓詞規律", "detail": "能背誦誓詞規律並解釋含意", "assessedBy": "troop"},
-            {"id": "L1-UND-02", "name": "認識小隊制度及小隊呼聲", "detail": "所屬小隊隊名、隊色、呼聲", "assessedBy": "troop"}
-          ]
+          "id": "L1-01",
+          "name": "會員認識",
+          "detail": "認識童軍運動、誓詞、規律、銘言及小隊制度。",
+          "assessedBy": "member",
+          "group": "L1",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ChiefScoutsAward.pdf"
+        },
+        {
+          "id": "L1-02",
+          "name": "保護童軍成員免受傷害",
+          "detail": "完成 Safe from Harm 相關要求。",
+          "assessedBy": "member",
+          "group": "L1",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ChiefScoutsAward.pdf"
         }
-      ]
+      ],
+      "itemLabel": "進度項目",
+      "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ChiefScoutsAward.pdf"
     },
     {
       "id": "L2",
@@ -32,34 +44,122 @@
       "color": "#33691E",
       "purpose": "經歷體驗，初步接觸童軍運動，建議6個月完成",
       "description": "11歲起，年滿13歲可跳至只完成探索+標準之戶外挑戰部分後直接考高級",
-      "segments": [
+      "items": [
         {
-          "code": "L2-OUTDOOR",
-          "name": "戶外挑戰",
-          "desc": "露營、烹飪、探險",
-          "items": [
-            {"id": "L2-OUT-CAMP", "name": "露營 - 參與一次小隊露營，學習營地建設及營火", "detail": "需要露營紀錄", "assessedBy": "troop"},
-            {"id": "L2-OUT-COOK", "name": "烹飪 - 準備簡單小隊餐單及煮食", "detail": "營地輕便炊事", "assessedBy": "troop"},
-            {"id": "L2-OUT-EXPLORE", "name": "探險 - 完成一次遠足及地圖閱讀", "detail": "認識地圖、指南針", "assessedBy": "troop"}
-          ]
+          "id": "L2-01",
+          "name": "A1 營藝",
+          "detail": "參與一次露營；收拾兩日一夜背囊；安全使用有潛在危險工具；保養露營物品。",
+          "assessedBy": "member",
+          "group": "L2",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutPathfinderAward.pdf"
         },
         {
-          "code": "L2-EXPERIENCE",
-          "name": "經歷與文化",
-          "items": [
-            {"id": "L2-EXP-CULTURE", "name": "文化藝術 - 參與一次文化活動或展覽", "detail": "博物館、藝術展等", "assessedBy": "member"},
-            {"id": "L2-EXP-COMM", "name": "社區 - 參與一次社區服務或探訪", "detail": "2小時服務", "assessedBy": "member"}
-          ]
+          "id": "L2-02",
+          "name": "A2 歷險",
+          "detail": "參與不少於八公里徒步或十二公里單車／船艇郊野旅程；認識地圖及十種習用圖例；收拾一日郊野背囊。",
+          "assessedBy": "member",
+          "group": "L2",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutPathfinderAward.pdf"
         },
         {
-          "code": "L2-SPECIAL",
-          "name": "專科徽章",
-          "desc": "至少1個興趣組",
-          "items": [
-            {"id": "L2-SPEC-01", "name": "考獲至少1個興趣組專科徽章 (由旅團考)", "detail": "釣魚、藝術、攝影等綠底章，旅團主考", "assessedBy": "troop"}
-          ]
+          "id": "L2-03",
+          "name": "A3 先鋒工程",
+          "detail": "示範平結、八字結、雙套結、半結、反手結、稱人結、接繩結、繫木結、縮繩結及曳木結，並認識保養繩索。",
+          "assessedBy": "member",
+          "group": "L2",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutPathfinderAward.pdf"
+        },
+        {
+          "id": "L2-04",
+          "name": "A4 戶外活動（選修）",
+          "detail": "明瞭戶外活動安全指引及郊野守則，完成追蹤符號、公園定向或密碼通訊其中一項。",
+          "assessedBy": "member",
+          "group": "L2",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutPathfinderAward.pdf"
+        },
+        {
+          "id": "L2-05",
+          "name": "A5 海上活動（選修）",
+          "detail": "明瞭海上活動安全守則並通過本會游泳測試；海童軍必須選此項。",
+          "assessedBy": "member",
+          "group": "L2",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutPathfinderAward.pdf"
+        },
+        {
+          "id": "L2-06",
+          "name": "A6 航空活動（選修）",
+          "detail": "認識機場及航機航空安全守則，完成航空戶外活動、航機部件認識或初級航機辨認其中一項；空童軍必須選此項。",
+          "assessedBy": "member",
+          "group": "L2",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutPathfinderAward.pdf"
+        },
+        {
+          "id": "L2-07",
+          "name": "B1 體適能",
+          "detail": "參與一次以運動或體能競技為主題的小隊活動。",
+          "assessedBy": "member",
+          "group": "L2",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutPathfinderAward.pdf"
+        },
+        {
+          "id": "L2-08",
+          "name": "B2 小隊歡呼",
+          "detail": "認識所屬小隊歡呼並於活動中使用。",
+          "assessedBy": "member",
+          "group": "L2",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutPathfinderAward.pdf"
+        },
+        {
+          "id": "L2-09",
+          "name": "B3 領導才",
+          "detail": "參與一次小隊會議並指出目的。",
+          "assessedBy": "member",
+          "group": "L2",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutPathfinderAward.pdf"
+        },
+        {
+          "id": "L2-10",
+          "name": "B4 靈性發展",
+          "detail": "分享運用誓詞、規律及銘言的例子，並參與一次默禱儀式。",
+          "assessedBy": "member",
+          "group": "L2",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutPathfinderAward.pdf"
+        },
+        {
+          "id": "L2-11",
+          "name": "C1 服務他人",
+          "detail": "示範處理流鼻血、燒傷、燙傷、割傷及刺傷；完成不少於四小時認許服務並記錄。",
+          "assessedBy": "member",
+          "group": "L2",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutPathfinderAward.pdf"
+        },
+        {
+          "id": "L2-12",
+          "name": "C2 社區設施",
+          "detail": "向小隊介紹居所或旅部附近的社區設施。",
+          "assessedBy": "member",
+          "group": "L2",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutPathfinderAward.pdf"
+        },
+        {
+          "id": "L2-13",
+          "name": "D1 生態環境",
+          "detail": "參觀自然生境或生態主題展覽或地方。",
+          "assessedBy": "member",
+          "group": "L2",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutPathfinderAward.pdf"
+        },
+        {
+          "id": "L2-14",
+          "name": "D2 氣象",
+          "detail": "認識天氣與氣候差異及其對戶外活動的影響。",
+          "assessedBy": "member",
+          "group": "L2",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutPathfinderAward.pdf"
         }
-      ]
+      ],
+      "itemLabel": "進度項目",
+      "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutPathfinderAward.pdf"
     },
     {
       "id": "L3",
@@ -68,24 +168,146 @@
       "en": "Scout Standard Award",
       "color": "#558B2F",
       "purpose": "知識認知，建立成功感，建議6個月完成",
-      "segments": [
+      "items": [
         {
-          "code": "L3-OUTDOOR",
-          "name": "戶外挑戰進階",
-          "items": [
-            {"id": "L3-OUT-ADV", "name": "露營進階 - 策劃及執行小隊露營，含營火會", "detail": "需提交計劃書", "assessedBy": "member"},
-            {"id": "L3-OUT-EXPLORE", "name": "探險進階 - 完成遠足及露營的結合", "detail": "10公里遠足+露營", "assessedBy": "member"}
-          ]
+          "id": "L3-01",
+          "name": "A1 營藝",
+          "detail": "參與及記錄露營；架搭、收拾及存放營幕；完成不少於四項營地建設；戶外生火及烹調。",
+          "assessedBy": "member",
+          "group": "L3",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutStandardAward.pdf"
         },
         {
-          "code": "L3-LEAD",
-          "name": "領導與服務",
-          "items": [
-            {"id": "L3-LEAD-PATROL", "name": "小隊活動 - 策劃一次小隊活動", "detail": "由隊長帶領", "assessedBy": "troop"},
-            {"id": "L3-LEAD-SERVICE", "name": "服務 - 參與社區服務4小時", "detail": "服務紀錄", "assessedBy": "member"}
-          ]
+          "id": "L3-02",
+          "name": "A2 歷險",
+          "detail": "完成不少於十二公里徒步或十八公里單車／船艇旅程；認識比例距離、正置地圖及以地圖指南針定位。",
+          "assessedBy": "member",
+          "group": "L3",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutStandardAward.pdf"
+        },
+        {
+          "id": "L3-03",
+          "name": "A3 先鋒工程",
+          "detail": "示範四方、十字、八字、圓周及展立編結；遵守安全守則；完成一項先鋒工程。",
+          "assessedBy": "member",
+          "group": "L3",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutStandardAward.pdf"
+        },
+        {
+          "id": "L3-04",
+          "name": "A4 戶外活動（選修）",
+          "detail": "完成探索獎章戶外活動部分；考獲從未獲得的戶外相關專科徽章；完成城市追蹤或通訊活動。",
+          "assessedBy": "member",
+          "group": "L3",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutStandardAward.pdf"
+        },
+        {
+          "id": "L3-05",
+          "name": "A5 海上活動（選修）",
+          "detail": "完成探索獎章海上活動部分；考獲艇工章；參與一次指定海上活動。",
+          "assessedBy": "member",
+          "group": "L3",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutStandardAward.pdf"
+        },
+        {
+          "id": "L3-06",
+          "name": "A6 航空活動（選修）",
+          "detail": "完成探索獎章航空活動部分；考獲初級航空活動章；完成航空安全或風對飛行影響項目。",
+          "assessedBy": "member",
+          "group": "L3",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutStandardAward.pdf"
+        },
+        {
+          "id": "L3-07",
+          "name": "B1 體適能",
+          "detail": "考獲未曾獲得的體適能專科徽章，或設計及烹調一份正餐。",
+          "assessedBy": "member",
+          "group": "L3",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutStandardAward.pdf"
+        },
+        {
+          "id": "L3-08",
+          "name": "B2 藝術創意科技",
+          "detail": "參與營火／營燈會，並完成藝術創意科技選項。",
+          "assessedBy": "member",
+          "group": "L3",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutStandardAward.pdf"
+        },
+        {
+          "id": "L3-09",
+          "name": "B3 領導才",
+          "detail": "參與一次小隊活動。",
+          "assessedBy": "member",
+          "group": "L3",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutStandardAward.pdf"
+        },
+        {
+          "id": "L3-10",
+          "name": "B4 靈性發展",
+          "detail": "參與童軍崇拜會，並介紹宗教或分享信念。",
+          "assessedBy": "member",
+          "group": "L3",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutStandardAward.pdf"
+        },
+        {
+          "id": "L3-11",
+          "name": "C1 服務他人",
+          "detail": "認識急救原則及召喚緊急服務；收拾一日戶外個人急救藥囊；參與不少於八小時認許服務。",
+          "assessedBy": "member",
+          "group": "L3",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutStandardAward.pdf"
+        },
+        {
+          "id": "L3-12",
+          "name": "C2 社區本土",
+          "detail": "參與或觀賞本地文化習俗或傳統節慶。",
+          "assessedBy": "member",
+          "group": "L3",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutStandardAward.pdf"
+        },
+        {
+          "id": "L3-13",
+          "name": "C3 世界認識",
+          "detail": "介紹一種外地活動或文化。",
+          "assessedBy": "member",
+          "group": "L3",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutStandardAward.pdf"
+        },
+        {
+          "id": "L3-14",
+          "name": "D1 生態環境",
+          "detail": "介紹生物鏈、生物網及物種生態循環。",
+          "assessedBy": "member",
+          "group": "L3",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutStandardAward.pdf"
+        },
+        {
+          "id": "L3-15",
+          "name": "D2 氣象",
+          "detail": "介紹風速風向量度，或雲形成及十種基本雲層。",
+          "assessedBy": "member",
+          "group": "L3",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutStandardAward.pdf"
+        },
+        {
+          "id": "L3-16",
+          "name": "D3 危機保護",
+          "detail": "介紹自然災難影響，或認識不留痕原則。",
+          "assessedBy": "member",
+          "group": "L3",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutStandardAward.pdf"
+        },
+        {
+          "id": "L3-17",
+          "name": "E1 交流活動",
+          "detail": "以童軍身份參與一次與其他旅團或團體交流。",
+          "assessedBy": "member",
+          "group": "L3",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutStandardAward.pdf"
         }
-      ]
+      ],
+      "itemLabel": "進度項目",
+      "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutStandardAward.pdf"
     },
     {
       "id": "L4",
@@ -94,23 +316,146 @@
       "en": "Scout Advanced Award",
       "color": "#8BC34A",
       "purpose": "知識深化，培養責任感，建議12個月完成",
-      "segments": [
+      "items": [
         {
-          "code": "L4-SELF",
-          "name": "自立及服務",
-          "items": [
-            {"id": "L4-SELF-CAMP", "name": "自立 - 獨立照顧自己及小隊", "detail": "包括個人裝備管理", "assessedBy": "member"},
-            {"id": "L4-SERVICE", "name": "服務他人 - 持續服務8小時", "detail": "可服務旅團或社區", "assessedBy": "member"}
-          ]
+          "id": "L4-01",
+          "name": "A1 營藝",
+          "detail": "協助策劃及參與露營；完成不少於六項營地建設；進行原野烹飪；學習或練習不少於六個月。",
+          "assessedBy": "member",
+          "group": "L4",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutAdvancedAward.pdf"
         },
         {
-          "code": "L4-SKILL",
-          "name": "技能深化",
-          "items": [
-            {"id": "L4-SKILL-01", "name": "考獲一個技能組或服務組專科徽章", "detail": "藍底或紅底章，由區主考", "assessedBy": "member"}
-          ]
+          "id": "L4-02",
+          "name": "A2 歷險",
+          "detail": "完成二十公里徒步或三十公里單車／船艇兩日一夜旅程，或黃昏至黎明旅程；認識等高線及無指南針辨向。",
+          "assessedBy": "member",
+          "group": "L4",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutAdvancedAward.pdf"
+        },
+        {
+          "id": "L4-03",
+          "name": "A3 先鋒工程",
+          "detail": "示範雙接繩結、漁翁結、三套結、勾口結、吊板結及普通繩端結；以不少於兩種編結製作兩項工程。",
+          "assessedBy": "member",
+          "group": "L4",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutAdvancedAward.pdf"
+        },
+        {
+          "id": "L4-04",
+          "name": "A4 戶外活動（選修）",
+          "detail": "完成標準獎章戶外活動；考獲露營、探險、先鋒工程及原野烹飪技能組其中兩個。",
+          "assessedBy": "member",
+          "group": "L4",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutAdvancedAward.pdf"
+        },
+        {
+          "id": "L4-05",
+          "name": "A5 海上活動（選修）",
+          "detail": "完成標準獎章海上活動；考獲水手章及一個海上活動相關專科徽章。",
+          "assessedBy": "member",
+          "group": "L4",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutAdvancedAward.pdf"
+        },
+        {
+          "id": "L4-06",
+          "name": "A6 航空活動（選修）",
+          "detail": "完成標準獎章航空活動；考獲中級航空活動章及認識航空氣象。",
+          "assessedBy": "member",
+          "group": "L4",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutAdvancedAward.pdf"
+        },
+        {
+          "id": "L4-07",
+          "name": "B1 體適能",
+          "detail": "考獲未曾獲得的體適能專科徽章，或執行四至六星期體能訓練。",
+          "assessedBy": "member",
+          "group": "L4",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutAdvancedAward.pdf"
+        },
+        {
+          "id": "L4-08",
+          "name": "B2 藝術創意科技",
+          "detail": "考獲未曾獲得的藝術、創意或科技專科徽章並完成一項創作／表演。",
+          "assessedBy": "member",
+          "group": "L4",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutAdvancedAward.pdf"
+        },
+        {
+          "id": "L4-09",
+          "name": "B3 領導才",
+          "detail": "執行一次小隊長會議議決案。",
+          "assessedBy": "member",
+          "group": "L4",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutAdvancedAward.pdf"
+        },
+        {
+          "id": "L4-10",
+          "name": "B4 靈性發展",
+          "detail": "擔任小隊或旅團職務不少於三個月，並完成宗教／靈性發展選項。",
+          "assessedBy": "member",
+          "group": "L4",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutAdvancedAward.pdf"
+        },
+        {
+          "id": "L4-11",
+          "name": "C1 服務他人",
+          "detail": "收拾兩日一夜小隊急救藥囊；示範創傷出血中暑熱衰竭處理；策劃社區參與；參與不少於十二小時服務。",
+          "assessedBy": "member",
+          "group": "L4",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutAdvancedAward.pdf"
+        },
+        {
+          "id": "L4-12",
+          "name": "C2 社區本土",
+          "detail": "考獲社區相關專科或獎章，或介紹區議會及立法會，或參與共融活動。",
+          "assessedBy": "member",
+          "group": "L4",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutAdvancedAward.pdf"
+        },
+        {
+          "id": "L4-13",
+          "name": "C3 世界認識",
+          "detail": "介紹國際組織或其他國家／地區童軍組織。",
+          "assessedBy": "member",
+          "group": "L4",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutAdvancedAward.pdf"
+        },
+        {
+          "id": "L4-14",
+          "name": "D1 生態環境",
+          "detail": "介紹香港生境、物種分類、多樣性、分佈及瀕危物種。",
+          "assessedBy": "member",
+          "group": "L4",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutAdvancedAward.pdf"
+        },
+        {
+          "id": "L4-15",
+          "name": "D2 氣象",
+          "detail": "介紹四季或二十四節氣，及本港氣候或天氣術語。",
+          "assessedBy": "member",
+          "group": "L4",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutAdvancedAward.pdf"
+        },
+        {
+          "id": "L4-16",
+          "name": "D3 危機保護",
+          "detail": "介紹可持續發展，或參與至少一天／兩次環境保育工作。",
+          "assessedBy": "member",
+          "group": "L4",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutAdvancedAward.pdf"
+        },
+        {
+          "id": "L4-17",
+          "name": "E1 新體驗",
+          "detail": "參與一項從未嘗試且具挑戰的活動並向成員介紹。",
+          "assessedBy": "member",
+          "group": "L4",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutAdvancedAward.pdf"
         }
-      ]
+      ],
+      "itemLabel": "進度項目",
+      "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ScoutAdvancedAward.pdf"
     },
     {
       "id": "L5",
@@ -120,153 +465,1362 @@
       "color": "#FFD700",
       "purpose": "童軍支部最高獎章，培訓策劃及領導才能，建議12個月",
       "description": "需年滿14歲、考獲會員章及完成探索、標準、高級之技能、歷險、承諾、專科等項目方可考取",
-      "segments": [
+      "items": [
         {
-          "code": "L5-LEAD",
-          "name": "領導才",
-          "items": [
-            {"id": "L5-LEAD-01", "name": "教授隊員技能 - 教授至少一項專科徽章給其他童軍 (3個月後)", "detail": "教導組要求", "assessedBy": "member"},
-            {"id": "L5-LEAD-02", "name": "策劃活動 - 策劃一次小隊或團活動", "detail": "包括財政、程序", "assessedBy": "member"}
-          ]
+          "id": "L5-01",
+          "name": "A1 營藝",
+          "detail": "計劃及實行露營；教授基本露營技巧；製作露營報告。",
+          "assessedBy": "member",
+          "group": "L5",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ChiefScoutsAward.pdf"
         },
         {
-          "code": "L5-COMMIT",
-          "name": "承諾",
-          "items": [
-            {"id": "L5-COMMIT-01", "name": "履行童軍誓詞規律，成為模範", "detail": "團長評核", "assessedBy": "troop"}
-          ]
+          "id": "L5-02",
+          "name": "A2 歷險",
+          "detail": "策劃、完成及記錄不少於三十公里兩日一夜郊野旅程；教授郊野技巧及野外求生。",
+          "assessedBy": "member",
+          "group": "L5",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ChiefScoutsAward.pdf"
+        },
+        {
+          "id": "L5-03",
+          "name": "A3 先鋒工程",
+          "detail": "計劃及帶領使用不少於三種編結的先鋒工程；教授繩結及收繩。",
+          "assessedBy": "member",
+          "group": "L5",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ChiefScoutsAward.pdf"
+        },
+        {
+          "id": "L5-04",
+          "name": "A4 戶外活動（選修）",
+          "detail": "完成高級獎章戶外活動；策劃及參與全日小隊戶外活動。",
+          "assessedBy": "member",
+          "group": "L5",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ChiefScoutsAward.pdf"
+        },
+        {
+          "id": "L5-05",
+          "name": "A5 海上活動（選修）",
+          "detail": "完成高級獎章海上活動；策劃及參與不少於六小時海上旅程。",
+          "assessedBy": "member",
+          "group": "L5",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ChiefScoutsAward.pdf"
+        },
+        {
+          "id": "L5-06",
+          "name": "A6 航空活動（選修）",
+          "detail": "完成高級獎章航空活動；與團長商討後完成兩項自選航空活動。",
+          "assessedBy": "member",
+          "group": "L5",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ChiefScoutsAward.pdf"
+        },
+        {
+          "id": "L5-07",
+          "name": "B1 體適能",
+          "detail": "考獲未曾獲得的體適能專科徽章及策劃小隊體能活動。",
+          "assessedBy": "member",
+          "group": "L5",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ChiefScoutsAward.pdf"
+        },
+        {
+          "id": "L5-08",
+          "name": "B2 藝術創意科技",
+          "detail": "創作及帶領營火活動，並完成一項教學或創作項目。",
+          "assessedBy": "member",
+          "group": "L5",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ChiefScoutsAward.pdf"
+        },
+        {
+          "id": "L5-09",
+          "name": "B3 領導才",
+          "detail": "考獲領導才獎章。",
+          "assessedBy": "member",
+          "group": "L5",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ChiefScoutsAward.pdf"
+        },
+        {
+          "id": "L5-10",
+          "name": "B4 靈性發展",
+          "detail": "介紹誓詞規律銘言，及帶領默禱、協助崇拜會或考獲宗教章。",
+          "assessedBy": "member",
+          "group": "L5",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ChiefScoutsAward.pdf"
+        },
+        {
+          "id": "L5-11",
+          "name": "C1 服務他人",
+          "detail": "考獲急救、消防或拯溺其中一個服務組專科徽章；探討社區參與；參與不少於十六小時服務。",
+          "assessedBy": "member",
+          "group": "L5",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ChiefScoutsAward.pdf"
+        },
+        {
+          "id": "L5-12",
+          "name": "C2 社區本土",
+          "detail": "探討本地時事，並完成旅遊章或特殊需要人士溝通／社區調查項目。",
+          "assessedBy": "member",
+          "group": "L5",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ChiefScoutsAward.pdf"
+        },
+        {
+          "id": "L5-13",
+          "name": "C3 世界認識",
+          "detail": "探討國際問題，並完成國際交流或介紹外地童軍活動。",
+          "assessedBy": "member",
+          "group": "L5",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ChiefScoutsAward.pdf"
+        },
+        {
+          "id": "L5-14",
+          "name": "D1 生態環境",
+          "detail": "考獲生態相關專科／獎章。",
+          "assessedBy": "member",
+          "group": "L5",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ChiefScoutsAward.pdf"
+        },
+        {
+          "id": "L5-15",
+          "name": "D2 氣象",
+          "detail": "教授氣象知識並考獲氣象興趣組章或完成天氣圖及一週記錄。",
+          "assessedBy": "member",
+          "group": "L5",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ChiefScoutsAward.pdf"
+        },
+        {
+          "id": "L5-16",
+          "name": "D3 危機保護",
+          "detail": "介紹人類活動環境影響；計劃及帶領環境保育工作。",
+          "assessedBy": "member",
+          "group": "L5",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ChiefScoutsAward.pdf"
+        },
+        {
+          "id": "L5-17",
+          "name": "E1 新體驗",
+          "detail": "完成具挑戰活動並向成員介紹。",
+          "assessedBy": "member",
+          "group": "L5",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ChiefScoutsAward.pdf"
+        },
+        {
+          "id": "L5-18",
+          "name": "E2 教導組",
+          "detail": "考獲一個教導組專科徽章。",
+          "assessedBy": "member",
+          "group": "L5",
+          "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ChiefScoutsAward.pdf"
         }
-      ]
+      ],
+      "itemLabel": "進度項目",
+      "sourceUrl": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/pdf-zh/Progressive/ChiefScoutsAward.pdf"
     }
   ],
   "otherBadges": [
     {
-      "id": "INT-ANGLER",
-      "name": "釣魚章 (興趣組) (旅團考 - 領袖剔)",
-      "icon": "🎣",
-      "desc": "興趣組綠底，旅團主考，領袖直接剔/填日子",
+      "id": "SC-INT-001",
+      "name": "釣魚",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
       "group": "interest",
-      "assessedBy": "troop"
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
     },
     {
-      "id": "INT-ARTIST",
-      "name": "藝術章 (興趣組) (旅團考)",
-      "icon": "🎨",
-      "desc": "綠底興趣組，旅團考",
+      "id": "SC-INT-002",
+      "name": "愛護動物",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
       "group": "interest",
-      "assessedBy": "troop"
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
     },
     {
-      "id": "INT-CAMPCOOK",
-      "name": "營地烹飪章 (興趣組)",
-      "icon": "🍳",
-      "desc": "興趣組，旅團考",
+      "id": "SC-INT-003",
+      "name": "射箭",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
       "group": "interest",
-      "assessedBy": "troop"
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
     },
     {
-      "id": "INT-PHOTOGRAPHER",
-      "name": "攝影章 (興趣組)",
-      "icon": "📸",
-      "desc": "興趣組，旅團考",
+      "id": "SC-INT-004",
+      "name": "藝術",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
       "group": "interest",
-      "assessedBy": "troop"
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
     },
     {
-      "id": "INT-COMPUTER",
-      "name": "電腦章 (興趣組) 2022更新",
-      "icon": "💻",
-      "desc": "綠底，旅團考",
+      "id": "SC-INT-005",
+      "name": "運動",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
       "group": "interest",
-      "assessedBy": "troop"
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
     },
     {
-      "id": "PUR-CAMPER",
-      "name": "露營章 (技能組) (區主考 - 成員填日子領袖審批)",
-      "icon": "🏕️",
-      "desc": "技能組藍底，區會安排主考，成員填日子領袖審批=知會",
+      "id": "SC-INT-006",
+      "name": "觀鳥",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-007",
+      "name": "抱石",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-008",
+      "name": "營地烹飪",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-009",
+      "name": "營火",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-010",
+      "name": "獨木舟",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-011",
+      "name": "搜集",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-012",
+      "name": "電腦",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-013",
+      "name": "單車",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-014",
+      "name": "龍舟",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-015",
+      "name": "步操",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-016",
+      "name": "地質",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-017",
+      "name": "騎術",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-018",
+      "name": "風箏",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-019",
+      "name": "圖書管理",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-020",
+      "name": "氣象",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-021",
+      "name": "模型製作",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-022",
+      "name": "音樂",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-023",
+      "name": "自然",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-024",
+      "name": "公園定向",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-025",
+      "name": "動物飼養",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-026",
+      "name": "攝影",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-027",
+      "name": "划艇",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-028",
+      "name": "風帆",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-029",
+      "name": "農務",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-030",
+      "name": "立划板",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-031",
+      "name": "立划板水球",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-032",
+      "name": "游泳",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-033",
+      "name": "旅遊",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INT-034",
+      "name": "滑浪風帆",
+      "icon": "🟢",
+      "desc": "童軍訓練綱要：interest類別；詳情及考驗要求請參閱官方文件。",
+      "group": "interest",
+      "assessedBy": "troop",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-001",
+      "name": "立體打印",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
       "group": "pursuit",
-      "assessedBy": "member"
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
     },
     {
-      "id": "PUR-MAPREADER",
-      "name": "地圖閱讀章 (技能組)",
-      "icon": "🗺️",
-      "desc": "技能組，區考，成員填日子",
+      "id": "SC-PUR-002",
+      "name": "沿繩下降",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
       "group": "pursuit",
-      "assessedBy": "member"
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
     },
     {
-      "id": "PUR-PIONEER",
-      "name": "先鋒工程章 (技能組)",
-      "icon": "🪢",
-      "desc": "技能組，成員填日子",
+      "id": "SC-PUR-003",
+      "name": "射箭",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
       "group": "pursuit",
-      "assessedBy": "member"
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
     },
     {
-      "id": "PUR-PROGRAMMER",
-      "name": "編程章 (技能組) 2022新",
-      "icon": "👨‍💻",
-      "desc": "技能組藍底，區考",
+      "id": "SC-PUR-004",
+      "name": "天象",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
       "group": "pursuit",
-      "assessedBy": "member"
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
     },
     {
-      "id": "SER-FIRSTAIDER",
-      "name": "急救章 (服務組)",
-      "icon": "🩹",
-      "desc": "服務組紅底，區考，成員填日子",
+      "id": "SC-PUR-005",
+      "name": "航空領航",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-006",
+      "name": "原野烹飪",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-007",
+      "name": "露營",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-008",
+      "name": "獨木舟",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-009",
+      "name": "獨木舟水球",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-010",
+      "name": "攀登",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-011",
+      "name": "通訊",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-012",
+      "name": "烹飪",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-013",
+      "name": "手藝",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-014",
+      "name": "數據分析",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-015",
+      "name": "電子",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-016",
+      "name": "探險",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-017",
+      "name": "模擬飛行",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-018",
+      "name": "步操",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-019",
+      "name": "獨木舟國際賽艇",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-020",
+      "name": "地圖繪製",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-021",
+      "name": "地圖閱讀",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-022",
+      "name": "射擊",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-023",
+      "name": "技擊",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-024",
+      "name": "機械",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-025",
+      "name": "氣象",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-026",
+      "name": "多媒體創作",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-027",
+      "name": "領航",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-028",
+      "name": "觀察",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-029",
+      "name": "野外定向",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-030",
+      "name": "先鋒工程",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-031",
+      "name": "編程",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-032",
+      "name": "風帆賽艇舵手",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-033",
+      "name": "風帆",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-034",
+      "name": "徒手潛水",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-035",
+      "name": "艇長",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-036",
+      "name": "體育",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-037",
+      "name": "樹木護理",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-PUR-038",
+      "name": "國際友誼",
+      "icon": "🔵",
+      "desc": "童軍訓練綱要：pursuit類別；詳情及考驗要求請參閱官方文件。",
+      "group": "pursuit",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-SER-001",
+      "name": "愛護動物",
+      "icon": "🔴",
+      "desc": "童軍訓練綱要：service類別；詳情及考驗要求請參閱官方文件。",
       "group": "service",
-      "assessedBy": "member"
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
     },
     {
-      "id": "SER-FIREMAN",
-      "name": "消防章 (服務組)",
-      "icon": "🧯",
-      "desc": "服務組，區考",
+      "id": "SC-SER-002",
+      "name": "營地管理",
+      "icon": "🔴",
+      "desc": "童軍訓練綱要：service類別；詳情及考驗要求請參閱官方文件。",
       "group": "service",
-      "assessedBy": "member"
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
     },
     {
-      "id": "INS-CAMPCOOK",
-      "name": "營地烹飪章 (教導組) - 考獲3個月後教授他人",
-      "icon": "👨‍🏫",
-      "desc": "教導組黃底，需先考獲同項興趣/技能/服務章3個月後，教授其他童軍",
+      "id": "SC-SER-003",
+      "name": "獨木舟救生",
+      "icon": "🔴",
+      "desc": "童軍訓練綱要：service類別；詳情及考驗要求請參閱官方文件。",
+      "group": "service",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-SER-004",
+      "name": "公民",
+      "icon": "🔴",
+      "desc": "童軍訓練綱要：service類別；詳情及考驗要求請參閱官方文件。",
+      "group": "service",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-SER-005",
+      "name": "護養",
+      "icon": "🔴",
+      "desc": "童軍訓練綱要：service類別；詳情及考驗要求請參閱官方文件。",
+      "group": "service",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-SER-006",
+      "name": "網絡安全",
+      "icon": "🔴",
+      "desc": "童軍訓練綱要：service類別；詳情及考驗要求請參閱官方文件。",
+      "group": "service",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-SER-007",
+      "name": "多元共融",
+      "icon": "🔴",
+      "desc": "童軍訓練綱要：service類別；詳情及考驗要求請參閱官方文件。",
+      "group": "service",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-SER-008",
+      "name": "消防",
+      "icon": "🔴",
+      "desc": "童軍訓練綱要：service類別；詳情及考驗要求請參閱官方文件。",
+      "group": "service",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-SER-009",
+      "name": "急救",
+      "icon": "🔴",
+      "desc": "童軍訓練綱要：service類別；詳情及考驗要求請參閱官方文件。",
+      "group": "service",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-SER-010",
+      "name": "指引",
+      "icon": "🔴",
+      "desc": "童軍訓練綱要：service類別；詳情及考驗要求請參閱官方文件。",
+      "group": "service",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-SER-011",
+      "name": "語言",
+      "icon": "🔴",
+      "desc": "童軍訓練綱要：service類別；詳情及考驗要求請參閱官方文件。",
+      "group": "service",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-SER-012",
+      "name": "工藝",
+      "icon": "🔴",
+      "desc": "童軍訓練綱要：service類別；詳情及考驗要求請參閱官方文件。",
+      "group": "service",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-SER-013",
+      "name": "拯溺",
+      "icon": "🔴",
+      "desc": "童軍訓練綱要：service類別；詳情及考驗要求請參閱官方文件。",
+      "group": "service",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-SER-014",
+      "name": "精神健康",
+      "icon": "🔴",
+      "desc": "童軍訓練綱要：service類別；詳情及考驗要求請參閱官方文件。",
+      "group": "service",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-SER-015",
+      "name": "食物營養",
+      "icon": "🔴",
+      "desc": "童軍訓練綱要：service類別；詳情及考驗要求請參閱官方文件。",
+      "group": "service",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-SER-016",
+      "name": "領港",
+      "icon": "🔴",
+      "desc": "童軍訓練綱要：service類別；詳情及考驗要求請參閱官方文件。",
+      "group": "service",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-SER-017",
+      "name": "公共衞生",
+      "icon": "🔴",
+      "desc": "童軍訓練綱要：service類別；詳情及考驗要求請參閱官方文件。",
+      "group": "service",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-SER-018",
+      "name": "物資管理",
+      "icon": "🔴",
+      "desc": "童軍訓練綱要：service類別；詳情及考驗要求請參閱官方文件。",
+      "group": "service",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-SER-019",
+      "name": "秘書",
+      "icon": "🔴",
+      "desc": "童軍訓練綱要：service類別；詳情及考驗要求請參閱官方文件。",
+      "group": "service",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-SER-020",
+      "name": "國際友誼",
+      "icon": "🔴",
+      "desc": "童軍訓練綱要：service類別；詳情及考驗要求請參閱官方文件。",
+      "group": "service",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-001",
+      "name": "釣魚",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
       "group": "instructor",
-      "assessedBy": "member"
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
     },
     {
-      "id": "SEA-BOATMAN",
-      "name": "水手章 (海上活動)",
-      "icon": "⛵",
-      "desc": "海上活動，成員填日子",
+      "id": "SC-INS-002",
+      "name": "抱石",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-003",
+      "name": "營火",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-004",
+      "name": "單車",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-005",
+      "name": "模型製作",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-006",
+      "name": "攝影",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-007",
+      "name": "風帆",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-008",
+      "name": "游泳",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-009",
+      "name": "天象",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-010",
+      "name": "原野烹飪",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-011",
+      "name": "露營",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-012",
+      "name": "通訊",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-013",
+      "name": "烹飪",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-014",
+      "name": "手藝",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-015",
+      "name": "模擬飛行",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-016",
+      "name": "地圖繪製",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-017",
+      "name": "地圖閱讀",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-018",
+      "name": "機械",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-019",
+      "name": "氣象",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-020",
+      "name": "多媒體創作",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-021",
+      "name": "觀察",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-022",
+      "name": "野外定向",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-023",
+      "name": "先鋒工程",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-024",
+      "name": "編程",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-025",
+      "name": "樹木護理",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-026",
+      "name": "護養",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-INS-027",
+      "name": "拯溺",
+      "icon": "🟡",
+      "desc": "童軍訓練綱要：instructor類別；詳情及考驗要求請參閱官方文件。",
+      "group": "instructor",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-SEA-001",
+      "name": "艇工",
+      "icon": "⚓",
+      "desc": "童軍訓練綱要：sea；詳情及考驗要求請參閱官方文件。",
       "group": "sea",
-      "assessedBy": "member"
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
     },
     {
-      "id": "AIR-BASIC",
-      "name": "初級航空活動章",
+      "id": "SC-SEA-002",
+      "name": "水手",
+      "icon": "⚓",
+      "desc": "童軍訓練綱要：sea；詳情及考驗要求請參閱官方文件。",
+      "group": "sea",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-SEA-003",
+      "name": "水手長",
+      "icon": "⚓",
+      "desc": "童軍訓練綱要：sea；詳情及考驗要求請參閱官方文件。",
+      "group": "sea",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-AIR-001",
+      "name": "初級航空活動",
       "icon": "✈️",
-      "desc": "航空活動",
+      "desc": "童軍訓練綱要：air；詳情及考驗要求請參閱官方文件。",
       "group": "air",
-      "assessedBy": "member"
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
     },
     {
-      "id": "OT-COMMUNITY",
+      "id": "SC-AIR-002",
+      "name": "中級航空活動",
+      "icon": "✈️",
+      "desc": "童軍訓練綱要：air；詳情及考驗要求請參閱官方文件。",
+      "group": "air",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-AIR-003",
+      "name": "高級航空活動",
+      "icon": "✈️",
+      "desc": "童軍訓練綱要：air；詳情及考驗要求請參閱官方文件。",
+      "group": "air",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-OTH-001",
+      "name": "服務獎章",
+      "icon": "🏅",
+      "desc": "童軍訓練綱要：other；詳情及考驗要求請參閱官方文件。",
+      "group": "other",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-OTH-002",
+      "name": "領導才獎章",
+      "icon": "🏅",
+      "desc": "童軍訓練綱要：other；詳情及考驗要求請參閱官方文件。",
+      "group": "other",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-OTH-003",
+      "name": "小隊活動巾圈",
+      "icon": "🏅",
+      "desc": "童軍訓練綱要：other；詳情及考驗要求請參閱官方文件。",
+      "group": "other",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-OTH-004",
       "name": "社區參與章",
-      "icon": "🤝",
-      "desc": "其他獎章",
+      "icon": "🏅",
+      "desc": "童軍訓練綱要：other；詳情及考驗要求請參閱官方文件。",
       "group": "other",
-      "assessedBy": "member"
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
     },
     {
-      "id": "OT-AYP-BRONZE",
-      "name": "香港青年獎勵計劃銅章",
-      "icon": "🥉",
-      "desc": "AYP",
+      "id": "SC-OTH-005",
+      "name": "宗教章",
+      "icon": "🏅",
+      "desc": "童軍訓練綱要：other；詳情及考驗要求請參閱官方文件。",
       "group": "other",
-      "assessedBy": "member"
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-OTH-006",
+      "name": "維護自然世界章",
+      "icon": "🏅",
+      "desc": "童軍訓練綱要：other；詳情及考驗要求請參閱官方文件。",
+      "group": "other",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-OTH-007",
+      "name": "世界童軍環境章",
+      "icon": "🏅",
+      "desc": "童軍訓練綱要：other；詳情及考驗要求請參閱官方文件。",
+      "group": "other",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-OTH-008",
+      "name": "深資童軍先修章",
+      "icon": "🏅",
+      "desc": "童軍訓練綱要：other；詳情及考驗要求請參閱官方文件。",
+      "group": "other",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
+    },
+    {
+      "id": "SC-OTH-009",
+      "name": "香港青年獎勵計劃",
+      "icon": "🏅",
+      "desc": "童軍訓練綱要：other；詳情及考驗要求請參閱官方文件。",
+      "group": "other",
+      "assessedBy": "member",
+      "sourceUrl": "https://scoutsinfohub.org.hk/scout-training-scheme"
     }
   ],
   "trainingPlan": {
@@ -282,26 +1836,61 @@
       "小隊合作及領導",
       "戶外技能及服務"
     ],
-    "progressFlow": "會員章→探索獎章→標準獎章→高級獎章→總領袖獎章",
-    "assessmentPrinciples": "會員章及興趣組由旅團團長主考，技能組/服務組/教導組及高級以上由區會安排主考。興趣組領袖直接剔/填日子，其他由成員填日子領袖審批=知會。",
+    "progressFlow": "會員章→探索獎章→標準獎章→高級獎章→總領袖獎章（各獎章由進度項目組成，不設段章）",
+    "assessmentPrinciples": "興趣組可由童軍團長安排考驗；技能組、服務組及教導組須經童軍團長批准考驗申請，再由總會、地域或區會授權代表考驗。急救、消防、拯溺均屬服務組。",
     "links": [
-      {"title": "童軍資訊站 - 2026專科徽章更新", "url": "https://scoutsinfohub.org.hk/notice/tong-jun-zhi-bu-zhuan-ke-hui-zhang-geng-xin"},
-      {"title": "童軍訓練綱要 2015/2017版 PDF", "url": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/FullVersion-zh.pdf"},
-      {"title": "香港童軍獎章列表 維基", "url": "https://zh.wikipedia.org/wiki/香港童軍總會獎章列表"}
+      {
+        "title": "童軍訓練綱要（完整中文版）",
+        "url": "https://scoutsinfohub.org.hk/ScoutTrainingScheme/FullVersion-zh.pdf"
+      },
+      {
+        "title": "童軍資訊站",
+        "url": "https://scoutsinfohub.org.hk/"
+      },
+      {
+        "title": "童軍總會通告 P013/26",
+        "url": "https://www.scout.org.hk/uploads/tc/circulars/23262/p013-26.pdf"
+      }
     ]
   },
   "safeFromHarm": {
     "title": "保護童軍成員免受傷害 Safe from Harm",
     "policy": "所有童軍活動須在安全環境進行",
     "learning": [
-      {"title": "保護童軍成員免受傷害 網上自學課程", "url": "https://sfh.scout.org.hk", "mandatory": true}
+      {
+        "title": "保護童軍成員免受傷害 網上自學課程",
+        "url": "https://sfh.scout.org.hk",
+        "mandatory": true
+      }
     ],
-    "prevention": ["兩人同行", "保持界限"],
-    "handling": ["聆聽", "記錄", "報告"],
-    "hotlines": [{"name": "童軍總會", "tel": "2957 6414"}]
+    "prevention": [
+      "兩人同行",
+      "保持界限"
+    ],
+    "handling": [
+      "聆聽",
+      "記錄",
+      "報告"
+    ],
+    "hotlines": [
+      {
+        "name": "童軍總會",
+        "tel": "2957 6414"
+      }
+    ]
   },
   "forms": {
-    "PT18": {"name": "總領袖獎章及證書申請表 PT/18", "code": "PT/18"},
-    "PT120A": {"name": "童軍專科徽章證書 (綠表->白表)", "code": "PT120A"}
+    "PT18": {
+      "name": "總領袖獎章及證書申請表",
+      "code": "PT/18"
+    },
+    "PT120A": {
+      "name": "童軍專科徽章證書／申請表",
+      "code": "PT/120A"
+    },
+    "PT65": {
+      "name": "童軍考驗計劃／申請文件",
+      "code": "PT/65"
+    }
   }
 }
