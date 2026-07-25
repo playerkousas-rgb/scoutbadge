@@ -264,7 +264,7 @@ a:hover{text-decoration:underline}
   <div class="app-header-common">
     <div class="logo-row">
       <div class="logo-svg-wrap" aria-hidden="true" title="童軍">
-        <img src="assets/scout-logo-chief-256.png" alt="童軍標誌" onerror="this.onerror=null; this.src='assets/scout-logo-chief-128.png'; if(this.src.includes('128')){ this.onerror=function(){this.style.display='none'; document.getElementById('fallbackSvgHome').style.display='block';}; }">
+        <img src="assets/scout-logo-chief-256.png" alt="童軍標誌" onerror="this.onerror=null; this.src='assets/scout-logo-chief-256.png'; if(this.src.includes('128')){ this.onerror=function(){this.style.display='none'; document.getElementById('fallbackSvgHome').style.display='block';}; }">
         <svg id="fallbackSvgHome" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="display:none"><defs><radialGradient id="flameGrad2" cx="0.5" cy="0.3" r="0.7"><stop offset="0%" stop-color="#FFEE58"/><stop offset="50%" stop-color="#FFA000"/><stop offset="100%" stop-color="#BF360C"/></radialGradient></defs><path d="M30 85 L50 38 L70 85" fill="none" stroke="#FFD700" stroke-width="3" stroke-linecap="round"/><rect x="47" y="42" width="6" height="34" fill="#8B0000" rx="2"/><ellipse cx="50" cy="42" rx="9" ry="2.5" fill="none" stroke="#FFD700" stroke-width="1.2"/><path d="M45 46 Q42 36 48 28 Q50 24 50 20 Q50 16 52 13 Q55 18 54 24 Q53 28 55 32 Q58 38 55 46" fill="url(#flameGrad2)"/></svg>
       </div>
       <div style="text-align:left">
@@ -414,7 +414,7 @@ a:hover{text-decoration:underline}
 <div id="mainApp" style="display:none">
   <div class="main-app-header">
     <div class="left">
-      <div class="logo-mini" style="overflow:hidden"><img src="assets/scout-logo-chief-128.png" alt="logo" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:24px;height:24px;display:none"><path d="M30 85 L50 38 L70 85" fill="none" stroke="#FFD700" stroke-width="3" stroke-linecap="round"/><rect x="47" y="42" width="6" height="34" fill="#fff" rx="2"/><ellipse cx="50" cy="42" rx="9" ry="2.5" fill="none" stroke="#FFD700" stroke-width="1.2"/><path d="M45 46 Q42 36 48 28 Q50 24 50 20 Q50 16 52 13 Q55 18 54 24 Q53 28 55 32 Q58 38 55 46" fill="#FFD700"/></svg></div>
+      <div class="logo-mini" style="overflow:hidden"><img src="assets/scout-logo-chief-256.png" alt="logo" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:24px;height:24px;display:none"><path d="M30 85 L50 38 L70 85" fill="none" stroke="#FFD700" stroke-width="3" stroke-linecap="round"/><rect x="47" y="42" width="6" height="34" fill="#fff" rx="2"/><ellipse cx="50" cy="42" rx="9" ry="2.5" fill="none" stroke="#FFD700" stroke-width="1.2"/><path d="M45 46 Q42 36 48 28 Q50 24 50 20 Q50 16 52 13 Q55 18 54 24 Q53 28 55 32 Q58 38 55 46" fill="#FFD700"/></svg></div>
       <h1 id="appTitle">童軍進度追蹤</h1>
     </div>
     <div class="user-info">
@@ -2178,7 +2178,7 @@ const EMBEDDED_GUIDES={
   <h3>4. 表格列印</h3><p>自動填入，官方PT/18/PT/120A格式</p>
   <h3>5. 用戶管理</h3><ul><li>更變成員角色</li><li>⚙️權限設定：預設領袖全部 (*)，可按個別成員設定可考核範圍</li></ul>
   <h3>6. 系統設定</h3><p>允許成員互相查看進度：預設關，團長可開</p>
-};
+`};
 
 async function renderHelpTab(){
   const c=document.getElementById('tab-help');
