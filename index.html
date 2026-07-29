@@ -19,6 +19,16 @@
 body{font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang HK","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:16px;overscroll-behavior:none}
 a{color:var(--maroon);text-decoration:none}
 a:hover{text-decoration:underline}
+/* In-app syllabus button (replaces external jumps to training syllabus) */
+.link-btn{background:none;border:none;color:var(--maroon);font-size:10px;padding:0;margin-top:3px;cursor:pointer;text-decoration:underline;font-family:inherit}
+.link-btn:hover{color:var(--maroon-dark)}
+.syllabus-launch{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-family:inherit;transition:.2s;color:var(--text)}
+.syllabus-launch:hover{border-color:var(--maroon);background:var(--maroon-light)}
+.syllabus-seg-title{font-weight:700;font-size:12.5px;color:var(--maroon);margin-bottom:4px}
+.syllabus-item{font-size:12.5px;padding:6px 8px;border-radius:6px;margin:4px 0}
+.syllabus-item .syllabus-name{font-weight:600}
+.syllabus-item.hl{background:#FFF3CD;border:1px solid #FFE69C}
+.syllabus-item .syllabus-name.hl{font-weight:700}
 /* Header */
 .app-header-common{background:var(--maroon);color:#fff;padding:18px 16px;text-align:center;border-bottom:4px solid var(--gold);position:relative;overflow:hidden}
 .app-header-common::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(circle at 30% 20%, rgba(255,215,0,0.15) 0%, transparent 50%);pointer-events:none}
@@ -479,6 +489,16 @@ a:hover{text-decoration:underline}
     <div id="detailBody" style="font-size:12.5px;line-height:1.8;color:var(--text)"></div>
     <div class="modal-actions">
       <button class="btn btn-secondary" style="flex:1" onclick="closeModal('itemDetailModal')">關閉</button>
+    </div>
+  </div>
+</div>
+
+<div id="syllabusModal" class="modal">
+  <div class="modal-content" style="max-width:680px">
+    <h3 id="syllabusTitle">📚 訓練綱要</h3>
+    <div id="syllabusBody" style="font-size:12.5px;line-height:1.8;color:var(--text)"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('syllabusModal')">關閉</button>
     </div>
   </div>
 </div>
@@ -1173,7 +1193,7 @@ function renderItemRow(item, flat, targetYmis, isLeaderView){
       <input type="checkbox" class="checkbox" ${checked?'checked':''} ${editable?'':'disabled'} onchange="handleCheckboxToggle('${item.id}', this.checked, '${targetYmis}')">
       <div class="item-main">
         <div class="item-name">${item.name} ${isInterest?'<span style="background:var(--green);color:#fff;padding:1px 5px;border-radius:999px;font-size:9px">旅團考</span>':''} ${item.mandatory?'<span style="background:var(--red);color:#fff;padding:1px 5px;border-radius:999px;font-size:9px">必修</span>':''}</div>
-        ${item.sourceUrl?`<div style="font-size:10px;margin-top:3px"><a href="${item.sourceUrl}" target="_blank">📚 官方訓練綱要</a></div>`:''}${item.detail?`<div class="item-detail" style="display:none" id="detail-${item.id}">${item.detail}<br>${item.assessment?`<b>評核：</b>${item.assessment}<br>`:''}${item.tip?`<b>提示：</b>${item.tip}<br>`:''}${item.link?`<a href="${item.link}" target="_blank">🔗 參考連結</a><br>`:''}${item.links? item.links.map(l=>`<a href="${l.url}" target="_blank">🔗 ${l.title}</a>`).join('<br>'):''}</div>`:''}
+        <button class="link-btn" onclick="showSyllabusModal('${item.group||''}','${item.id}')">📚 訓練綱要（APP內）</button>${item.detail?`<div class="item-detail" style="display:none" id="detail-${item.id}">${item.detail}<br>${item.assessment?`<b>評核：</b>${item.assessment}<br>`:''}${item.tip?`<b>提示：</b>${item.tip}<br>`:''}${item.link?`<a href="${item.link}" target="_blank">🔗 參考連結</a><br>`:''}${item.links? item.links.map(l=>`<a href="${l.url}" target="_blank">🔗 ${l.title}</a>`).join('<br>'):''}</div>`:''}
         <div class="item-meta">${dateVal?`<span>📅 ${dateVal}</span>`:''}${item.evidence?`<span>📎 ${item.evidence}</span>`:''}${isInterest?' <span style="font-size:10px;color:var(--green)">由領袖考核</span>':' <span style="font-size:10px;color:var(--blue)">成員填日子領袖審批</span>'}</div>
       </div>
       <div class="item-actions">
@@ -1190,7 +1210,7 @@ function renderItemRow(item, flat, targetYmis, isLeaderView){
       <input type="checkbox" class="checkbox" ${checked?'checked':''} ${editable?'':'disabled'} onchange="handleCheckboxToggle('${item.id}', this.checked, '${targetYmis}', true)">
       <div class="item-main">
         <div class="item-name"><b>${item.name}</b> <span class="sub-count">${subDone}/${item.subItems.length}</span></div>
-        ${item.sourceUrl?`<div style="font-size:10px;margin-top:3px"><a href="${item.sourceUrl}" target="_blank">📚 官方訓練綱要</a></div>`:''}${item.detail?`<div class="item-detail" style="display:none" id="detail-${item.id}">${item.detail}</div>`:''}
+        <button class="link-btn" onclick="showSyllabusModal('${item.group||''}','${item.id}')">📚 訓練綱要（APP內）</button>${item.detail?`<div class="item-detail" style="display:none" id="detail-${item.id}">${item.detail}</div>`:''}
         <div class="item-meta">${dateVal?`📅 ${dateVal}`:''} ${item.requirement||''}</div>
       </div>
       <div class="item-actions">
@@ -1207,7 +1227,7 @@ function renderItemRow(item, flat, targetYmis, isLeaderView){
             <div class="item-main"><div class="item-name" style="font-size:12px">${sub.name}</div><div class="item-meta">${sd?`📅 ${sd}`:''}${sub.detail?` - ${sub.detail.substring(0,60)}`:''}</div></div>
             <div class="item-actions">
               ${editable?`<input type="date" value="${sd}" max="${todayISO()}" onchange="handleDateChange('${sub.id}', this.value, '${targetYmis}')">`:''}
-              <button class="info-btn" onclick="showSubDetail('${escapeAttr(sub.name)}','${escapeAttr(sub.detail||'')}')">ⓘ</button>
+              <button class="info-btn" onclick="showSubDetail('${escapeAttr(sub.name)}','${escapeAttr(sub.detail||'')}','${item.group||''}')">ⓘ</button>
               ${!editable?`<button class="btn btn-sm btn-outline" onclick="openRequestModal('${sub.id}', '${escapeAttr(sub.name)}')">${sc?'✅':'📝'}</button>`:''}
             </div>
           </div>`;
@@ -1241,9 +1261,74 @@ function toggleDetail(id){
   if(!el) return;
   el.style.display=el.style.display==='none'?'block':'none';
 }
-function showSubDetail(name, detail){
+function showSyllabusModal(badgeId, highlightId){
+  if(!itemsData){ showToast('資料未載入','error'); return; }
+  const bodyEl=document.getElementById('syllabusBody');
+  const titleEl=document.getElementById('syllabusTitle');
+  let html='';
+  const all = (badgeId==='*'||badgeId==='ALL');
+  const badges = all ? itemsData.badges : [itemsData.badges.find(b=>b.id===badgeId)].filter(Boolean);
+  if(badges.length===0){ showToast('未找到該獎章綱要','error'); return; }
+  if(!all){
+    const b=badges[0];
+    if(b.purpose) html+=`<div style="background:var(--maroon-light);border-left:4px solid var(--maroon);padding:8px 12px;border-radius:6px;margin-bottom:10px"><b>目的：</b>${b.purpose}</div>`;
+    if(b.description) html+=`<div style="font-size:12px;color:var(--text-light);margin-bottom:10px">${b.description}</div>`;
+    if(b.requirements||b.requirement) html+=`<div style="font-size:12px;margin-bottom:10px"><b>獎章要求：</b>${b.requirements||b.requirement}</div>`;
+    html+=`<div style="border-top:1px solid var(--border);margin:10px 0 6px"></div><b style="font-size:13px;color:var(--maroon)">考驗項目總覽（共 ${countSyllabusItems(b)} 項）</b>`;
+    getBadgeGroups(b).forEach(seg=>{
+      html+=`<div style="margin-top:10px"><div class="syllabus-seg-title">${seg.name} ${seg.desc?`<small style="font-weight:400;color:var(--text-light)">- ${seg.desc}</small>`:''} ${seg.requirement?`<small style="font-weight:400;color:var(--text-light)">| ${seg.requirement}</small>`:''}</div><div style="padding-left:8px;border-left:2px dashed var(--border);margin-top:4px">`;
+      seg.items.forEach(it=>{
+        const nodes=(it.subItems&&it.subItems.length)?it.subItems:[it];
+        nodes.forEach(node=>{
+          const isHi = highlightId && (node.id===highlightId || it.id===highlightId);
+          html+=`<div class="syllabus-item${isHi?' hl':''}"><div class="syllabus-name${isHi?' hl':''}">${isHi?'🔎 ':''}${node.name} <small style="color:var(--text-light);font-weight:400">(${node.id})</small></div>`;
+          if(node.detail) html+=`<div style="font-size:12px;color:var(--text-light);margin-top:2px">${node.detail}</div>`;
+          if(node.assessment) html+=`<div style="font-size:12px;margin-top:2px"><b>評核：</b>${node.assessment}</div>`;
+          if(node.tip) html+=`<div style="font-size:12px;margin-top:2px"><b>提示：</b>${node.tip}</div>`;
+          if(isHi && node.link) html+=`<div style="font-size:12px;margin-top:2px"><a href="${node.link}" target="_blank" rel="noopener">🔗 參考連結</a></div>`;
+          html+=`</div>`;
+        });
+      });
+      html+=`</div></div>`;
+    });
+    if(itemsData.trainingPlan && itemsData.trainingPlan.assessmentPrinciples) html+=`<div style="margin-top:12px;font-size:11.5px;color:var(--text-light);background:var(--bg);padding:8px;border-radius:6px"><b>評核原則：</b>${itemsData.trainingPlan.assessmentPrinciples}</div>`;
+    const src=findSyllabusSource(badgeId);
+    if(src) html+=`<div style="margin-top:12px;font-size:11px;color:var(--text-light);border-top:1px dashed var(--border);padding-top:8px">需要網絡時可查看官方原文：<a href="${src}" target="_blank" rel="noopener">🌐 官方訓練綱要 PDF（新視窗）</a></div>`;
+    titleEl.innerHTML=`📚 ${b.icon||''} ${b.name} 訓練綱要`;
+  } else {
+    titleEl.innerHTML='📚 童軍訓練綱要（APP內完整版）';
+    if(itemsData.trainingPlan){
+      const tp=itemsData.trainingPlan;
+      html+=`<div style="font-size:12px;line-height:1.8;margin-bottom:8px"><b>${tp.title}</b><br>${tp.purpose||''}</div>`;
+      html+=`<div style="font-size:11px;color:var(--text-light);background:var(--bg);padding:8px;border-radius:6px;margin-bottom:10px"><b>進度流程：</b>${tp.progressFlow||''}<br><b>評核原則：</b>${tp.assessmentPrinciples||''}</div>`;
+    }
+    itemsData.badges.forEach(b=>{
+      html+=`<div style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="font-weight:700;color:var(--maroon);font-size:13px">${b.icon||''} ${b.name}</div><button class="btn btn-sm btn-outline" onclick="showSyllabusModal('${b.id}')">查看詳細</button></div><div style="font-size:11px;color:var(--text-light);margin-top:4px">${b.purpose||''}</div><div style="font-size:11px;margin-top:6px">${b.items.map(it=>`<span style="display:inline-block;background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:2px 7px;margin:2px;font-size:10px">${it.name}</span>`).join('')}</div></div>`;
+    });
+  }
+  bodyEl.innerHTML=html;
+  document.getElementById('syllabusModal').classList.add('active');
+}
+function findSyllabusSource(badgeId){
+  if(badgeId==='*'||badgeId==='ALL'){
+    for(const b of itemsData.badges){ for(const it of b.items){ if(it.sourceUrl) return it.sourceUrl; } }
+    return '';
+  }
+  const b=itemsData.badges.find(x=>x.id===badgeId);
+  if(!b) return '';
+  for(const it of b.items){ if(it.sourceUrl) return it.sourceUrl; }
+  return '';
+}
+function countSyllabusItems(b){
+  let n=0;
+  getBadgeGroups(b).forEach(s=>s.items.forEach(it=>{ n+=(it.subItems&&it.subItems.length)?it.subItems.length:1; }));
+  return n;
+}
+function showSubDetail(name, detail, syllabusBadge){
   document.getElementById('detailTitle').textContent=name;
-  document.getElementById('detailBody').innerHTML=`<div style="white-space:pre-wrap">${detail||'暫無詳細說明，請參考訓練綱要。'}</div>`;
+  let html=`<div style="white-space:pre-wrap">${detail||'暫無詳細說明。'}</div>`;
+  if(syllabusBadge) html+=`<div style="margin-top:12px;text-align:center"><button class="btn btn-sm btn-outline" onclick="closeModal('itemDetailModal');showSyllabusModal('${syllabusBadge}')">📚 查看完整訓練綱要（APP內）</button></div>`;
+  document.getElementById('detailBody').innerHTML=html;
   document.getElementById('itemDetailModal').classList.add('active');
 }
 
@@ -2262,7 +2347,7 @@ function renderInfoTab(){
     </div>
     <div style="margin-top:10px"><b style="font-size:12px">進度流程：</b><span style="font-size:11px;background:var(--maroon-light);padding:3px 8px;border-radius:999px;margin-left:6px">${tp.progressFlow}</span></div>
     <div style="margin-top:8px;font-size:11px;color:var(--text-light)"><b>評估原則：</b>${tp.assessmentPrinciples}</div>
-    <div style="margin-top:10px"><b style="font-size:12px">有用連結：</b><div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">${tp.links.map(l=>`<a href="${l.url}" target="_blank" class="link-card" style="padding:8px;margin:0"><div class="link-icon">🔗</div><div class="link-text"><div class="title">${l.title}</div><div class="url">${l.url}</div></div></a>`).join('')}</div></div>
+    <div style="margin-top:10px"><b style="font-size:12px">訓練綱要：</b><button class="btn btn-sm btn-primary" style="margin-top:6px" onclick="showSyllabusModal('*')">📖 在APP內查看完整訓練綱要</button><div style="font-size:11px;color:var(--text-light);margin-top:6px">官方網上資源（需要網絡時才用）：</div><div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">${tp.links.map(l=>`<a href="${l.url}" target="_blank" rel="noopener" class="link-card" style="padding:8px;margin:0"><div class="link-icon">🔗</div><div class="link-text"><div class="title">${l.title}</div><div class="url">${l.url}</div></div></a>`).join('')}</div></div>
   </div>`;
 
   html+=`<div class="info-section"><h3>🛡️ ${sfh.title}</h3><p style="font-size:11px;background:#FFF5F5;padding:8px;border-radius:6px;border-left:3px solid var(--red)">${sfh.policy}</p>
@@ -2286,10 +2371,10 @@ function renderInfoTab(){
 
   html+=`<div class="info-section"><h3>📄 表格下載及佩戴指引</h3>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <a href="https://www.scout.org.hk/uploads/tc/circulars/23262/p013-26.pdf" target="_blank" class="link-card"><div class="link-icon">📄</div><div class="link-text"><div class="title">PT/18 總領袖獎章申請表</div><div class="url">童軍支部通告及表格資料</div></div></a>
-      <a href="https://www.scout.org.hk/uploads/tc/circulars/23262/p013-26.pdf" target="_blank" class="link-card"><div class="link-icon">🐉</div><div class="link-text"><div class="title">PT/120A 專科徽章申請表</div><div class="url">童軍支部通告及表格資料</div></div></a>
+      <a href="https://www.scout.org.hk/uploads/tc/circulars/23262/p013-26.pdf" target="_blank" rel="noopener" class="link-card"><div class="link-icon">📄</div><div class="link-text"><div class="title">PT/18 總領袖獎章申請表</div><div class="url">官方空白表格（亦可於「表格列印」自動填寫）</div></div></a>
+      <a href="https://www.scout.org.hk/uploads/tc/circulars/23262/p013-26.pdf" target="_blank" rel="noopener" class="link-card"><div class="link-icon">🐉</div><div class="link-text"><div class="title">PT/120A 專科徽章申請表</div><div class="url">官方空白表格（亦可於「表格列印」自動填寫）</div></div></a>
       <a href="https://scoutsinfohub.org.hk/" target="_blank" class="link-card"><div class="link-icon">👕</div><div class="link-text"><div class="title">徽章佩戴指引 (2024-04-01起)</div><div class="url">童軍支部資料</div></div></a>
-      <a href="https://scoutsinfohub.org.hk/ScoutTrainingScheme/FullVersion-zh.pdf" target="_blank" class="link-card"><div class="link-icon">🗂️</div><div class="link-text"><div class="title">童軍訓練綱要（完整中文版）</div><div class="url">scoutsinfohub.org.hk</div></div></a>
+      <button class="syllabus-launch" onclick="showSyllabusModal('*')"><div class="link-icon">📖</div><div class="link-text"><div class="title">童軍訓練綱要（APP內完整版）</div><div class="url">無須跳轉，直接在 APP 內查看各獎章考驗</div></div></button>
     </div>
     <div style="margin-top:10px;font-size:11px;line-height:1.6;background:var(--bg);padding:10px;border-radius:8px">
       <b>佩戴重點（2024新指引）：</b><br>
@@ -2368,9 +2453,9 @@ async function loadUsers(){
         </div>`;
       }
 
-      let h=roleExplain+systemSettingHtml+mockTool+'<div class="filter-bar"><button class="btn btn-sm btn-primary" onclick="addMemberFromApp()">➕ 新增成員</button><button class="btn btn-sm btn-secondary" onclick="downloadSquadReport()">⬇️ 小隊報表</button><button class="btn btn-sm btn-outline" onclick="loadAuditHistory()">🧾 操作紀錄</button><button class="btn btn-sm btn-outline" onclick="loadApprovalHistory()">✅ 審批歷史</button><label class="btn btn-sm btn-secondary">📥 匯入 CSV<input type="file" accept=".csv" onchange="importMembersCSV(this.files[0])" style="display:none"></label><input type="text" id="userSearch" placeholder="搜尋姓名/ YMIS/ Email" oninput="filterUsers()" style="flex:1"></div><div id="userList">';
+      let h=roleExplain+systemSettingHtml+mockTool+'<div class="filter-bar"><button class="btn btn-sm btn-warning" onclick="openBulkOnboardModal()">📥 批量開戶</button><button class="btn btn-sm btn-primary" onclick="addMemberFromApp()">➕ 新增成員</button><button class="btn btn-sm btn-secondary" onclick="downloadSquadReport()">⬇️ 小隊報表</button><button class="btn btn-sm btn-outline" onclick="loadAuditHistory()">🧾 操作紀錄</button><button class="btn btn-sm btn-outline" onclick="loadApprovalHistory()">✅ 審批歷史</button><label class="btn btn-sm btn-secondary">📥 匯入 CSV<input type="file" accept=".csv" onchange="importMembersFull(this.files[0])" style="display:none"></label><input type="text" id="userSearch" placeholder="搜尋姓名/ YMIS/ Email" oninput="filterUsers()" style="flex:1"></div><div id="userList">';
       h+=d.users.map(u=>`<div class="user-item" data-search="${(u.name+u.ymis+u.email).toLowerCase()}"><div class="user-item-info"><b>${u.name}</b> ${u.ymis?`(${u.ymis})`:''} ${u.email?` - ${u.email}`:''}<span class="role-badge role-${u.role}">${getRoleName(u.role)}</span> ${u.can_tick?'<span style="background:var(--green-light);color:var(--green);padding:1px 6px;border-radius:999px;font-size:9px">可勾選</span>':''}<br><small style="font-size:10px;color:var(--text-light)">權限: ${u.allowed_badges|| (u.role==='member'?'無':'全部(*)')}</small></div><div class="user-item-actions">`+
-        (['admin','group_leader','branch_leader','super_admin'].includes(currentUser.role)&&u.ymis!==currentUser.ymis?`<select onchange="updateUserRole('${u.ymis}',this.value)"><option value="member" ${u.role==='member'?'selected':''}>團員</option><!-- 童軍無執委 --><option value="branch_leader" ${u.role==='branch_leader'?'selected':''}>支部領袖</option><option value="group_leader" ${u.role==='group_leader'?'selected':''}>團長</option><option value="admin" ${u.role==='admin'?'selected':''}>管理員</option></select><button class="btn btn-sm ${u.can_tick?'btn-danger':'btn-success'}" onclick="toggleCanTick('${u.ymis}',${!u.can_tick})">${u.can_tick?'收回勾選':'授權勾選'}</button><button class="btn btn-sm btn-warning" onclick="openPermissionModal('${u.ymis}','${u.name.replace(/'/g,"\'") }','${u.role}','${(u.allowed_badges||'').replace(/'/g,"")}')">⚙️ 權限</button><button class="btn btn-sm btn-warning" onclick="resetMemberPassword('${u.ymis}')">🔑 重設密碼</button><button class="btn btn-sm btn-outline" onclick="editSquad('${u.ymis}','${(u.squad||'').replace(/'/g,"\'")}','${(u.squad_role||'member').replace(/'/g,"\'")}')">🧭 小隊</button>`:'' )+
+        (['admin','group_leader','branch_leader','super_admin'].includes(currentUser.role)&&u.ymis!==currentUser.ymis?`<select onchange="updateUserRole('${u.ymis}',this.value)"><option value="member" ${u.role==='member'?'selected':''}>團員</option><!-- 童軍無執委 --><option value="branch_leader" ${u.role==='branch_leader'?'selected':''}>支部領袖</option><option value="group_leader" ${u.role==='group_leader'?'selected':''}>團長</option><option value="admin" ${u.role==='admin'?'selected':''}>管理員</option></select><button class="btn btn-sm ${u.can_tick?'btn-danger':'btn-success'}" onclick="toggleCanTick('${u.ymis}',${!u.can_tick})">${u.can_tick?'收回勾選':'授權勾選'}</button><button class="btn btn-sm btn-warning" onclick="openPermissionModal('${u.ymis}','${u.name.replace(/'/g,"\'") }','${u.role}','${(u.allowed_badges||'').replace(/'/g,"")}')">⚙️ 權限</button><button class="btn btn-sm btn-warning" onclick="resetMemberPassword('${u.ymis}')">🔑 重設密碼</button><button class="btn btn-sm btn-outline" onclick="editSquad('${u.ymis}','${(u.squad||'').replace(/'/g,"\'")}','${(u.squad_role||'member').replace(/'/g,"\'")}')">🧭 小隊</button><button class="btn btn-sm btn-danger" onclick="deactivateUser('${u.ymis}')">🗑️ 停用</button>`:'' )+
         `</div></div>`).join('');
       h+='</div>';
       c.innerHTML=h;
@@ -2387,6 +2472,68 @@ async function loadApprovalHistory(){try{const r=await fetch(currentBackend,{met
 async function loadAuditHistory(){
  try{const r=await fetch(currentBackend,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'getAuditLog',token:currentToken})});const d=await r.json();if(!d.success)throw Error(d.error);const q=prompt('輸入搜尋字詞（可留空）','')||'';const list=(d.records||[]).filter(x=>x.join(' ').toLowerCase().includes(q.toLowerCase()));alert(list.slice(-50).map(x=>x.join(' | ')).join('\n')||'沒有紀錄');}catch(e){showToast('讀取操作紀錄失敗：'+e.message,'error');}
 }
+/* ================== Bulk Onboarding ================== */
+function downloadMembersTemplate(){
+  const csv='ymis,name,email,squad,squad_role,role,can_tick,password,note\n1234560001,王小明,wong@example.org,紅隊,member,member,false,,新團員\n1234560002,李小華,lee@example.org,藍隊,member,member,false,,轉隊\n';
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='members_template.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  showToast('已下載成員範本 CSV','success');
+}
+function parseMemberCSV(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(!lines.length) return [];
+  const headers=lines[0].split(',').map(h=>h.trim());
+  const out=[];
+  for(const line of lines.slice(1)){
+    const cols=line.split(',');
+    const o={};headers.forEach((h,i)=>o[h]=(cols[i]||'').trim());
+    if(/^\d{10}$/.test(o.ymis||'')) out.push({ymis:o.ymis,name:o.name||'',email:o.email||'',squad:o.squad||'',squad_role:o.squad_role||'member',role:o.role||'member',can_tick:['true','1','yes','y'].includes((o.can_tick||'').toLowerCase()),password:o.password||'',note:o.note||''});
+  }
+  return out;
+}
+async function importMembersFull(file){
+  if(!file)return;
+  const text=await file.text();
+  await bulkAddMembers(parseMemberCSV(text));
+}
+async function bulkAddMembers(list){
+  if(!list.length){showToast('沒有有效資料（YMIS 須為10位數字）','warning');return;}
+  const existing=new Set(members.map(m=>m.ymis));
+  let ok=0,skip=0;const errs=[];
+  for(const m of list){
+    if(existing.has(m.ymis)){skip++;continue;}
+    try{
+      const action=m.password?'addUser':'addMember';
+      const payload={action,token:currentToken,apikey:currentApikey,ymis:m.ymis,name:m.name,email:m.email,squad:m.squad,squad_role:m.squad_role,role:m.role,can_tick:m.can_tick,password:m.password};
+      const r=await fetch(currentBackend,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)});
+      const d=await r.json();
+      if(d.success){ok++;existing.add(m.ymis);}else{skip++;errs.push(m.ymis+':'+(d.error||'失敗'));}
+    }catch(e){skip++;errs.push(m.ymis+':網絡錯誤');}
+  }
+  showToast(`批量開戶完成：成功 ${ok} 筆，略過 ${skip} 筆`,errs.length?'warning':'success');
+  if(errs.length) console.warn('批量開戶失敗：',errs);
+  loadUsers();
+}
+function openBulkOnboardModal(){ document.getElementById('bulkOnboardModal').classList.add('active'); }
+async function bulkAddFromJSON(){
+  const raw=document.getElementById('bulkJson').value;
+  let arr; try{ arr=JSON.parse(raw); }catch(e){ showToast('JSON 格式錯誤','error'); return; }
+  if(!Array.isArray(arr)) arr=[arr];
+  const list=arr.filter(o=>/^\d{10}$/.test(String(o.ymis))).map(o=>({ymis:String(o.ymis),name:o.name||'',email:o.email||'',squad:o.squad||'',squad_role:o.squad_role||'member',role:o.role||'member',can_tick:['true','1','yes','y'].includes(String(o.can_tick||'').toLowerCase()),password:o.password||'',note:o.note||''}));
+  await bulkAddMembers(list);
+  closeModal('bulkOnboardModal');
+}
+
+async function deactivateUser(ymis){
+  if(!confirm('確定停用此帳號？停用後將無法登入，資料會保留。'))return;
+  try{
+    const r=await fetch(currentBackend,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'deactivateUser',token:currentToken,target_ymis:ymis})});
+    const d=await r.json();
+    if(!d.success)throw new Error(d.error);
+    showToast('已停用 '+ymis,'success');
+    loadUsers();
+  }catch(e){ showToast('停用失敗：'+e.message,'error'); }
+}
+
 async function addMemberFromApp(){
   const ymis=prompt('成員 YMIS（10位數字）'); if(!ymis)return;
   const name=prompt('成員姓名'); if(!name)return;
@@ -2623,5 +2770,26 @@ async function reviewApp(id,dec){
   }catch(e){ showToast('錯誤','error'); }
 }
 </script>
+<div id="bulkOnboardModal" class="modal">
+  <div class="modal-content" style="max-width:640px">
+    <h3>📥 批量開戶</h3>
+    <div class="info-section" style="font-size:12px;line-height:1.7">
+      <p><b>方法一：上傳 CSV（最快）</b><br>先下載範本 → 填寫 → 上傳。有填密碼/角色會開立可登入帳號，否則只加入成員。</p>
+      <p><b>方法二（進階／備用，日常不建議）：Google Sheets 直接寫入</b><br>把 CSV 匯入 Google Sheets → 填寫 → 用附帶的 Apps Script（<a href="assets/batch-onboard/Code.gs" target="_blank">Code.gs</a>）轉 JSON 並直接寫入主資料表。一般請用「方法一」在前端完成即可。詳見 <a href="docs/BULK_ONBOARD.md" target="_blank">說明</a>。</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
+      <button class="btn btn-sm btn-primary" onclick="downloadMembersTemplate()">⬇️ 下載成員範本 CSV</button>
+      <label class="btn btn-sm btn-secondary">📥 上傳填好的 CSV<input type="file" accept=".csv" onchange="importMembersFull(this.files[0])" style="display:none"></label>
+      <a class="btn btn-sm btn-outline" href="assets/batch-onboard/Code.gs" target="_blank">📄 下載 Sheets Script（進階備用）</a>
+    </div>
+    <div style="font-size:11px;color:var(--text-light);margin-bottom:6px">或直接貼上 JSON 陣列（[{ymis,name,...}]）：</div>
+    <textarea id="bulkJson" style="width:100%;height:120px;font-family:monospace;font-size:11px;padding:6px;border:1px solid var(--border);border-radius:8px"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-sm btn-success" style="flex:1" onclick="bulkAddFromJSON()">🚀 由 JSON 批量開戶</button>
+      <button class="btn btn-sm btn-secondary" style="flex:1" onclick="closeModal('bulkOnboardModal')">關閉</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
