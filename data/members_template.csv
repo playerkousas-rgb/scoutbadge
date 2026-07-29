@@ -1,0 +1,4 @@
+ymis,name,email,squad,squad_role,role,can_tick,password,note
+1234560001,王小明,wong@example.org,紅隊,member,member,false,,新團員
+1234560002,李小華,lee@example.org,藍隊,member,member,false,,轉隊
+1234560003,張大衛,cheung@example.org,紅隊,member,branch_leader,true,secret123,副隊長可剔章
