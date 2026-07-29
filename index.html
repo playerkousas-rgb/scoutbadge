@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>童軍支部進度及行政平台</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <style>
@@ -19,11 +19,17 @@
 body{font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang HK","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:16px;overscroll-behavior:none}
 a{color:var(--maroon);text-decoration:none}
 a:hover{text-decoration:underline}
-/* In-app syllabus button (replaces external jumps to training syllabus) */
-.link-btn{background:none;border:none;color:var(--maroon);font-size:10px;padding:0;margin-top:3px;cursor:pointer;text-decoration:underline;font-family:inherit}
+/* In-app syllabus content: display inline instead of pop-up for mobile record-book use */
+.link-btn{background:none;border:none;color:var(--maroon);font-size:12px;padding:0;margin-top:3px;cursor:pointer;text-decoration:underline;font-family:inherit}
 .link-btn:hover{color:var(--maroon-dark)}
 .syllabus-launch{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-family:inherit;transition:.2s;color:var(--text)}
 .syllabus-launch:hover{border-color:var(--maroon);background:var(--maroon-light)}
+.syllabus-inline{display:block;margin-top:7px;background:#F7FBF7;border:1px solid #DDEBDD;border-left:3px solid var(--maroon);border-radius:8px;padding:8px 10px;font-size:12.5px;color:#334155;line-height:1.7;word-break:break-word}
+.syllabus-inline b{color:var(--maroon)}
+.syllabus-inline .syllabus-extra{margin-top:4px}
+.syllabus-inline a{font-size:12px}
+.syllabus-direct-note{display:inline-block;background:var(--green-light);color:var(--green);padding:3px 8px;border-radius:999px;font-size:11px;margin:4px 6px 4px 0}
+.syllabus-full-inline{scroll-margin-top:90px}
 .syllabus-seg-title{font-weight:700;font-size:12.5px;color:var(--maroon);margin-bottom:4px}
 .syllabus-item{font-size:12.5px;padding:6px 8px;border-radius:6px;margin:4px 0}
 .syllabus-item .syllabus-name{font-weight:600}
@@ -261,10 +267,64 @@ a:hover{text-decoration:underline}
 .step-content p{color:var(--text-light);font-size:11.5px;line-height:1.6}
 
 @media(max-width:768px){
-  .level-structure{grid-template-columns:repeat(2,1fr)}
-  .info-grid{grid-template-columns:1fr}
-  .troop-grid{grid-template-columns:repeat(2,1fr)}
-  .other-grid{grid-template-columns:1fr}
+  body{font-size:15px;line-height:1.65}
+  .container{padding:12px}
+  .level-structure{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .info-grid,.other-grid{grid-template-columns:1fr}
+  .troop-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .logo-row{gap:10px}
+  .logo-svg-wrap{width:48px;height:48px;border-radius:12px}
+  .logo-row h1{font-size:18px;line-height:1.25}
+  .logo-row p,.header-subtitle{font-size:11px}
+  .welcome-nav{gap:6px;margin:12px 0}
+  .welcome-nav button{flex:1 1 calc(50% - 6px);min-height:42px;padding:9px 10px}
+  .login-container{margin:12px auto;padding:18px;border-radius:14px}
+  .main-app-header{position:static;padding:9px 12px}
+  .main-app-header .left{min-width:0;flex:1}
+  .main-app-header h1{font-size:14px;line-height:1.35;white-space:normal}
+  .user-info{width:100%;justify-content:space-between}
+  .user-chip{max-width:calc(100% - 82px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .nav-tabs{top:0;z-index:120}
+  .nav-tab{min-width:92px;min-height:44px;padding:11px 10px;font-size:12px}
+  .tab-content{padding:12px}
+  .badge-header{padding:12px;align-items:flex-start;gap:8px}
+  .badge-header h3{font-size:14px;line-height:1.45;display:block}
+  .segment-header{padding:10px 12px;align-items:flex-start;gap:8px}
+  .items-container{padding:6px 10px}
+  .item-row,.sub-item{align-items:flex-start;flex-wrap:wrap;gap:8px;padding:10px 0}
+  .item-row.checked{padding:10px 8px;margin:2px 0}
+  .checkbox{width:24px;height:24px;margin-top:2px}
+  .item-main{flex:1 1 calc(100% - 42px)}
+  .item-name{font-size:14px;line-height:1.55}
+  .item-meta{font-size:12px}
+  .item-actions{width:100%;margin-left:32px;gap:6px}
+  .item-actions .btn{min-height:40px;flex:1 1 auto}
+  .info-btn{width:40px;height:40px;font-size:14px}
+  .item-actions input[type="date"],.item-actions input[type="text"],.progress-note{width:100%!important;min-height:40px;font-size:13px!important}
+  .item-detail,.syllabus-inline{font-size:12.5px;line-height:1.65;margin-top:8px;padding:8px}
+  .sub-items{padding-left:14px;margin-left:4px}
+  .filter-bar{gap:6px}
+  .filter-bar input,.filter-bar select,.filter-bar .btn{flex:1 1 100%;min-height:40px}
+  [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
+  .form-row{flex-direction:column;gap:0}
+  .form-group input,.form-group select,.form-group textarea{min-height:42px;font-size:16px}
+  .modal{align-items:flex-end;padding:0}
+  .modal-content{max-height:88vh;border-radius:16px 16px 0 0;padding:18px 14px}
+  .modal-actions{position:sticky;bottom:0;background:var(--card);padding-top:10px}
+  .save-bar{padding:10px 12px calc(10px + env(safe-area-inset-bottom));flex-direction:column;align-items:stretch;gap:8px}
+  .save-bar>div:last-child{width:100%}
+  .save-bar .btn{flex:1;min-height:40px}
+  .print-field{flex-direction:column;align-items:stretch}
+  .print-field label{min-width:0}
+  .link-card,.syllabus-launch{align-items:flex-start}
+}
+@media(max-width:420px){
+  .troop-grid{grid-template-columns:1fr}
+  .welcome-nav button{flex-basis:100%}
+  .level-box{padding:10px 6px}
+  .level-box .level-num{font-size:18px}
+  .tab-content{padding:10px}
+  .badge-header h3 small{display:block;margin-top:2px}
 }
 </style>
 </head>
@@ -858,7 +918,8 @@ function setupTabsByRole(){
     const p=localStorage.getItem(LS.pending(currentTroopId));
     if(p){ pendingChanges=JSON.parse(p); updateSaveBar(); }
   }catch(e){}
-  if(isMember){
+  if(isMember && !setupTabsByRole._memberToastShown){
+    setupTabsByRole._memberToastShown=true;
     showToast('成員模式：只能查看自己進度，其他獎章及申請','warning');
   }
 }
@@ -936,6 +997,7 @@ async function loadItemsAndProgress(){
   try{
     // 先載入系統設定（私隱開關）
     await loadAppConfig();
+    setupTabsByRole();
     const r1=await fetch('data/items.json'); itemsData=await r1.json();
     // backend load
     let backendData=null;
@@ -1011,6 +1073,8 @@ function switchTab(name, btn){
         else if(name==='forms') renderFormsTab();
         else if(name==='help') renderHelpTab();
         else if(name==='info') renderInfoTab();
+        else if(name==='other') renderOtherBadgesTab();
+        else if(name==='byitem') renderByItemTab();
         else if(name==='users') loadUsers();
         else if(name==='apps') loadApplications();
       }catch(e){
@@ -1177,6 +1241,24 @@ function getSegmentItemIds(seg){
   });
   return ids;
 }
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function renderInlineSyllabus(item){
+  const parts=[];
+  if(item.detail) parts.push(`<div><b>綱要內容：</b><span style="white-space:pre-wrap">${escapeHtml(item.detail)}</span></div>`);
+  if(item.requirement) parts.push(`<div class="syllabus-extra"><b>要求：</b>${escapeHtml(item.requirement)}</div>`);
+  if(item.assessment) parts.push(`<div class="syllabus-extra"><b>評核：</b>${escapeHtml(item.assessment)}</div>`);
+  if(item.tip) parts.push(`<div class="syllabus-extra"><b>提示：</b>${escapeHtml(item.tip)}</div>`);
+  if(item.evidence) parts.push(`<div class="syllabus-extra"><b>證明：</b>${escapeHtml(item.evidence)}</div>`);
+  const links=[];
+  if(item.link) links.push({title:'參考連結', url:item.link});
+  if(item.sourceUrl) links.push({title:'官方原文', url:item.sourceUrl});
+  if(Array.isArray(item.links)) item.links.forEach(l=>links.push({title:l.title||'參考連結', url:l.url}));
+  const linksHtml=links.filter(l=>l.url).map(l=>`<a href="${escapeHtml(l.url)}" target="_blank" rel="noopener">🔗 ${escapeHtml(l.title)}</a>`).join('　');
+  if(parts.length===0 && !linksHtml) return `<div class="syllabus-inline"><b>綱要內容：</b>請參考所屬獎章整體要求。</div>`;
+  return `<div class="syllabus-inline" id="detail-${escapeHtml(item.id||'')}">📚 ${parts.join('')}${linksHtml?`<div class="syllabus-extra">${linksHtml}</div>`:''}</div>`;
+}
 function renderItemRow(item, flat, targetYmis, isLeaderView){
   const isParent=item.subItems && item.subItems.length>0;
   const checked=flat[item.id]?true:false;
@@ -1193,12 +1275,11 @@ function renderItemRow(item, flat, targetYmis, isLeaderView){
       <input type="checkbox" class="checkbox" ${checked?'checked':''} ${editable?'':'disabled'} onchange="handleCheckboxToggle('${item.id}', this.checked, '${targetYmis}')">
       <div class="item-main">
         <div class="item-name">${item.name} ${isInterest?'<span style="background:var(--green);color:#fff;padding:1px 5px;border-radius:999px;font-size:9px">旅團考</span>':''} ${item.mandatory?'<span style="background:var(--red);color:#fff;padding:1px 5px;border-radius:999px;font-size:9px">必修</span>':''}</div>
-        <button class="link-btn" onclick="showSyllabusModal('${item.group||''}','${item.id}')">📚 訓練綱要（APP內）</button>${item.detail?`<div class="item-detail" style="display:none" id="detail-${item.id}">${item.detail}<br>${item.assessment?`<b>評核：</b>${item.assessment}<br>`:''}${item.tip?`<b>提示：</b>${item.tip}<br>`:''}${item.link?`<a href="${item.link}" target="_blank">🔗 參考連結</a><br>`:''}${item.links? item.links.map(l=>`<a href="${l.url}" target="_blank">🔗 ${l.title}</a>`).join('<br>'):''}</div>`:''}
+        ${renderInlineSyllabus(item)}
         <div class="item-meta">${dateVal?`<span>📅 ${dateVal}</span>`:''}${item.evidence?`<span>📎 ${item.evidence}</span>`:''}${isInterest?' <span style="font-size:10px;color:var(--green)">由領袖考核</span>':' <span style="font-size:10px;color:var(--blue)">成員填日子領袖審批</span>'}</div>
       </div>
       <div class="item-actions">
         ${editable?`<input type="date" value="${dateVal}" max="${todayISO()}" onchange="handleDateChange('${item.id}', this.value, '${targetYmis}')">`:''}${editable?`<input type="text" class="progress-note" placeholder="證明／備註" value="${escapeAttr(item.note||'')}" onchange="handleNoteChange('${item.id}', this.value, '${targetYmis}')" style="width:120px;font-size:10px">`:''}
-        <button class="info-btn" onclick="toggleDetail('${item.id}')" title="查看考驗說明">ⓘ</button>
         ${!editable && !isInterest?`<button class="btn btn-sm btn-outline" onclick="openRequestModal('${item.id}', '${escapeAttr(item.name)}')" title="申請完成">${checked?'✅ 已完成':'📝 申請'}</button>`:''}
         ${!editable && isInterest?`<span style="font-size:10px;color:var(--text-light)">由領袖剔</span>`:''}
       </div>
@@ -1210,12 +1291,11 @@ function renderItemRow(item, flat, targetYmis, isLeaderView){
       <input type="checkbox" class="checkbox" ${checked?'checked':''} ${editable?'':'disabled'} onchange="handleCheckboxToggle('${item.id}', this.checked, '${targetYmis}', true)">
       <div class="item-main">
         <div class="item-name"><b>${item.name}</b> <span class="sub-count">${subDone}/${item.subItems.length}</span></div>
-        <button class="link-btn" onclick="showSyllabusModal('${item.group||''}','${item.id}')">📚 訓練綱要（APP內）</button>${item.detail?`<div class="item-detail" style="display:none" id="detail-${item.id}">${item.detail}</div>`:''}
+        ${renderInlineSyllabus(item)}
         <div class="item-meta">${dateVal?`📅 ${dateVal}`:''} ${item.requirement||''}</div>
       </div>
       <div class="item-actions">
         ${editable?`<input type="date" value="${dateVal}" max="${todayISO()}" onchange="handleDateChange('${item.id}', this.value, '${targetYmis}')">`:''}
-        <button class="info-btn" onclick="toggleDetail('${item.id}')">ⓘ</button>
         <span style="font-size:10px;cursor:pointer" onclick="toggleSubItems(this)">▶ 展開</span>
       </div>
       <div class="sub-items" style="display:none;flex-basis:100%;margin-top:8px;width:100%">
@@ -1224,10 +1304,9 @@ function renderItemRow(item, flat, targetYmis, isLeaderView){
           const sd=flat[sub.id]||'';
           return `<div class="sub-item ${sc?'checked':''}" data-item-id="${sub.id}">
             <input type="checkbox" class="checkbox" ${sc?'checked':''} ${editable?'':'disabled'} onchange="handleCheckboxToggle('${sub.id}', this.checked, '${targetYmis}')">
-            <div class="item-main"><div class="item-name" style="font-size:12px">${sub.name}</div><div class="item-meta">${sd?`📅 ${sd}`:''}${sub.detail?` - ${sub.detail.substring(0,60)}`:''}</div></div>
+            <div class="item-main"><div class="item-name" style="font-size:12px">${sub.name}</div>${renderInlineSyllabus(sub)}<div class="item-meta">${sd?`📅 ${sd}`:''}</div></div>
             <div class="item-actions">
               ${editable?`<input type="date" value="${sd}" max="${todayISO()}" onchange="handleDateChange('${sub.id}', this.value, '${targetYmis}')">`:''}
-              <button class="info-btn" onclick="showSubDetail('${escapeAttr(sub.name)}','${escapeAttr(sub.detail||'')}','${item.group||''}')">ⓘ</button>
               ${!editable?`<button class="btn btn-sm btn-outline" onclick="openRequestModal('${sub.id}', '${escapeAttr(sub.name)}')">${sc?'✅':'📝'}</button>`:''}
             </div>
           </div>`;
@@ -1296,7 +1375,7 @@ function showSyllabusModal(badgeId, highlightId){
     if(src) html+=`<div style="margin-top:12px;font-size:11px;color:var(--text-light);border-top:1px dashed var(--border);padding-top:8px">需要網絡時可查看官方原文：<a href="${src}" target="_blank" rel="noopener">🌐 官方訓練綱要 PDF（新視窗）</a></div>`;
     titleEl.innerHTML=`📚 ${b.icon||''} ${b.name} 訓練綱要`;
   } else {
-    titleEl.innerHTML='📚 童軍訓練綱要（APP內完整版）';
+    titleEl.innerHTML='📚 童軍訓練綱要（頁面內直接顯示）';
     if(itemsData.trainingPlan){
       const tp=itemsData.trainingPlan;
       html+=`<div style="font-size:12px;line-height:1.8;margin-bottom:8px"><b>${tp.title}</b><br>${tp.purpose||''}</div>`;
@@ -1306,8 +1385,16 @@ function showSyllabusModal(badgeId, highlightId){
       html+=`<div style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="font-weight:700;color:var(--maroon);font-size:13px">${b.icon||''} ${b.name}</div><button class="btn btn-sm btn-outline" onclick="showSyllabusModal('${b.id}')">查看詳細</button></div><div style="font-size:11px;color:var(--text-light);margin-top:4px">${b.purpose||''}</div><div style="font-size:11px;margin-top:6px">${b.items.map(it=>`<span style="display:inline-block;background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:2px 7px;margin:2px;font-size:10px">${it.name}</span>`).join('')}</div></div>`;
     });
   }
-  bodyEl.innerHTML=html;
-  document.getElementById('syllabusModal').classList.add('active');
+  bodyEl.innerHTML=html; // 保留內容給舊版 modal 容器，但不再彈出
+  document.querySelectorAll('#inlineSyllabusPanel').forEach(p=>p.remove());
+  const activeTab=document.querySelector('.tab-content.active') || document.getElementById('tab-info') || document.body;
+  const panel=document.createElement('div');
+  panel.id='inlineSyllabusPanel';
+  panel.className='info-section syllabus-full-inline';
+  panel.innerHTML=`<h3>${titleEl.innerHTML}</h3><div style="font-size:12.5px;line-height:1.8;color:var(--text)">${html}</div>`;
+  activeTab.prepend(panel);
+  panel.scrollIntoView({behavior:'smooth',block:'start'});
+  showToast('綱要已直接顯示在頁面內，不再彈出視窗','success');
 }
 function findSyllabusSource(badgeId){
   if(badgeId==='*'||badgeId==='ALL'){
@@ -1327,7 +1414,7 @@ function countSyllabusItems(b){
 function showSubDetail(name, detail, syllabusBadge){
   document.getElementById('detailTitle').textContent=name;
   let html=`<div style="white-space:pre-wrap">${detail||'暫無詳細說明。'}</div>`;
-  if(syllabusBadge) html+=`<div style="margin-top:12px;text-align:center"><button class="btn btn-sm btn-outline" onclick="closeModal('itemDetailModal');showSyllabusModal('${syllabusBadge}')">📚 查看完整訓練綱要（APP內）</button></div>`;
+  if(syllabusBadge) html+=`<div style="margin-top:12px;text-align:center"><button class="btn btn-sm btn-outline" onclick="closeModal('itemDetailModal');showSyllabusModal('${syllabusBadge}')">📚 在頁面內顯示完整綱要</button></div>`;
   document.getElementById('detailBody').innerHTML=html;
   document.getElementById('itemDetailModal').classList.add('active');
 }
@@ -2115,7 +2202,7 @@ function renderFormsTab(){
     <div class="info-card"><h3>🖨️ 表格自動填寫功能</h3><p>系統會根據進度自動填寫 PT/18 及 PT/120A 表格所需完成日期，領袖/成員可修改後直接列印。支援雙面列印，符合總會要求。</p><ul><li>自動帶入姓名、YMIS、旅團、進度項目完成日期</li><li>可手動編輯補充服務時數、證書編號</li><li>一鍵列印，隱藏操作按鈕</li></ul></div>
     <div class="info-card" style="border-color:var(--blue)"><h3 style="color:var(--blue)">📋 表格說明</h3><p><b>PT/18 總領袖獎章</b>：完成訓練綱要所列進度項目後申請。<br><b>PT/120A 專科徽章</b>：按現行童軍支部訓練綱要完成要求及服務紀錄，交由領袖核實後遞交。<br><b>PT/65 考驗計劃</b>：開展進度性獎章考驗前提交計劃書。</p></div>
   </div>
-  <div class="filter-bar"><label>選擇成員：</label><select id="formMemberSelect" onchange="renderFormsTab()">${members.map(m=>`<option value="${m.ymis}" ${m.ymis===targetYmis?'selected':''}>${m.name} (${m.ymis})</option>`).join('')}</select></div>
+  <div class="filter-bar"><label>選擇成員：</label><select id="formMemberSelect" onchange="selectedProgressYmis=this.value;renderFormsTab()">${members.map(m=>`<option value="${m.ymis}" ${m.ymis===targetYmis?'selected':''}>${m.name} (${m.ymis})</option>`).join('')}</select></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
     <button class="btn btn-primary" onclick="generatePrintableForm('PT18')">🖨️ 產生 PT/18 總領袖獎章申請表</button>
     <button class="btn btn-warning" onclick="generatePrintableForm('PT120A')">🐉 產生 PT/120A 專科徽章申請表</button>
@@ -2347,7 +2434,7 @@ function renderInfoTab(){
     </div>
     <div style="margin-top:10px"><b style="font-size:12px">進度流程：</b><span style="font-size:11px;background:var(--maroon-light);padding:3px 8px;border-radius:999px;margin-left:6px">${tp.progressFlow}</span></div>
     <div style="margin-top:8px;font-size:11px;color:var(--text-light)"><b>評估原則：</b>${tp.assessmentPrinciples}</div>
-    <div style="margin-top:10px"><b style="font-size:12px">訓練綱要：</b><button class="btn btn-sm btn-primary" style="margin-top:6px" onclick="showSyllabusModal('*')">📖 在APP內查看完整訓練綱要</button><div style="font-size:11px;color:var(--text-light);margin-top:6px">官方網上資源（需要網絡時才用）：</div><div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">${tp.links.map(l=>`<a href="${l.url}" target="_blank" rel="noopener" class="link-card" style="padding:8px;margin:0"><div class="link-icon">🔗</div><div class="link-text"><div class="title">${l.title}</div><div class="url">${l.url}</div></div></a>`).join('')}</div></div>
+    <div style="margin-top:10px"><b style="font-size:12px">訓練綱要：</b><span class="syllabus-direct-note">已直接列在本頁下方，不再彈窗</span><button class="btn btn-sm btn-primary" style="margin-top:6px" onclick="document.getElementById('fullSyllabusInline')?.scrollIntoView({behavior:'smooth',block:'start'})">📖 跳到本頁完整綱要</button><div style="font-size:11px;color:var(--text-light);margin-top:6px">官方網上資源（需要網絡時才用）：</div><div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">${tp.links.map(l=>`<a href="${l.url}" target="_blank" rel="noopener" class="link-card" style="padding:8px;margin:0"><div class="link-icon">🔗</div><div class="link-text"><div class="title">${l.title}</div><div class="url">${l.url}</div></div></a>`).join('')}</div></div>
   </div>`;
 
   html+=`<div class="info-section"><h3>🛡️ ${sfh.title}</h3><p style="font-size:11px;background:#FFF5F5;padding:8px;border-radius:6px;border-left:3px solid var(--red)">${sfh.policy}</p>
@@ -2360,7 +2447,7 @@ function renderInfoTab(){
     <div style="margin-top:10px"><b style="font-size:11px">求助熱線：</b><div style="font-size:11px;color:var(--text-light)">${sfh.hotlines.map(h=>`<div>• ${h.name}: ${h.tel||''} ${h.email||''}</div>`).join('')}</div></div>
   </div>`;
 
-  html+=`<div class="info-section"><h3>📚 各獎章考驗總覽（點擊展開）</h3>`;
+  html+=`<div class="info-section syllabus-full-inline" id="fullSyllabusInline"><h3>📚 各獎章考驗總覽（直接列在頁面，不用彈窗）</h3><p style="font-size:11px;color:var(--text-light);margin-bottom:8px">手機查看時可直接向下捲動；每個獎章以可展開區塊呈現，避免遮住畫面或需要關閉視窗。</p>`;
   itemsData.badges.forEach(b=>{
     html+=`<details style="margin-bottom:8px;border:1px solid var(--border);border-radius:8px;padding:8px"><summary style="cursor:pointer;font-weight:700;color:var(--maroon)">${b.icon} ${b.name} - ${b.purpose}</summary>
       <div style="font-size:11px;line-height:1.7;margin-top:8px">${b.description||''}<br><b>要求：</b>${b.requirements||b.requirement||'參考進度項目說明'}</div>
@@ -2374,7 +2461,7 @@ function renderInfoTab(){
       <a href="https://www.scout.org.hk/uploads/tc/circulars/23262/p013-26.pdf" target="_blank" rel="noopener" class="link-card"><div class="link-icon">📄</div><div class="link-text"><div class="title">PT/18 總領袖獎章申請表</div><div class="url">官方空白表格（亦可於「表格列印」自動填寫）</div></div></a>
       <a href="https://www.scout.org.hk/uploads/tc/circulars/23262/p013-26.pdf" target="_blank" rel="noopener" class="link-card"><div class="link-icon">🐉</div><div class="link-text"><div class="title">PT/120A 專科徽章申請表</div><div class="url">官方空白表格（亦可於「表格列印」自動填寫）</div></div></a>
       <a href="https://scoutsinfohub.org.hk/" target="_blank" class="link-card"><div class="link-icon">👕</div><div class="link-text"><div class="title">徽章佩戴指引 (2024-04-01起)</div><div class="url">童軍支部資料</div></div></a>
-      <button class="syllabus-launch" onclick="showSyllabusModal('*')"><div class="link-icon">📖</div><div class="link-text"><div class="title">童軍訓練綱要（APP內完整版）</div><div class="url">無須跳轉，直接在 APP 內查看各獎章考驗</div></div></button>
+      <button class="syllabus-launch" onclick="document.getElementById('fullSyllabusInline')?.scrollIntoView({behavior:'smooth',block:'start'})"><div class="link-icon">📖</div><div class="link-text"><div class="title">童軍訓練綱要（本頁直接顯示）</div><div class="url">不再彈出視窗，直接跳到下方各獎章考驗</div></div></button>
     </div>
     <div style="margin-top:10px;font-size:11px;line-height:1.6;background:var(--bg);padding:10px;border-radius:8px">
       <b>佩戴重點（2024新指引）：</b><br>
@@ -2561,7 +2648,7 @@ async function toggleAllowMemberViewOthers(checked){
   }
 }
 async function updateSystemConfig(key,value){
-  try{const r=await fetch(currentBackend,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'updateConfig',token:currentToken,key,value})});const d=await r.json();if(!d.success)throw new Error(d.error);appConfig[key]=value;setupTabsByRole();renderUsersTab();showToast('設定已更新','success');}catch(e){showToast('設定失敗：'+e.message,'error');}
+  try{const r=await fetch(currentBackend,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'updateConfig',token:currentToken,key,value})});const d=await r.json();if(!d.success)throw new Error(d.error);appConfig[key]=value;setupTabsByRole();loadUsers();showToast('設定已更新','success');}catch(e){showToast('設定失敗：'+e.message,'error');}
 }
 function setMemberProgressScope(value){ updateSystemConfig('member_progress_scope',value); }
 function setSquadComparison(checked){ updateSystemConfig('allow_squad_comparison',checked?'true':'false'); }
