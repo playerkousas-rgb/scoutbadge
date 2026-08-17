@@ -5,6 +5,7 @@ const url = require('url');
 
 const proxyHandler = require('./api/proxy');
 const troopsHandler = require('./api/troops');
+const healthHandler = require('./api/health');
 
 const PORT = process.env.PORT || 3000;
 const HOST = '0.0.0.0';
@@ -43,6 +44,13 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Route: /api/health - 新增用於排查「找不到82的SHEET」
+  if (pathname === '/api/health') {
+    req.query = parsedUrl.query;
+    healthHandler(req, res);
+    return;
+  }
+
   // Static files
   let filePath = path.join(__dirname, pathname === '/' ? 'index.html' : pathname);
 
@@ -56,7 +64,7 @@ const server = http.createServer((req, res) => {
   fs.stat(filePath, (err, stats) => {
     if (err || !stats.isFile()) {
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end('404 Not Found');
+      res.end('404 Not Found - 若你看到找不到82的SHEET，請檢查 /api/troops 與 /api/health?troopId=0082');
       return;
     }
 
@@ -74,4 +82,5 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`Development preview server running at http://${HOST}:${PORT}`);
+  console.log(`Health check: http://${HOST}:${PORT}/api/health?troopId=0082`);
 });

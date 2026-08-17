@@ -661,7 +661,10 @@ let currentTroopId='',currentTroopName='',currentBackend='',currentApikey='';
 
 /* ================== Unified API Proxy Wrapper ================== */
 async function apiRequest(action, payload = {}, options = {}) {
-  const troopId = payload.troopId || currentTroopId || '0082';
+  let rawTroopId = payload.troopId || currentTroopId || '0082';
+  // Normalize: 82 -> 0082 to prevent "找不到82的SHEET"
+  let troopId = String(rawTroopId).trim();
+  if(/^\d+$/.test(troopId)) troopId = troopId.padStart(4,'0');
   if (!troopId) {
     throw new Error('未選擇旅團 (No troop selected)');
   }
@@ -671,6 +674,8 @@ async function apiRequest(action, payload = {}, options = {}) {
     action: action,
     ...payload
   };
+  // Ensure payload troopId also normalized
+  reqBody.troopId = troopId;
 
   if (!reqBody.token && typeof currentToken !== 'undefined' && currentToken) {
     reqBody.token = currentToken;
@@ -888,25 +893,50 @@ async function loadTroops(){
   const fallbackTroops={
     "0082": { name:"第 82 旅" }
   };
+  function normalizeId(id){
+    const s=String(id).trim();
+    if(/^\d+$/.test(s)) return s.padStart(4,'0');
+    const m=s.match(/^(\d+)([A-Z]*)$/i);
+    if(m) return m[1].padStart(4,'0') + (m[2]||'').toUpperCase();
+    return s;
+  }
   try{
     let data={troops:{}};
     try{ const r=await fetch('data/troops.json?_='+Date.now()); if(r.ok){ const d=await r.json(); data.troops={...data.troops, ...(d.troops||{})}; } }catch(e){}
     try{ const r2=await fetch('/api/troops?_='+Date.now()); if(r2.ok){ const d2=await r2.json(); if(d2.troops && Object.keys(d2.troops).length>0){ data.troops={...data.troops,...d2.troops}; } } }catch(e){}
-    let troops={...fallbackTroops, ...(data.troops||{})};
-    grid.innerHTML=Object.entries(troops).map(([id,t])=>`<div class="troop-card" onclick="selectTroop('${id}')"><div class="troop-id">${id}</div><div class="troop-name">${t.name||'第'+id+'旅'}</div></div>`).join('');
+    let rawTroops={...fallbackTroops, ...(data.troops||{})};
+    // Deduplicate: 82 and 0082 are same troop, keep canonical 0082
+    const deduped={};
+    const seen=new Set();
+    Object.entries(rawTroops).forEach(([id,t])=>{
+      // Skip alias entries that point to canonical
+      if(t && t._aliasOf) return;
+      const canonical=normalizeId(id);
+      if(seen.has(canonical)) return;
+      seen.add(canonical);
+      // Use canonical as display key, but preserve original if canonical not present
+      deduped[canonical]=t;
+    });
+    // If after dedup empty, fallback
+    if(Object.keys(deduped).length===0) Object.assign(deduped, fallbackTroops);
+    grid.innerHTML=Object.entries(deduped).map(([id,t])=>`<div class="troop-card" onclick="selectTroop('${id}')"><div class="troop-id">${id}</div><div class="troop-name">${t.name||'第'+id+'旅'}</div>${t._fallback?'<div style="font-size:9px;color:var(--orange)">(fallback)</div>':''}</div>`).join('') || '<p style="color:var(--text-light)">暫無旅團，請檢查 troops.json 或聯絡管理員。常見問題：若顯示「找不到82的SHEET」，請確認 Vercel 環境變數 TROOP_0082_BACKEND 已設定且 Apps Script 已執行 initializeSheets()</p>';
   }catch(e){
     console.error(e);
-    grid.innerHTML=Object.entries(fallbackTroops).map(([id,t])=>`<div class="troop-card" onclick="selectTroop('${id}')"><div class="troop-id">${id}</div><div class="troop-name">${t.name}</div></div>`).join('');
+    grid.innerHTML=Object.entries(fallbackTroops).map(([id,t])=>`<div class="troop-card" onclick="selectTroop('${id}')"><div class="troop-id">${id}</div><div class="troop-name">${t.name}</div></div>`).join('') + '<div style="grid-column:1/-1;font-size:11px;color:var(--red);background:#FFF5F5;padding:8px;border-radius:8px;margin-top:8px">⚠️ 載入旅團列表失敗，已顯示備用。如仍見「找不到82」，請檢查 /api/troops 是否回應 404，或在 Vercel Logs 查看 [PROXY] 錯誤。</div>';
   }
 }
 async function selectTroop(id){
   try{
-    if(currentTroopId && currentTroopId !== id){
+    // Normalize 82 -> 0082 for consistency, fix "找不到82的SHEET" caused by ID mismatch
+    const normId = (/^\d+$/.test(String(id).trim())) ? String(id).trim().padStart(4,'0') : String(id).trim();
+    if(currentTroopId && currentTroopId !== normId){
       currentUser = null;
       currentToken = '';
       localStorage.removeItem(LS.session);
     }
-    currentTroopId=id;
+    currentTroopId=normId;
+    // Also treat incoming short id as same, so UI displays canonical
+    id = normId;
     let name = '第' + id + '旅';
     try {
       const r = await fetch('/api/troops');
