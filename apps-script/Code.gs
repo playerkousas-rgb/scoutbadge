@@ -75,24 +75,61 @@ const REQUIRED_SHEETS = [
 function diagnoseSheets() {
   const ss = getSheet();
   if(!ss) return {success:false, error:'找不到試算表，請在 Google Sheet 內開啟 Apps Script 再執行'};
-  const existing = ss.getSheets().map(s=>s.getName());
+  const sheets = ss.getSheets();
+  const existing = sheets.map(s=>s.getName());
   const missing = [];
   const present = [];
+  const counts = {};
+  sheets.forEach(s=>{
+    try{
+      counts[s.getName()] = {rows: s.getLastRow(), cols: s.getLastColumn()};
+    }catch(e){
+      counts[s.getName()] = {error: e.toString()};
+    }
+  });
   REQUIRED_SHEETS.forEach(req=>{
     if(existing.indexOf(req.name)>=0) present.push(req.name);
     else missing.push(req.name);
   });
+  // 特別檢查 Users 成員數量
+  let usersCount = 0;
+  let membersCount = 0;
+  try{
+    const u = ss.getSheetByName('Users');
+    if(u) usersCount = Math.max(0, u.getLastRow()-1);
+  }catch(e){}
+  try{
+    const m = ss.getSheetByName('成員名單');
+    if(m) membersCount = Math.max(0, m.getLastRow()-1);
+  }catch(e){}
   return {
     success: true,
     spreadsheetName: ss.getName(),
     spreadsheetId: ss.getId(),
+    spreadsheetUrl: ss.getUrl(),
     existing,
     missing,
     present,
+    counts,
+    usersCount,
+    membersCount,
     allOk: missing.length===0,
-    message: missing.length===0 ? '✅ 所有必要工作表齊全，82 系統正常' : '⚠️ 缺少工作表：' + missing.join('、') + '，請執行 initializeSheets() 修復'
+    isEmpty: usersCount<=1 && membersCount<=1,
+    message: missing.length===0 ? ( (usersCount<=1 ? '⚠️ 工作表齊全但 Users 只有 '+usersCount+' 人，可能是空表/被重置，請檢查是否連錯試算表' : '✅ 所有必要工作表齊全，82 系統正常') ) : '⚠️ 缺少工作表：' + missing.join('、') + '，請執行 initializeSheets() 修復'
   };
 }
+
+function getSpreadsheetInfo(){
+  const ss = getSheet();
+  if(!ss) return {error:'No spreadsheet'};
+  return {
+    name: ss.getName(),
+    id: ss.getId(),
+    url: ss.getUrl(),
+    sheets: ss.getSheets().map(s=>({name:s.getName(), rows:s.getLastRow()}))
+  };
+}
+
 
 function repairSheets() {
   const diag = diagnoseSheets();
