@@ -2219,11 +2219,11 @@ async function reviewSingleRequest(reqId, decision){
     showToast('操作失敗：'+e.message,'error');
   }
 }
-function batchApprove(){
+async function batchApprove(){
   const checks=document.querySelectorAll('.batch-check:checked');
   if(checks.length===0){ showToast('請先選中要批准的項目','warning'); return; }
   if(!confirm(`確定批量批准 ${checks.length} 項？`)) return;
-  checks.forEach(ch=>{
+  for(const ch of checks){
     const reqId=ch.dataset.req;
     const dateInput=document.getElementById('confirmDate_'+reqId);
     const confirmedDate=dateInput?dateInput.value:todayISO();
@@ -2231,10 +2231,12 @@ function batchApprove(){
     if(req){
       addOrUpdatePending(req.ymis, req.item_id, confirmedDate, false);
     }
-    // if backend pending, we should call review but for batch we just add to pendingChanges and later backend will be updated via save? Actually need to approve via API.
-    // For simplicity, call review API for each but with local fallback
-    await apiRequest('reviewRequest', { request_id: reqId, decision: 'approved', confirmed_date: confirmedDate });
-  });
+    try{
+      await apiRequest('reviewRequest', { request_id: reqId, decision: 'approved', confirmed_date: confirmedDate });
+    }catch(e){
+      console.warn('batch approve failed for', reqId, e.message);
+    }
+  }
   pendingRequestsQueue=pendingRequestsQueue.filter(r=> ![...checks].some(c=>c.dataset.req===r.request_id));
   renderRequestsTab();
   updateSaveBar();
