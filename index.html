@@ -661,7 +661,10 @@ let currentTroopId='',currentTroopName='',currentBackend='',currentApikey='';
 
 /* ================== Unified API Proxy Wrapper ================== */
 async function apiRequest(action, payload = {}, options = {}) {
-  const troopId = payload.troopId || currentTroopId || '0082';
+  let rawTroopId = payload.troopId || currentTroopId || '0082';
+  // Normalize: 82 -> 0082 to prevent "找不到82的SHEET"
+  let troopId = String(rawTroopId).trim();
+  if(/^\d+$/.test(troopId)) troopId = troopId.padStart(4,'0');
   if (!troopId) {
     throw new Error('未選擇旅團 (No troop selected)');
   }
@@ -671,6 +674,8 @@ async function apiRequest(action, payload = {}, options = {}) {
     action: action,
     ...payload
   };
+  // Ensure payload troopId also normalized
+  reqBody.troopId = troopId;
 
   if (!reqBody.token && typeof currentToken !== 'undefined' && currentToken) {
     reqBody.token = currentToken;
@@ -884,29 +889,90 @@ function backToHome(){
 }
 async function loadTroops(){
   const grid=document.getElementById('troopGrid');
-  grid.innerHTML='<p style="grid-column:1/-1;text-align:center;color:var(--text-light);padding:20px">載入中...</p>';
   const fallbackTroops={
     "0082": { name:"第 82 旅" }
   };
+  // 立即顯示 fallback，確保首頁一定看到 0082（修復「看不到0082選項」）
+  function renderTroops(troopsObj, isFallback){
+    const entries = Object.entries(troopsObj);
+    if(entries.length===0){
+      grid.innerHTML = '<div class="troop-card" onclick="selectTroop(\'0082\')"><div class="troop-id">0082</div><div class="troop-name">第 82 旅</div><div style="font-size:9px;color:var(--green)">(內置)</div></div>';
+      return;
+    }
+    grid.innerHTML=entries.map(([id,t])=>`<div class="troop-card" onclick="selectTroop('${id}')"><div class="troop-id">${id}</div><div class="troop-name">${(t&&t.name)||'第'+id+'旅'}</div>${t&&t._fallback?'<div style="font-size:9px;color:var(--orange)">(fallback)</div>':''}</div>`).join('');
+  }
+  function normalizeId(id){
+    const s=String(id).trim();
+    if(/^\d+$/.test(s)) return s.padStart(4,'0');
+    const m=s.match(/^(\d+)([A-Z]*)$/i);
+    if(m) return m[1].padStart(4,'0') + (m[2]||'').toUpperCase();
+    return s;
+  }
+  // 1. 立即渲染 fallback，解決載入中卡死
+  renderTroops(fallbackTroops, true);
+  grid.innerHTML += '<div id="troopLoadStatus" style="grid-column:1/-1;font-size:10px;color:var(--text-light);padding:4px;text-align:center">正在同步最新旅團列表...</div>';
+
   try{
+    // 帶超時的 fetch，避免 /api/troops 卡死導致一直「載入中...」
+    const fetchWithTimeout = (url, ms=3000) => {
+      return Promise.race([
+        fetch(url).then(r=>r),
+        new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')), ms))
+      ]);
+    };
     let data={troops:{}};
-    try{ const r=await fetch('data/troops.json?_='+Date.now()); if(r.ok){ const d=await r.json(); data.troops={...data.troops, ...(d.troops||{})}; } }catch(e){}
-    try{ const r2=await fetch('/api/troops?_='+Date.now()); if(r2.ok){ const d2=await r2.json(); if(d2.troops && Object.keys(d2.troops).length>0){ data.troops={...data.troops,...d2.troops}; } } }catch(e){}
-    let troops={...fallbackTroops, ...(data.troops||{})};
-    grid.innerHTML=Object.entries(troops).map(([id,t])=>`<div class="troop-card" onclick="selectTroop('${id}')"><div class="troop-id">${id}</div><div class="troop-name">${t.name||'第'+id+'旅'}</div></div>`).join('');
+    try{
+      const r=await fetchWithTimeout('data/troops.json?_='+Date.now(), 2500);
+      if(r && r.ok){
+        const d=await r.json();
+        data.troops={...data.troops, ...(d.troops||{})};
+      }
+    }catch(e){ console.warn('data/troops.json fetch failed', e.message); }
+    try{
+      const r2=await fetchWithTimeout('/api/troops?_='+Date.now(), 3500);
+      if(r2 && r2.ok){
+        const d2=await r2.json();
+        if(d2.troops && Object.keys(d2.troops).length>0){
+          data.troops={...data.troops,...d2.troops};
+        }
+      }
+    }catch(e){ console.warn('api/troops fetch failed', e.message); }
+
+    let rawTroops={...fallbackTroops, ...(data.troops||{})};
+    // Deduplicate: 82 and 0082 are same troop, keep canonical 0082
+    const deduped={};
+    const seen=new Set();
+    Object.entries(rawTroops).forEach(([id,t])=>{
+      if(t && t._aliasOf) return;
+      const canonical=normalizeId(id);
+      if(seen.has(canonical)) return;
+      seen.add(canonical);
+      deduped[canonical]=t;
+    });
+    if(Object.keys(deduped).length===0) Object.assign(deduped, fallbackTroops);
+    renderTroops(deduped, false);
+    const statusEl=document.getElementById('troopLoadStatus');
+    if(statusEl) statusEl.remove();
   }catch(e){
-    console.error(e);
-    grid.innerHTML=Object.entries(fallbackTroops).map(([id,t])=>`<div class="troop-card" onclick="selectTroop('${id}')"><div class="troop-id">${id}</div><div class="troop-name">${t.name}</div></div>`).join('');
+    console.error('loadTroops error', e);
+    // 確保即使出錯，0082 仍然可選
+    renderTroops(fallbackTroops, true);
+    const statusEl=document.getElementById('troopLoadStatus');
+    if(statusEl) statusEl.innerHTML='⚠️ 同步失敗，已顯示內置旅團 0082。<br>若 /api/troops 404 屬正常（靜態部署），請直接點 0082 進入。';
   }
 }
 async function selectTroop(id){
   try{
-    if(currentTroopId && currentTroopId !== id){
+    // Normalize 82 -> 0082 for consistency, fix "找不到82的SHEET" caused by ID mismatch
+    const normId = (/^\d+$/.test(String(id).trim())) ? String(id).trim().padStart(4,'0') : String(id).trim();
+    if(currentTroopId && currentTroopId !== normId){
       currentUser = null;
       currentToken = '';
       localStorage.removeItem(LS.session);
     }
-    currentTroopId=id;
+    currentTroopId=normId;
+    // Also treat incoming short id as same, so UI displays canonical
+    id = normId;
     let name = '第' + id + '旅';
     try {
       const r = await fetch('/api/troops');
@@ -2153,11 +2219,11 @@ async function reviewSingleRequest(reqId, decision){
     showToast('操作失敗：'+e.message,'error');
   }
 }
-function batchApprove(){
+async function batchApprove(){
   const checks=document.querySelectorAll('.batch-check:checked');
   if(checks.length===0){ showToast('請先選中要批准的項目','warning'); return; }
   if(!confirm(`確定批量批准 ${checks.length} 項？`)) return;
-  checks.forEach(ch=>{
+  for(const ch of checks){
     const reqId=ch.dataset.req;
     const dateInput=document.getElementById('confirmDate_'+reqId);
     const confirmedDate=dateInput?dateInput.value:todayISO();
@@ -2165,10 +2231,12 @@ function batchApprove(){
     if(req){
       addOrUpdatePending(req.ymis, req.item_id, confirmedDate, false);
     }
-    // if backend pending, we should call review but for batch we just add to pendingChanges and later backend will be updated via save? Actually need to approve via API.
-    // For simplicity, call review API for each but with local fallback
-    await apiRequest('reviewRequest', { request_id: reqId, decision: 'approved', confirmed_date: confirmedDate });
-  });
+    try{
+      await apiRequest('reviewRequest', { request_id: reqId, decision: 'approved', confirmed_date: confirmedDate });
+    }catch(e){
+      console.warn('batch approve failed for', reqId, e.message);
+    }
+  }
   pendingRequestsQueue=pendingRequestsQueue.filter(r=> ![...checks].some(c=>c.dataset.req===r.request_id));
   renderRequestsTab();
   updateSaveBar();

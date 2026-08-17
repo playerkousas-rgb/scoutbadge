@@ -3,6 +3,11 @@
     "0082": {
       "name": "第 82 旅",
       "backend": "https://script.google.com/macros/s/AKfycbz_hto9mtwazfLPFNCGFx_WtBsILf2oVKecjE2m1WBTkIkskFuFv7EGQJCgeG3aPfKf/exec"
+    },
+    "82": {
+      "name": "第 82 旅",
+      "backend": "https://script.google.com/macros/s/AKfycbz_hto9mtwazfLPFNCGFx_WtBsILf2oVKecjE2m1WBTkIkskFuFv7EGQJCgeG3aPfKf/exec",
+      "_aliasOf": "0082"
     }
   }
 }

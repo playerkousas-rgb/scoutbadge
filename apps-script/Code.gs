@@ -23,6 +23,12 @@ function getApiKey() {
   return apiKey;
 }
 function showApiKey() {
+  const ss = getSheet();
+  if(!ss){
+    const apiKey = getApiKey();
+    Logger.log('API Key: ' + apiKey + ' (no sheet)');
+    return apiKey;
+  }
   let sh=ss.getSheetByName('服務紀錄'); if(!sh){ sh=ss.insertSheet('服務紀錄'); sh.appendRow(['record_id','YMIS','姓名','活動名稱','日期','時數','機構／地點','內容','核實領袖','狀態','備註']); sh.getRange(1,1,1,11).setFontWeight('bold').setBackground('#2E7D32').setFontColor('#FFFFFF'); sh.setFrozenRows(1); }
   let ah=ss.getSheetByName('操作紀錄'); if(!ah){ ah=ss.insertSheet('操作紀錄'); ah.appendRow(['時間','操作者','操作','對象','詳情']); ah.getRange(1,1,1,5).setFontWeight('bold').setBackground('#8B0000').setFontColor('#FFFFFF'); ah.setFrozenRows(1); }
 
@@ -36,6 +42,7 @@ function showApiKey() {
   }
 
   // 確保系統設定包含 allow_member_requests（默認 true）
+  let cfgSheet = ss.getSheetByName('SystemConfig');
   if(cfgSheet){
     const cfgData=cfgSheet.getDataRange().getValues();
     let hasRequests=false;
@@ -49,6 +56,89 @@ function showApiKey() {
   Logger.log('API Key: ' + apiKey);
   return apiKey;
 }
+
+// ===== 新增：診斷 82 旅 SHEET 健康狀態 v5.1.1 =====
+const REQUIRED_SHEETS = [
+  {name:'進度追蹤', headers:['YMIS','項目 ID','完成日期','更新時間','確認者','備註']},
+  {name:'成員名單', headers:['YMIS','姓名','加入日期','支部','聯絡','小隊']},
+  {name:'Users', headers:['ymis','name','email','role','password_hash','branch','can_tick','auth_by','auth_date','created_at','last_login','status','allowed_badges','squad','squad_role','force_change_password']},
+  {name:'Applications', headers:['app_id','ymis','name','email','role','branch','status','applied_at','reviewed_by','reviewed_at','note']},
+  {name:'Tokens', headers:['token','ymis','created_at','expires_at']},
+  {name:'SystemConfig', headers:['key','value','updated_at','updated_by']},
+  {name:'待批完成', headers:['request_id','ymis','name','item_id','item_name','requested_date','evidence','status','created_at','reviewed_by','reviewed_at','review_note','confirmed_date']},
+  {name:'其他獎章', headers:['YMIS','獎章 ID','獎章名稱','完成日期','證書編號','備註','更新時間']},
+  {name:'服務紀錄', headers:['record_id','YMIS','姓名','活動名稱','日期','時數','機構／地點','內容','核實領袖','狀態','備註']},
+  {name:'操作紀錄', headers:['時間','操作者','操作','對象','詳情']},
+  {name:'活動履歷', headers: LOG_HEADERS}
+];
+
+function diagnoseSheets() {
+  const ss = getSheet();
+  if(!ss) return {success:false, error:'找不到試算表，請在 Google Sheet 內開啟 Apps Script 再執行'};
+  const sheets = ss.getSheets();
+  const existing = sheets.map(s=>s.getName());
+  const missing = [];
+  const present = [];
+  const counts = {};
+  sheets.forEach(s=>{
+    try{
+      counts[s.getName()] = {rows: s.getLastRow(), cols: s.getLastColumn()};
+    }catch(e){
+      counts[s.getName()] = {error: e.toString()};
+    }
+  });
+  REQUIRED_SHEETS.forEach(req=>{
+    if(existing.indexOf(req.name)>=0) present.push(req.name);
+    else missing.push(req.name);
+  });
+  // 特別檢查 Users 成員數量
+  let usersCount = 0;
+  let membersCount = 0;
+  try{
+    const u = ss.getSheetByName('Users');
+    if(u) usersCount = Math.max(0, u.getLastRow()-1);
+  }catch(e){}
+  try{
+    const m = ss.getSheetByName('成員名單');
+    if(m) membersCount = Math.max(0, m.getLastRow()-1);
+  }catch(e){}
+  return {
+    success: true,
+    spreadsheetName: ss.getName(),
+    spreadsheetId: ss.getId(),
+    spreadsheetUrl: ss.getUrl(),
+    existing,
+    missing,
+    present,
+    counts,
+    usersCount,
+    membersCount,
+    allOk: missing.length===0,
+    isEmpty: usersCount<=1 && membersCount<=1,
+    message: missing.length===0 ? ( (usersCount<=1 ? '⚠️ 工作表齊全但 Users 只有 '+usersCount+' 人，可能是空表/被重置，請檢查是否連錯試算表' : '✅ 所有必要工作表齊全，82 系統正常') ) : '⚠️ 缺少工作表：' + missing.join('、') + '，請執行 initializeSheets() 修復'
+  };
+}
+
+function getSpreadsheetInfo(){
+  const ss = getSheet();
+  if(!ss) return {error:'No spreadsheet'};
+  return {
+    name: ss.getName(),
+    id: ss.getId(),
+    url: ss.getUrl(),
+    sheets: ss.getSheets().map(s=>({name:s.getName(), rows:s.getLastRow()}))
+  };
+}
+
+
+function repairSheets() {
+  const diag = diagnoseSheets();
+  if(diag.allOk) return jsonResponse({success:true, message:'所有工作表已齊全，無需修復', diagnose:diag});
+  const result = initializeSheets();
+  const after = diagnoseSheets();
+  return jsonResponse({success:true, before:diag, after:after, apiKey: result.apiKey, repaired: true});
+}
+
 function hashPassword(p) {
   const raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, p, Utilities.Charset.UTF_8);
   return raw.map(function(b){return ('0' + (b & 0xFF).toString(16)).slice(-2);}).join('');
@@ -273,15 +363,19 @@ function destroyToken(token){
 function doGet(e){
   const action=e.parameter.action;
   if(action==='load'){
-    // v4: allow load without apikey for backwards compatibility (troops.json may not have apikey), but if apikey provided, must validate
     const reqKey=e.parameter.apikey;
     const reqToken=e.parameter.token;
     if(reqKey && reqKey!==getApiKey()) return jsonResponse({success:false,error:'Invalid API Key'});
     if(reqToken && !validateToken(reqToken)) return jsonResponse({success:false,error:'Token 無效或過期'});
     return handleLoad();
   }
+  if(action==='health' || action==='diagnose' || action==='checkSheets'){
+    // 健康檢查：不需驗證，方便排查「找不到82的SHEET」
+    const diag = diagnoseSheets();
+    return jsonResponse({success:true, action: action, diagnose: diag, apiKeyConfigured: !!getApiKey(), timestamp: now()});
+  }
   if(action==='getLoginMode') return jsonResponse({success:true,login_mode:'standalone'});
-  return jsonResponse({success:false,error:'Unknown action'});
+  return jsonResponse({success:false,error:'Unknown action: ' + action});
 }
 function doPost(e){
   try{
@@ -372,7 +466,21 @@ function doPost(e){
       if(!canUserTick(user.role)) return jsonResponse({success:false,error:'權限不足，需領袖權限'});
       return handleDeleteLogRecord(body.record_id, ymis);
     }
-    return jsonResponse({success:false,error:'Unknown action'});
+    if(action==='healthCheck' || action==='diagnoseSheets'){
+      // 需要 apikey 或 token
+      const reqKey=body.apikey;
+      if(reqKey && reqKey!==getApiKey()) return jsonResponse({success:false,error:'Invalid API Key'});
+      const diag = diagnoseSheets();
+      return jsonResponse({success:true, diagnose:diag, timestamp: now()});
+    }
+    if(action==='repairSheets'){
+      if(getRoleLevel(user.role)<80) return jsonResponse({success:false,error:'需管理員權限執行修復'});
+      const before = diagnoseSheets();
+      initializeSheets();
+      const after = diagnoseSheets();
+      return jsonResponse({success:true, before:before, after:after, repaired:true});
+    }
+    return jsonResponse({success:false,error:'Unknown action: ' + action});
   }catch(err){ return jsonResponse({success:false,error:err.toString()}); }
 }
 
