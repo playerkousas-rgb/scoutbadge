@@ -889,10 +889,18 @@ function backToHome(){
 }
 async function loadTroops(){
   const grid=document.getElementById('troopGrid');
-  grid.innerHTML='<p style="grid-column:1/-1;text-align:center;color:var(--text-light);padding:20px">載入中...</p>';
   const fallbackTroops={
     "0082": { name:"第 82 旅" }
   };
+  // 立即顯示 fallback，確保首頁一定看到 0082（修復「看不到0082選項」）
+  function renderTroops(troopsObj, isFallback){
+    const entries = Object.entries(troopsObj);
+    if(entries.length===0){
+      grid.innerHTML = '<div class="troop-card" onclick="selectTroop(\'0082\')"><div class="troop-id">0082</div><div class="troop-name">第 82 旅</div><div style="font-size:9px;color:var(--green)">(內置)</div></div>';
+      return;
+    }
+    grid.innerHTML=entries.map(([id,t])=>`<div class="troop-card" onclick="selectTroop('${id}')"><div class="troop-id">${id}</div><div class="troop-name">${(t&&t.name)||'第'+id+'旅'}</div>${t&&t._fallback?'<div style="font-size:9px;color:var(--orange)">(fallback)</div>':''}</div>`).join('');
+  }
   function normalizeId(id){
     const s=String(id).trim();
     if(/^\d+$/.test(s)) return s.padStart(4,'0');
@@ -900,29 +908,57 @@ async function loadTroops(){
     if(m) return m[1].padStart(4,'0') + (m[2]||'').toUpperCase();
     return s;
   }
+  // 1. 立即渲染 fallback，解決載入中卡死
+  renderTroops(fallbackTroops, true);
+  grid.innerHTML += '<div id="troopLoadStatus" style="grid-column:1/-1;font-size:10px;color:var(--text-light);padding:4px;text-align:center">正在同步最新旅團列表...</div>';
+
   try{
+    // 帶超時的 fetch，避免 /api/troops 卡死導致一直「載入中...」
+    const fetchWithTimeout = (url, ms=3000) => {
+      return Promise.race([
+        fetch(url).then(r=>r),
+        new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')), ms))
+      ]);
+    };
     let data={troops:{}};
-    try{ const r=await fetch('data/troops.json?_='+Date.now()); if(r.ok){ const d=await r.json(); data.troops={...data.troops, ...(d.troops||{})}; } }catch(e){}
-    try{ const r2=await fetch('/api/troops?_='+Date.now()); if(r2.ok){ const d2=await r2.json(); if(d2.troops && Object.keys(d2.troops).length>0){ data.troops={...data.troops,...d2.troops}; } } }catch(e){}
+    try{
+      const r=await fetchWithTimeout('data/troops.json?_='+Date.now(), 2500);
+      if(r && r.ok){
+        const d=await r.json();
+        data.troops={...data.troops, ...(d.troops||{})};
+      }
+    }catch(e){ console.warn('data/troops.json fetch failed', e.message); }
+    try{
+      const r2=await fetchWithTimeout('/api/troops?_='+Date.now(), 3500);
+      if(r2 && r2.ok){
+        const d2=await r2.json();
+        if(d2.troops && Object.keys(d2.troops).length>0){
+          data.troops={...data.troops,...d2.troops};
+        }
+      }
+    }catch(e){ console.warn('api/troops fetch failed', e.message); }
+
     let rawTroops={...fallbackTroops, ...(data.troops||{})};
     // Deduplicate: 82 and 0082 are same troop, keep canonical 0082
     const deduped={};
     const seen=new Set();
     Object.entries(rawTroops).forEach(([id,t])=>{
-      // Skip alias entries that point to canonical
       if(t && t._aliasOf) return;
       const canonical=normalizeId(id);
       if(seen.has(canonical)) return;
       seen.add(canonical);
-      // Use canonical as display key, but preserve original if canonical not present
       deduped[canonical]=t;
     });
-    // If after dedup empty, fallback
     if(Object.keys(deduped).length===0) Object.assign(deduped, fallbackTroops);
-    grid.innerHTML=Object.entries(deduped).map(([id,t])=>`<div class="troop-card" onclick="selectTroop('${id}')"><div class="troop-id">${id}</div><div class="troop-name">${t.name||'第'+id+'旅'}</div>${t._fallback?'<div style="font-size:9px;color:var(--orange)">(fallback)</div>':''}</div>`).join('') || '<p style="color:var(--text-light)">暫無旅團，請檢查 troops.json 或聯絡管理員。常見問題：若顯示「找不到82的SHEET」，請確認 Vercel 環境變數 TROOP_0082_BACKEND 已設定且 Apps Script 已執行 initializeSheets()</p>';
+    renderTroops(deduped, false);
+    const statusEl=document.getElementById('troopLoadStatus');
+    if(statusEl) statusEl.remove();
   }catch(e){
-    console.error(e);
-    grid.innerHTML=Object.entries(fallbackTroops).map(([id,t])=>`<div class="troop-card" onclick="selectTroop('${id}')"><div class="troop-id">${id}</div><div class="troop-name">${t.name}</div></div>`).join('') + '<div style="grid-column:1/-1;font-size:11px;color:var(--red);background:#FFF5F5;padding:8px;border-radius:8px;margin-top:8px">⚠️ 載入旅團列表失敗，已顯示備用。如仍見「找不到82」，請檢查 /api/troops 是否回應 404，或在 Vercel Logs 查看 [PROXY] 錯誤。</div>';
+    console.error('loadTroops error', e);
+    // 確保即使出錯，0082 仍然可選
+    renderTroops(fallbackTroops, true);
+    const statusEl=document.getElementById('troopLoadStatus');
+    if(statusEl) statusEl.innerHTML='⚠️ 同步失敗，已顯示內置旅團 0082。<br>若 /api/troops 404 屬正常（靜態部署），請直接點 0082 進入。';
   }
 }
 async function selectTroop(id){
