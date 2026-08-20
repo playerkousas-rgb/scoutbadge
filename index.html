@@ -432,6 +432,14 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
           <div style="background:var(--bg);padding:10px;border-radius:8px;border-left:3px solid var(--maroon)" data-i18n-html="guide_leader_card"></div>
         </div>
       </div>
+      <div class="info-section" style="margin-top:16px;border-left-color:var(--green);background:#F1F8F2">
+        <h3 data-i18n="guide_onboard_h3">🆕 帳戶申請／資料匯入教學</h3>
+        <p style="font-size:12px;line-height:1.8" data-i18n-html="guide_onboard_intro"></p>
+        <details style="margin-top:6px">
+          <summary style="cursor:pointer;font-weight:600;font-size:12px" data-i18n="ymis_guide_summary">📘 如何在 YMIS 匯出指定格式報告？（點擊展開）</summary>
+          <div style="margin-top:8px;font-size:12px;line-height:1.8" data-i18n-html="ymis_guide_html"></div>
+        </details>
+      </div>
     </div>
 
     <div id="welcome-changelog" class="welcome-section">
@@ -654,6 +662,8 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
   <div style="margin-top:4px;font-size:10px" data-i18n-html="footer_line3">Developed for 82 Troop • All rights reserved • <a href="https://www.scout.org.hk" target="_blank">香港童軍總會</a></div>
 </footer>
 
+<!-- YMIS 自訂報表解析器（同時供單元測試 test/ymis_parse.test.js 使用） -->
+<script src="assets/ymis-parse.js"></script>
 <script>
 /* ================== 🌐 中英雙語 i18n 翻譯層 (純介面翻譯；項目 ID 及後端紀錄完全不變) ================== */
 /* 一字典式翻譯：currentLang 只影響「顯示」；凡寫入後端/快取的 itemId 與 badge name 永遠用 data/items.json 中文版正名 */
@@ -940,6 +950,48 @@ zh:{
   wearing_points_html:'<b>佩戴重點（2024新指引）：</b><br>• 和平使者章佩戴左胸袋中央，取代會員章<br>• 急救章統一左袖上方AYP下方<br>• 拯溺布章佩戴左袖上方中央<br>• 世界童軍獎章最多右袖平行4枚<br>• 童軍支部徽章須按現行制服及佩戴指引佩戴',
   bulk_no_valid:'沒有有效資料（YMIS 須為10位數字）', bulk_done_fmt:'批量開戶完成：成功 {0} 筆，略過 {1} 筆',
   deactivate_fail:'停用失敗：', deactivate_confirm:'確定停用此帳號？停用後將無法登入，資料會保留。',
+  /* ---- 帳戶申請／資料匯入教學 ---- */
+  guide_onboard_h3:'🆕 帳戶申請／資料匯入教學',
+  guide_onboard_intro:'<b>個人開戶：</b>成員在登入頁按「🆕 申請成員帳戶」填 YMIS + 姓名 + 密碼，領袖在「✅ 審批中心 → 👤 用戶審批」批准即可。<br>'
+    +'<b>整團批量開戶（推薦）：</b>領袖登入 → 「👥 用戶管理 → 📥 批量開戶」→ 上載由 YMIS 匯出的「自訂報表」PDF（可輸入 PDF 密碼），系統會自動讀出 <b>童軍成員編號 / 中文姓名 / 電郵地址</b>，預覽確認後一次過開戶。<br>'
+    +'亦可下載 CSV 範本自行填寫上傳。完整文件：<a href="docs/YMIS_EXPORT.md" target="_blank">YMIS 匯出教學</a>、<a href="docs/BULK_ONBOARD.md" target="_blank">批量開戶</a>。',
+  /* ---- YMIS 報表批量開戶 ---- */
+  ymis_m0:'<b>方法一（最推薦）：YMIS 報表匯入</b><br>在 YMIS 匯出「自訂報表」PDF（欄位次序：童軍成員編號 → 中文姓名 → 電郵地址），直接上載，系統會自動讀出成員資料並預覽後開戶。',
+  ymis_guide_summary:'📘 如何在 YMIS 匯出指定格式報告？（點擊展開）',
+  ymis_guide_html:'<b>步驟一：搜尋與篩選旅團成員</b><ol>'
+    +'<li>登入 <a href="https://ymis.scout.org.hk/#/private/MemberSearch" target="_blank" rel="noopener">青少年成員資訊系統 (YMIS)</a>。</li>'
+    +'<li>點選頂部選單「功能」→「搜尋成員紀錄」。</li>'
+    +'<li>展開「成員紀錄」區塊：選擇所屬「地域」及「童軍區」，在「童軍旅」輸入旅團代號（例如 82）。</li>'
+    +'<li>按「搜尋」。</li>'
+    +'<li>在成員列表勾選要匯出的成員，或勾選最上方的「全選」。</li></ol>'
+    +'<b>步驟二：編製報告 → 自訂報表</b><ol>'
+    +'<li>按搜尋結果上方的「編製報告」。</li>'
+    +'<li>報告種類：切換為「自訂報表」；上方「排列」與「第二排列」可略過不變。</li></ol>'
+    +'<b>步驟三：欄位次序（最關鍵！）</b><br>必須<b>嚴格依序</b>把左側欄位加入右側「已選擇之項目」：'
+    +'<ol><li>童軍成員編號（＝系統的 YMIS）</li><li>中文姓名（＝姓名）</li><li>電郵地址（＝聯絡電郵）</li></ol>'
+    +'<div style="background:#FFFBEB;border-left:3px solid var(--orange);padding:6px 8px;border-radius:6px;margin:6px 0">💡 欄位先後次序完全取決於加入右側的先後次序；右側每欄的寬度百分比可維持預設（例如 100%）。</div>'
+    +'<b>步驟四：產出與下載</b><ol><li>確認右側次序為：童軍成員編號 → 中文姓名 → 電郵地址。</li><li>按右下角「確定」，系統自動產生並下載 PDF。</li></ol>'
+    +'<b>🔐 PDF 有密碼？</b><br>YMIS 匯出的 PDF 多數帶密碼保護。本 APP 支援直接輸入密碼解鎖讀取；若仍讀不到，可用 Chrome／Edge 開啟 PDF（輸入密碼）→ 列印 → 目的地選「另存為 PDF」，儲存出來的新檔案就沒有密碼。詳見 <a href="docs/YMIS_EXPORT.md" target="_blank">YMIS 匯出教學</a>。',
+  ymis_pw_label:'PDF 密碼（如有）',
+  ymis_pw_ph:'例如 M28858467',
+  ymis_pw_prompt:'此 PDF 有密碼保護，請輸入密碼：',
+  ymis_pw_wrong:'PDF 密碼不正確，請重新輸入',
+  ymis_pw_needed:'未輸入密碼，已取消讀取 PDF',
+  ymis_upload:'📄 上載 YMIS PDF 報表',
+  ymis_paste_hint:'讀不到 PDF？可把報表文字複製貼上（每行：編號 姓名 電郵）：',
+  ymis_paste_go:'🔍 解析貼上的文字',
+  ymis_pdfjs_fail:'無法載入 PDF 解析元件（需要網絡），請改用「貼上文字」或先用瀏覽器另存為無密碼 PDF',
+  ymis_reading:'正在讀取 PDF（{0}）...',
+  ymis_parsed:'已讀出 {0} 位成員，略過 {1} 行',
+  ymis_none:'讀不到成員資料，請確認報表欄位次序為：童軍成員編號 → 中文姓名 → 電郵地址',
+  ymis_preview_title:'📋 匯入預覽（可直接修改）',
+  ymis_col_ymis:'YMIS', ymis_col_name:'姓名', ymis_col_email:'聯絡電郵', ymis_col_status:'狀態', ymis_col_use:'匯入',
+  ymis_status_ok:'✅ 可匯入', ymis_status_len:'⚠️ 編號非10位', ymis_status_noname:'⚠️ 缺姓名', ymis_status_noemail:'ℹ️ 缺電郵', ymis_status_exist:'⏭️ 已存在',
+  ymis_opt_squad:'預設小隊（可留空）', ymis_opt_role:'預設角色', ymis_opt_pw:'初始密碼（留空＝只加入成員，不開登入帳號）',
+  ymis_opt_pw_ph:'例如 scout2026（首次登入須更改）',
+  ymis_pad:'🔢 全部補零至10位', ymis_clear:'🗑️ 清除預覽',
+  ymis_go:'🚀 確認批量開戶（{0} 人）',
+  ymis_pick_none:'請至少勾選一位成員',
   syl_suffix:'訓練綱要'
 },
 en:{
@@ -1208,7 +1260,49 @@ en:{
   wearing_guide:'Badge Wearing Guide (from 2024-04-01)', wearing_url:'Scout Section Resources',
   wearing_points_html:'<b>Wearing highlights (2024 guide):</b><br>• Messengers of Peace badge is worn at the centre of the left chest pocket, replacing the Membership Badge<br>• First Aid badge: top of left sleeve, below AYP<br>• Lifesaver cloth badge: centre of upper left sleeve<br>• Up to 4 World Scout badges in a row on the right sleeve<br>• Scout Section badges must follow the current uniform and wearing guidelines',
   bulk_no_valid:'No valid data (YMIS must be 10 digits)', bulk_done_fmt:'Bulk onboarding done: {0} succeeded, {1} skipped',
-  deactivate_fail:'Deactivation failed: ', deactivate_confirm:'Deactivate this account? The user will not be able to log in; data is kept.'
+  deactivate_fail:'Deactivation failed: ', deactivate_confirm:'Deactivate this account? The user will not be able to log in; data is kept.',
+  /* ---- Account request / data import guide ---- */
+  guide_onboard_h3:'🆕 Account requests / data import',
+  guide_onboard_intro:'<b>Individual sign-up:</b> on the login page tap "🆕 Request a member account", enter YMIS + name + password; a leader approves it under "✅ Approvals → 👤 User approvals".<br>'
+    +'<b>Whole-troop bulk onboarding (recommended):</b> leader signs in → "👥 User Management → 📥 Bulk onboarding" → upload the YMIS "Custom Report" PDF (password supported). The app reads <b>Scout Member No. / Chinese Name / Email Address</b>, shows a preview, then creates every account at once.<br>'
+    +'You can also download the CSV template and fill it in. Docs: <a href="docs/YMIS_EXPORT.md" target="_blank">YMIS export guide</a>, <a href="docs/BULK_ONBOARD.md" target="_blank">bulk onboarding</a>.',
+  /* ---- YMIS report bulk onboarding ---- */
+  ymis_m0:'<b>Method 1 (recommended): import the YMIS report</b><br>Export a YMIS "Custom Report" PDF (column order: Scout Member No. → Chinese Name → Email Address) and upload it here — the app reads the members, shows a preview, then creates the accounts.',
+  ymis_guide_summary:'📘 How to export the required report from YMIS (tap to expand)',
+  ymis_guide_html:'<b>Step 1 — search and filter troop members</b><ol>'
+    +'<li>Sign in to <a href="https://ymis.scout.org.hk/#/private/MemberSearch" target="_blank" rel="noopener">YMIS</a>.</li>'
+    +'<li>Top menu → "Function" → "Search Member Record".</li>'
+    +'<li>Expand "Member Record": pick your Region and District, then type the group number (e.g. 82) in "Scout Group".</li>'
+    +'<li>Click "Search".</li>'
+    +'<li>Tick the members to export, or tick "Select All" at the top of the list.</li></ol>'
+    +'<b>Step 2 — Generate Report → Custom Report</b><ol>'
+    +'<li>Click "Generate Report" above the results.</li>'
+    +'<li>Report type: switch to "Custom Report"; the "Sort" / "Second Sort" options can stay as they are.</li></ol>'
+    +'<b>Step 3 — field order (most important!)</b><br>Add the fields to "Selected Items" in <b>exactly</b> this order:'
+    +'<ol><li>Scout Member No. (→ YMIS)</li><li>Chinese Name (→ Name)</li><li>Email Address (→ Contact email)</li></ol>'
+    +'<div style="background:#FFFBEB;border-left:3px solid var(--orange);padding:6px 8px;border-radius:6px;margin:6px 0">💡 Column order follows the order you add them; the width percentage of each field can stay at its default (e.g. 100%).</div>'
+    +'<b>Step 4 — generate and download</b><ol><li>Confirm the order: Scout Member No. → Chinese Name → Email Address.</li><li>Click "Confirm" at the bottom-right; the PDF downloads automatically.</li></ol>'
+    +'<b>🔐 Password-protected PDF?</b><br>YMIS PDFs are usually encrypted. This app can unlock them with the password you type below. If it still fails, open the PDF in Chrome/Edge (enter the password) → Print → Destination "Save as PDF"; the new file has no password. See <a href="docs/YMIS_EXPORT.md" target="_blank">the YMIS export guide</a>.',
+  ymis_pw_label:'PDF password (if any)',
+  ymis_pw_ph:'e.g. M28858467',
+  ymis_pw_prompt:'This PDF is password protected. Please enter the password:',
+  ymis_pw_wrong:'Incorrect PDF password, please try again',
+  ymis_pw_needed:'No password entered — PDF reading cancelled',
+  ymis_upload:'📄 Upload YMIS PDF report',
+  ymis_paste_hint:'PDF unreadable? Paste the report text instead (one line per member: number name email):',
+  ymis_paste_go:'🔍 Parse pasted text',
+  ymis_pdfjs_fail:'Could not load the PDF engine (needs internet). Use "paste text", or re-save the PDF without a password first.',
+  ymis_reading:'Reading PDF ({0})...',
+  ymis_parsed:'Found {0} member(s), skipped {1} line(s)',
+  ymis_none:'No members found — check that the report columns are: Scout Member No. → Chinese Name → Email Address',
+  ymis_preview_title:'📋 Import preview (editable)',
+  ymis_col_ymis:'YMIS', ymis_col_name:'Name', ymis_col_email:'Contact email', ymis_col_status:'Status', ymis_col_use:'Import',
+  ymis_status_ok:'✅ Ready', ymis_status_len:'⚠️ Not 10 digits', ymis_status_noname:'⚠️ No name', ymis_status_noemail:'ℹ️ No email', ymis_status_exist:'⏭️ Already exists',
+  ymis_opt_squad:'Default patrol (optional)', ymis_opt_role:'Default role', ymis_opt_pw:'Initial password (blank = add member only, no login)',
+  ymis_opt_pw_ph:'e.g. scout2026 (must change on first login)',
+  ymis_pad:'🔢 Pad all to 10 digits', ymis_clear:'🗑️ Clear preview',
+  ymis_go:'🚀 Confirm bulk onboarding ({0})',
+  ymis_pick_none:'Please tick at least one member'
 }};
 
 let currentLang='zh';
@@ -3198,7 +3292,19 @@ const EMBEDDED_GUIDES={
   <h3>4. 📅 活動履歷（v5.0 新增）</h3><ul><li>為成員記錄服務、活動、訓練班三類活動</li><li>支援同一活動批量套用到多個成員</li><li>可編輯／刪除已有紀錄</li><li>後端需升級至 v5.0 才可寫入雲端</li></ul>
   <h3>5. 表格列印</h3><p>自動填入，官方PT/18/PT/120A格式</p>
   <h3>6. 用戶管理</h3><ul><li>更變成員角色</li><li>⚙️權限設定：預設領袖全部 (*)，可按個別成員設定可考核範圍</li><li>🔒 系統設定：可控制是否開放成員提交完成申請</li></ul>
-  <h3>7. 系統設定</h3><p>允許成員互相查看進度：預設關，團長可開<br>允許成員提交完成申請：預設開，團長可關（關閉後成員不能提交申請，需領袖直接剔）</p>
+  <h3>7. 📥 批量開戶（YMIS 報表匯入）</h3>
+  <p>用戶管理 → <b>📥 批量開戶</b>，最快是直接上載 YMIS 匯出的「自訂報表」PDF。</p>
+  <ol>
+    <li>登入 <a href="https://ymis.scout.org.hk/#/private/MemberSearch" target="_blank" rel="noopener">YMIS</a> → 功能 → 搜尋成員紀錄。</li>
+    <li>展開「成員紀錄」，選地域、童軍區，「童軍旅」輸入旅團代號（例如 82）→ 按「搜尋」。</li>
+    <li>勾選成員（或最上方「全選」）→ 按「編製報告」。</li>
+    <li>報告種類選「自訂報表」；「排列 / 第二排列」可不變。</li>
+    <li><b>嚴格依序</b>把左側欄位加到右側：①童軍成員編號 ②中文姓名 ③電郵地址（次序＝加入次序，寬度可維持 100%）。</li>
+    <li>按「確定」下載 PDF。</li>
+    <li>回到 APP：輸入 PDF 密碼（如有）→ 上載 PDF → 檢查預覽（可即場修改 YMIS／姓名／電郵）→ 設定預設小隊、角色、初始密碼 → 按「確認批量開戶」。</li>
+  </ol>
+  <p>🔐 若 PDF 密碼解不開：用 Chrome／Edge 打開 PDF（輸入一次密碼）→ 列印 → 目的地「另存為 PDF」，新檔案就沒有密碼；亦可把報表文字複製，用「貼上文字」解析。詳見 <a href="docs/YMIS_EXPORT.md" target="_blank">YMIS 匯出教學</a>、<a href="docs/BULK_ONBOARD.md" target="_blank">批量開戶說明</a>。</p>
+  <h3>8. 系統設定</h3><p>允許成員互相查看進度：預設關，團長可開<br>允許成員提交完成申請：預設開，團長可關（關閉後成員不能提交申請，需領袖直接剔）</p>
 `};
 // 🌐 英文版教學（與中文版內容相同之翻譯）
 const EMBEDDED_GUIDES_EN={
@@ -3227,7 +3333,19 @@ const EMBEDDED_GUIDES_EN={
   <h3>4. 📅 Activity Log (new in v5.0)</h3><ul><li>Record service, activities and training courses for members</li><li>Batch-apply one activity to multiple members</li><li>Edit / delete existing records</li><li>Cloud writing requires the v5.0 backend upgrade</li></ul>
   <h3>5. Forms</h3><p>Auto-filled, official PT/18 / PT/120A format</p>
   <h3>6. User Management</h3><ul><li>Change member roles</li><li>⚙️ Permission settings: leaders default to all (*); per-member assessable scope can be set</li><li>🔒 System settings: control whether members may submit completion requests</li></ul>
-  <h3>7. System Settings</h3><p>Allow members to view each other's progress: off by default, Group Leader may enable<br>Allow members to submit completion requests: on by default, Group Leader may disable (members then cannot submit; leaders tick directly)</p>`
+  <h3>7. 📥 Bulk onboarding (import the YMIS report)</h3>
+  <p>User Management → <b>📥 Bulk onboarding</b>. The fastest route is uploading the YMIS "Custom Report" PDF.</p>
+  <ol>
+    <li>Sign in to <a href="https://ymis.scout.org.hk/#/private/MemberSearch" target="_blank" rel="noopener">YMIS</a> → Function → Search Member Record.</li>
+    <li>Expand "Member Record", choose Region and District, type the group number (e.g. 82) in "Scout Group" → Search.</li>
+    <li>Tick the members (or "Select All") → click "Generate Report".</li>
+    <li>Report type: "Custom Report"; sort options can stay unchanged.</li>
+    <li>Add fields to the right in <b>exactly</b> this order: ① Scout Member No. ② Chinese Name ③ Email Address (order = the order you add them; widths can stay at 100%).</li>
+    <li>Click "Confirm" to download the PDF.</li>
+    <li>Back in the app: type the PDF password (if any) → upload the PDF → review the preview (YMIS / name / email are editable) → set default patrol, role and initial password → "Confirm bulk onboarding".</li>
+  </ol>
+  <p>🔐 If the password cannot be unlocked: open the PDF in Chrome/Edge (enter the password once) → Print → "Save as PDF"; the new file is unencrypted. You can also copy the report text and use "Parse pasted text". See <a href="docs/YMIS_EXPORT.md" target="_blank">the YMIS export guide</a> and <a href="docs/BULK_ONBOARD.md" target="_blank">bulk onboarding doc</a>.</p>
+  <h3>8. System Settings</h3><p>Allow members to view each other's progress: off by default, Group Leader may enable<br>Allow members to submit completion requests: on by default, Group Leader may disable (members then cannot submit; leaders tick directly)</p>`
 };
 function getGuideHtml(key){ return (inEn()&&EMBEDDED_GUIDES_EN[key])||EMBEDDED_GUIDES[key]||EMBEDDED_GUIDES.member; }
 
@@ -3248,7 +3366,7 @@ async function renderHelpTab(){
     </div>
   </div>
   <div class="info-section" id="helpContent"><div style="font-size:14px;line-height:1.8">${getGuideHtml(key)}</div></div>
-  <div class="info-section" style="background:var(--bg)"><h4>${t('help_docs_title')}</h4><div style="font-size:11px"><a href="docs/MEMBER_GUIDE.md" target="_blank">${t('help_docs_member')}</a> | <a href="docs/LEADER_GUIDE.md" target="_blank">${t('help_docs_leader')}</a></div></div>`;
+  <div class="info-section" style="background:var(--bg)"><h4>${t('help_docs_title')}</h4><div style="font-size:11px"><a href="docs/MEMBER_GUIDE.md" target="_blank">${t('help_docs_member')}</a> | <a href="docs/LEADER_GUIDE.md" target="_blank">${t('help_docs_leader')}</a> | <a href="docs/YMIS_EXPORT.md" target="_blank">YMIS 匯出／批量開戶</a> | <a href="docs/BULK_ONBOARD.md" target="_blank">BULK_ONBOARD.md</a></div></div>`;
 
   c.innerHTML=html;
 }
@@ -3471,7 +3589,185 @@ async function bulkAddMembers(list){
   if(errs.length) console.warn('批量開戶失敗：',errs);
   loadUsers();
 }
-function openBulkOnboardModal(){ document.getElementById('bulkOnboardModal').classList.add('active'); }
+function openBulkOnboardModal(){ document.getElementById('bulkOnboardModal').classList.add('active'); applyStaticI18n(); }
+
+/* ---------- YMIS 自訂報表（PDF / 文字）→ 批量開戶 ---------- */
+let ymisImportRows=[];           // 預覽中的資料
+let _pdfjsPromise=null;
+
+function loadPdfJs(){
+  if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if(_pdfjsPromise) return _pdfjsPromise;
+  const srcs=[
+    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',
+    'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'
+  ];
+  _pdfjsPromise=new Promise((resolve,reject)=>{
+    let i=0;
+    const tryNext=()=>{
+      if(i>=srcs.length){ _pdfjsPromise=null; reject(new Error('pdfjs_load_fail')); return; }
+      const src=srcs[i++];
+      const s=document.createElement('script');
+      s.src=src; s.async=true;
+      s.onload=()=>{
+        if(window.pdfjsLib){
+          try{ window.pdfjsLib.GlobalWorkerOptions.workerSrc=src.replace('pdf.min.js','pdf.worker.min.js'); }catch(e){}
+          resolve(window.pdfjsLib);
+        } else tryNext();
+      };
+      s.onerror=tryNext;
+      document.head.appendChild(s);
+    };
+    tryNext();
+  });
+  return _pdfjsPromise;
+}
+
+// 讀取（可帶密碼的）PDF，回傳 rows：[[cell,cell,cell], ...]
+async function readYmisPdfRows(file, password, retry){
+  const pdfjsLib=await loadPdfJs();
+  const buf=await file.arrayBuffer();
+  let doc;
+  try{
+    doc=await pdfjsLib.getDocument({ data:new Uint8Array(buf), password:password||'' }).promise;
+  }catch(err){
+    const isPw=err&&(err.name==='PasswordException'||/password/i.test(err.message||''));
+    if(isPw){
+      const pw=prompt(retry?t('ymis_pw_wrong'):t('ymis_pw_prompt'), password||'');
+      if(!pw) throw new Error(t('ymis_pw_needed'));
+      const box=document.getElementById('ymisPdfPw'); if(box) box.value=pw;
+      return readYmisPdfRows(file, pw, true);
+    }
+    throw err;
+  }
+  const rows=[];
+  for(let p=1;p<=doc.numPages;p++){
+    const page=await doc.getPage(p);
+    const tc=await page.getTextContent();
+    const items=tc.items.map(it=>({ str:it.str, x:it.transform[4], y:it.transform[5], width:it.width }));
+    rows.push(...YmisParse.itemsToRows(items));
+  }
+  return rows;
+}
+
+async function importYmisPdf(file){
+  if(!file) return;
+  if(!window.YmisParse){ showToast('assets/ymis-parse.js not loaded','error'); return; }
+  const pw=(document.getElementById('ymisPdfPw')?.value||'').trim();
+  showToast(tf('ymis_reading', file.name));
+  try{
+    const rows=await readYmisPdfRows(file, pw, false);
+    applyYmisParseResult(YmisParse.parseRows(rows));
+  }catch(e){
+    if(e&&e.message==='pdfjs_load_fail'){ showToast(t('ymis_pdfjs_fail'),'error'); return; }
+    showToast((e&&e.message)||t('api_failed'),'error');
+  }
+}
+
+function importYmisPastedText(){
+  if(!window.YmisParse){ showToast('assets/ymis-parse.js not loaded','error'); return; }
+  const raw=document.getElementById('ymisPasteText')?.value||'';
+  if(!raw.trim()){ showToast(t('ymis_none'),'warning'); return; }
+  applyYmisParseResult(YmisParse.parseText(raw));
+}
+
+function applyYmisParseResult(res){
+  const existing=new Set((members||[]).map(m=>String(m.ymis)));
+  ymisImportRows=(res.members||[]).map(m=>({
+    ymis:m.ymis, name:m.name, email:m.email,
+    exists:existing.has(m.ymis),
+    use:!existing.has(m.ymis)
+  }));
+  if(!ymisImportRows.length){ showToast(t('ymis_none'),'warning'); renderYmisPreview(); return; }
+  showToast(tf('ymis_parsed', ymisImportRows.length, (res.skipped||[]).length),'success');
+  renderYmisPreview();
+}
+
+function ymisRowStatus(r){
+  if(r.exists) return t('ymis_status_exist');
+  if(!/^\d{10}$/.test(r.ymis)) return t('ymis_status_len');
+  if(!r.name) return t('ymis_status_noname');
+  if(!r.email) return t('ymis_status_noemail');
+  return t('ymis_status_ok');
+}
+
+function renderYmisPreview(){
+  const box=document.getElementById('ymisPreview');
+  if(!box) return;
+  if(!ymisImportRows.length){ box.innerHTML=''; return; }
+  const picked=ymisImportRows.filter(r=>r.use).length;
+  const rows=ymisImportRows.map((r,i)=>`<tr>
+    <td style="text-align:center"><input type="checkbox" ${r.use?'checked':''} onchange="ymisEdit(${i},'use',this.checked)"></td>
+    <td><input value="${(r.ymis||'').replace(/"/g,'&quot;')}" oninput="ymisEdit(${i},'ymis',this.value)" style="width:100px;font-family:monospace;font-size:11px;padding:3px;border:1px solid var(--border);border-radius:4px"></td>
+    <td><input value="${(r.name||'').replace(/"/g,'&quot;')}" oninput="ymisEdit(${i},'name',this.value)" style="width:100%;min-width:80px;font-size:11px;padding:3px;border:1px solid var(--border);border-radius:4px"></td>
+    <td><input value="${(r.email||'').replace(/"/g,'&quot;')}" oninput="ymisEdit(${i},'email',this.value)" style="width:100%;min-width:120px;font-size:11px;padding:3px;border:1px solid var(--border);border-radius:4px"></td>
+    <td style="font-size:11px;white-space:nowrap">${ymisRowStatus(r)}</td>
+  </tr>`).join('');
+  box.innerHTML=`<div class="info-section" style="border-left-color:var(--blue);background:var(--blue-light)">
+    <h4 style="font-size:13px;margin-bottom:6px">${t('ymis_preview_title')}</h4>
+    <div style="max-height:240px;overflow:auto;background:#fff;border:1px solid var(--border);border-radius:8px">
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead><tr style="background:var(--bg);position:sticky;top:0">
+          <th style="padding:4px">${t('ymis_col_use')}</th><th style="padding:4px">${t('ymis_col_ymis')}</th>
+          <th style="padding:4px">${t('ymis_col_name')}</th><th style="padding:4px">${t('ymis_col_email')}</th>
+          <th style="padding:4px">${t('ymis_col_status')}</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:10px">
+      <label style="font-size:11px">${t('ymis_opt_squad')}<input id="ymisDefSquad" style="width:100%;padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px"></label>
+      <label style="font-size:11px">${t('ymis_opt_role')}<select id="ymisDefRole" style="width:100%;padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+        <option value="member">${t('role_member')}</option>
+        <option value="branch_leader">${t('role_branch_leader')}</option>
+        <option value="group_leader">${t('role_group_leader')}</option>
+        <option value="admin">${t('role_admin')}</option>
+      </select></label>
+      <label style="font-size:11px">${t('ymis_opt_pw')}<input id="ymisDefPw" placeholder="${t('ymis_opt_pw_ph')}" style="width:100%;padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px"></label>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+      <button class="btn btn-sm btn-outline" onclick="ymisPadAll()">${t('ymis_pad')}</button>
+      <button class="btn btn-sm btn-outline" onclick="ymisClearPreview()">${t('ymis_clear')}</button>
+      <button class="btn btn-sm btn-success" style="flex:1" onclick="confirmYmisImport()">${tf('ymis_go', picked)}</button>
+    </div>
+  </div>`;
+}
+
+function ymisEdit(i, field, val){
+  if(!ymisImportRows[i]) return;
+  ymisImportRows[i][field]=(field==='use')?!!val:String(val).trim();
+  if(field==='ymis'){
+    const existing=new Set((members||[]).map(m=>String(m.ymis)));
+    ymisImportRows[i].exists=existing.has(ymisImportRows[i].ymis);
+  }
+  if(field!=='use'){
+    const cell=document.querySelectorAll('#ymisPreview tbody tr')[i]?.children[4];
+    if(cell) cell.textContent=ymisRowStatus(ymisImportRows[i]);
+  } else renderYmisPreview();
+}
+function ymisPadAll(){
+  ymisImportRows.forEach(r=>{ r.ymis=YmisParse.padTo10(r.ymis); });
+  const existing=new Set((members||[]).map(m=>String(m.ymis)));
+  ymisImportRows.forEach(r=>{ r.exists=existing.has(r.ymis); });
+  renderYmisPreview();
+}
+function ymisClearPreview(){ ymisImportRows=[]; renderYmisPreview(); }
+
+async function confirmYmisImport(){
+  const squad=(document.getElementById('ymisDefSquad')?.value||'').trim();
+  const role=document.getElementById('ymisDefRole')?.value||'member';
+  const pw=(document.getElementById('ymisDefPw')?.value||'').trim();
+  const list=ymisImportRows.filter(r=>r.use&&/^\d{10}$/.test(r.ymis)&&r.name).map(r=>({
+    ymis:r.ymis, name:r.name, email:r.email||'', squad, squad_role:'member',
+    role, can_tick:role!=='member', password:pw, note:'YMIS import'
+  }));
+  if(!list.length){ showToast(t('ymis_pick_none'),'warning'); return; }
+  await bulkAddMembers(list);
+  ymisImportRows=[];
+  renderYmisPreview();
+  closeModal('bulkOnboardModal');
+}
 async function bulkAddFromJSON(){
   const raw=document.getElementById('bulkJson').value;
   let arr; try{ arr=JSON.parse(raw); }catch(e){ showToast(t('bulk_json_bad'),'error'); return; }
@@ -3984,19 +4280,42 @@ async function toggleAllowMemberRequests(checked){
 }
 </script>
 <div id="bulkOnboardModal" class="modal">
-  <div class="modal-content" style="max-width:640px">
+  <div class="modal-content" style="max-width:720px">
     <h3 data-i18n="bulk_title">📥 批量開戶</h3>
+
+    <!-- 方法一：YMIS 報表匯入（推薦） -->
+    <div class="info-section" style="border-left-color:var(--green);background:#F1F8F2;font-size:12px;line-height:1.7">
+      <p data-i18n-html="ymis_m0"></p>
+      <details style="margin-top:6px">
+        <summary style="cursor:pointer;font-weight:600" data-i18n="ymis_guide_summary">📘 如何在 YMIS 匯出指定格式報告？（點擊展開）</summary>
+        <div style="margin-top:8px;font-size:12px;line-height:1.8" data-i18n-html="ymis_guide_html"></div>
+      </details>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">
+        <label style="font-size:11px;color:var(--text-light)" data-i18n="ymis_pw_label">PDF 密碼（如有）</label>
+        <input type="text" id="ymisPdfPw" placeholder="例如 M28858467" data-i18n-ph="ymis_pw_ph" style="flex:1;min-width:150px;padding:6px;border:1px solid var(--border);border-radius:8px;font-size:12px">
+        <label class="btn btn-sm btn-primary"><span data-i18n="ymis_upload">📄 上載 YMIS PDF 報表</span><input type="file" accept="application/pdf,.pdf" onchange="importYmisPdf(this.files[0]);this.value=''" style="display:none"></label>
+      </div>
+      <div style="margin-top:8px">
+        <div style="font-size:11px;color:var(--text-light);margin-bottom:4px" data-i18n="ymis_paste_hint">讀不到 PDF？可把報表文字複製貼上（每行：編號 姓名 電郵）：</div>
+        <textarea id="ymisPasteText" style="width:100%;height:70px;font-family:monospace;font-size:11px;padding:6px;border:1px solid var(--border);border-radius:8px"></textarea>
+        <button class="btn btn-sm btn-outline" style="margin-top:6px" onclick="importYmisPastedText()" data-i18n="ymis_paste_go">🔍 解析貼上的文字</button>
+      </div>
+    </div>
+
+    <div id="ymisPreview"></div>
+
     <div class="info-section" style="font-size:12px;line-height:1.7">
-      <p data-i18n-html="bulk_m1"><b>方法一：上傳 CSV（最快）</b><br>先下載範本 → 填寫 → 上傳。有填密碼/角色會開立可登入帳號，否則只加入成員。</p>
-      <p data-i18n-html="bulk_m2"><b>方法二（進階／備用，日常不建議）：Google Sheets 直接寫入</b><br>把 CSV 匯入 Google Sheets → 填寫 → 用附帶的 Apps Script（<a href="assets/batch-onboard/Code.gs" target="_blank">Code.gs</a>）轉 JSON 並直接寫入主資料表。一般請用「方法一」在前端完成即可。詳見 <a href="docs/BULK_ONBOARD.md" target="_blank">說明</a>。</p>
+      <p data-i18n-html="bulk_m1"><b>方法二：上傳 CSV</b><br>先下載範本 → 填寫 → 上傳。有填密碼/角色會開立可登入帳號，否則只加入成員。</p>
+      <p data-i18n-html="bulk_m2"><b>方法三（進階／備用，日常不建議）：Google Sheets 直接寫入</b><br>把 CSV 匯入 Google Sheets → 填寫 → 用附帶的 Apps Script（<a href="assets/batch-onboard/Code.gs" target="_blank">Code.gs</a>）轉 JSON 並直接寫入主資料表。詳見 <a href="docs/BULK_ONBOARD.md" target="_blank">說明</a>。</p>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
       <button class="btn btn-sm btn-primary" onclick="downloadMembersTemplate()" data-i18n="bulk_dl">⬇️ 下載成員範本 CSV</button>
       <label class="btn btn-sm btn-secondary"><span data-i18n="bulk_ul">📥 上傳填好的 CSV</span><input type="file" accept=".csv" onchange="importMembersFull(this.files[0])" style="display:none"></label>
       <a class="btn btn-sm btn-outline" href="assets/batch-onboard/Code.gs" target="_blank" data-i18n="bulk_gs">📄 下載 Sheets Script（進階備用）</a>
+      <a class="btn btn-sm btn-outline" href="docs/YMIS_EXPORT.md" target="_blank">📘 YMIS 匯出教學 MD</a>
     </div>
     <div style="font-size:11px;color:var(--text-light);margin-bottom:6px" data-i18n="bulk_json_hint">或直接貼上 JSON 陣列（[{ymis,name,...}]）：</div>
-    <textarea id="bulkJson" style="width:100%;height:120px;font-family:monospace;font-size:11px;padding:6px;border:1px solid var(--border);border-radius:8px"></textarea>
+    <textarea id="bulkJson" style="width:100%;height:100px;font-family:monospace;font-size:11px;padding:6px;border:1px solid var(--border);border-radius:8px"></textarea>
     <div class="modal-actions">
       <button class="btn btn-sm btn-success" style="flex:1" onclick="bulkAddFromJSON()" data-i18n="bulk_go">🚀 由 JSON 批量開戶</button>
       <button class="btn btn-sm btn-secondary" style="flex:1" onclick="closeModal('bulkOnboardModal')" data-i18n="close">關閉</button>
