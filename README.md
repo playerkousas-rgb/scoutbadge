@@ -8,6 +8,7 @@ ScoutBadge 是為香港童軍支部設計的進度紀錄、專科徽章及領袖
 - 興趣組、技能組、服務組、教導組專科徽章
 - 海上活動、航空活動及其他獎章／徽章
 - 成員前端申請帳戶，領袖前端批准
+- 批量開戶：上載 YMIS「自訂報表」PDF（支援密碼解鎖）自動讀出 YMIS／姓名／電郵，預覽後一鍵開戶
 - 成員提交完成日期及現場核實備註，領袖審批後寫入進度
 - 小隊制度：小隊、隊長、副隊長及小隊進度
 - 可選私隱模式：只看自己、全隊、隊長／副隊長、全團
@@ -36,6 +37,7 @@ ScoutBadge 是為香港童軍支部設計的進度紀錄、專科徽章及領袖
 6. 領袖在 APP 的「審批中心」批准申請。
 
 完整步驟見 [`TROOP_ONBOARDING.md`](TROOP_ONBOARDING.md) 及 [`VERCEL_ENV_SETUP.md`](VERCEL_ENV_SETUP.md)。
+批量開戶（YMIS 報表匯出、PDF 密碼處理）見 [`docs/YMIS_EXPORT.md`](docs/YMIS_EXPORT.md) 及 [`docs/BULK_ONBOARD.md`](docs/BULK_ONBOARD.md)。
 
 ## 主系統宣傳語
 
