@@ -983,13 +983,16 @@ zh:{
   ymis_pdfjs_fail:'無法載入 PDF 解析元件（需要網絡），請改用「貼上文字」或先用瀏覽器另存為無密碼 PDF',
   ymis_reading:'正在讀取 PDF（{0}）...',
   ymis_parsed:'已讀出 {0} 位成員，略過 {1} 行',
+  ymis_parsed_pages:'已讀出 {0} 位成員（共 {1} 頁），略過 {2} 行',
+  ymis_reading_pages:'正在讀取第 {0}／{1} 頁...',
   ymis_none:'讀不到成員資料，請確認報表欄位次序為：童軍成員編號 → 中文姓名 → 電郵地址',
   ymis_preview_title:'📋 匯入預覽（可直接修改）',
   ymis_col_ymis:'YMIS', ymis_col_name:'姓名', ymis_col_email:'聯絡電郵', ymis_col_status:'狀態', ymis_col_use:'匯入',
   ymis_status_ok:'✅ 可匯入', ymis_status_len:'⚠️ 編號非10位', ymis_status_noname:'⚠️ 缺姓名', ymis_status_noemail:'ℹ️ 缺電郵', ymis_status_exist:'⏭️ 已存在',
   ymis_opt_squad:'預設小隊（可留空）', ymis_opt_role:'預設角色', ymis_opt_pw:'初始密碼（留空＝只加入成員，不開登入帳號）',
   ymis_opt_pw_ph:'例如 scout2026（首次登入須更改）',
-  ymis_pad:'🔢 全部補零至10位', ymis_clear:'🗑️ 清除預覽',
+  ymis_pad:'🔢 全部補零至10位', ymis_clear:'🗑️ 清除預覽', ymis_sel_all:'☑️ 全選', ymis_sel_none:'⬜ 全不選',
+  ymis_count_fmt:'（共 {0} 筆，已選 {1} 筆）', bulk_progress_fmt:'批量開戶中 {0}／{1}...',
   ymis_go:'🚀 確認批量開戶（{0} 人）',
   ymis_pick_none:'請至少勾選一位成員',
   syl_suffix:'訓練綱要'
@@ -1294,13 +1297,16 @@ en:{
   ymis_pdfjs_fail:'Could not load the PDF engine (needs internet). Use "paste text", or re-save the PDF without a password first.',
   ymis_reading:'Reading PDF ({0})...',
   ymis_parsed:'Found {0} member(s), skipped {1} line(s)',
+  ymis_parsed_pages:'Found {0} member(s) across {1} page(s), skipped {2} line(s)',
+  ymis_reading_pages:'Reading page {0} of {1}...',
   ymis_none:'No members found — check that the report columns are: Scout Member No. → Chinese Name → Email Address',
   ymis_preview_title:'📋 Import preview (editable)',
   ymis_col_ymis:'YMIS', ymis_col_name:'Name', ymis_col_email:'Contact email', ymis_col_status:'Status', ymis_col_use:'Import',
   ymis_status_ok:'✅ Ready', ymis_status_len:'⚠️ Not 10 digits', ymis_status_noname:'⚠️ No name', ymis_status_noemail:'ℹ️ No email', ymis_status_exist:'⏭️ Already exists',
   ymis_opt_squad:'Default patrol (optional)', ymis_opt_role:'Default role', ymis_opt_pw:'Initial password (blank = add member only, no login)',
   ymis_opt_pw_ph:'e.g. scout2026 (must change on first login)',
-  ymis_pad:'🔢 Pad all to 10 digits', ymis_clear:'🗑️ Clear preview',
+  ymis_pad:'🔢 Pad all to 10 digits', ymis_clear:'🗑️ Clear preview', ymis_sel_all:'☑️ Select all', ymis_sel_none:'⬜ Select none',
+  ymis_count_fmt:'({0} rows, {1} selected)', bulk_progress_fmt:'Onboarding {0}/{1}...',
   ymis_go:'🚀 Confirm bulk onboarding ({0})',
   ymis_pick_none:'Please tick at least one member'
 }};
@@ -3575,8 +3581,10 @@ async function importMembersFull(file){
 async function bulkAddMembers(list){
   if(!list.length){showToast(t('bulk_no_valid'),'warning');return;}
   const existing=new Set(members.map(m=>m.ymis));
-  let ok=0,skip=0;const errs=[];
+  let ok=0,skip=0,done=0;const errs=[];
   for(const m of list){
+    done++;
+    if(list.length>5&&done%3===1) showToast(tf('bulk_progress_fmt',done,list.length));
     if(existing.has(m.ymis)){skip++;continue;}
     try{
       const action=m.password?'addUser':'addMember';
@@ -3624,10 +3632,20 @@ function loadPdfJs(){
   return _pdfjsPromise;
 }
 
-// 讀取（可帶密碼的）PDF，回傳 rows：[[cell,cell,cell], ...]
-async function readYmisPdfRows(file, password, retry){
+// 讀取（可帶密碼的）PDF，回傳 pages：[ [ [cell,cell,cell], ... ], ... ]（支援多頁報表）
+// 舊版 Safari／iPad 沒有 File.arrayBuffer()，用 FileReader 後備
+function fileToArrayBuffer(file){
+  if(file.arrayBuffer) return file.arrayBuffer();
+  return new Promise((resolve,reject)=>{
+    const fr=new FileReader();
+    fr.onload=()=>resolve(fr.result);
+    fr.onerror=()=>reject(fr.error||new Error('read_fail'));
+    fr.readAsArrayBuffer(file);
+  });
+}
+async function readYmisPdfPages(file, password, retry){
   const pdfjsLib=await loadPdfJs();
-  const buf=await file.arrayBuffer();
+  const buf=await fileToArrayBuffer(file);
   let doc;
   try{
     doc=await pdfjsLib.getDocument({ data:new Uint8Array(buf), password:password||'' }).promise;
@@ -3637,18 +3655,19 @@ async function readYmisPdfRows(file, password, retry){
       const pw=prompt(retry?t('ymis_pw_wrong'):t('ymis_pw_prompt'), password||'');
       if(!pw) throw new Error(t('ymis_pw_needed'));
       const box=document.getElementById('ymisPdfPw'); if(box) box.value=pw;
-      return readYmisPdfRows(file, pw, true);
+      return readYmisPdfPages(file, pw, true);
     }
     throw err;
   }
-  const rows=[];
+  const pages=[];
   for(let p=1;p<=doc.numPages;p++){
+    if(doc.numPages>1) showToast(tf('ymis_reading_pages', p, doc.numPages));
     const page=await doc.getPage(p);
     const tc=await page.getTextContent();
     const items=tc.items.map(it=>({ str:it.str, x:it.transform[4], y:it.transform[5], width:it.width }));
-    rows.push(...YmisParse.itemsToRows(items));
+    pages.push(YmisParse.itemsToRows(items));
   }
-  return rows;
+  return pages;
 }
 
 async function importYmisPdf(file){
@@ -3657,8 +3676,8 @@ async function importYmisPdf(file){
   const pw=(document.getElementById('ymisPdfPw')?.value||'').trim();
   showToast(tf('ymis_reading', file.name));
   try{
-    const rows=await readYmisPdfRows(file, pw, false);
-    applyYmisParseResult(YmisParse.parseRows(rows));
+    const pages=await readYmisPdfPages(file, pw, false);
+    applyYmisParseResult(YmisParse.parsePages(pages));
   }catch(e){
     if(e&&e.message==='pdfjs_load_fail'){ showToast(t('ymis_pdfjs_fail'),'error'); return; }
     showToast((e&&e.message)||t('api_failed'),'error');
@@ -3680,7 +3699,8 @@ function applyYmisParseResult(res){
     use:!existing.has(m.ymis)
   }));
   if(!ymisImportRows.length){ showToast(t('ymis_none'),'warning'); renderYmisPreview(); return; }
-  showToast(tf('ymis_parsed', ymisImportRows.length, (res.skipped||[]).length),'success');
+  if(res.pages>1) showToast(tf('ymis_parsed_pages', ymisImportRows.length, res.pages, (res.skipped||[]).length),'success');
+  else showToast(tf('ymis_parsed', ymisImportRows.length, (res.skipped||[]).length),'success');
   renderYmisPreview();
 }
 
@@ -3705,7 +3725,11 @@ function renderYmisPreview(){
     <td style="font-size:11px;white-space:nowrap">${ymisRowStatus(r)}</td>
   </tr>`).join('');
   box.innerHTML=`<div class="info-section" style="border-left-color:var(--blue);background:var(--blue-light)">
-    <h4 style="font-size:13px;margin-bottom:6px">${t('ymis_preview_title')}</h4>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+      <h4 style="font-size:13px;margin:0;flex:1">${t('ymis_preview_title')} ${tf('ymis_count_fmt', ymisImportRows.length, picked)}</h4>
+      <button class="btn btn-sm btn-outline" onclick="ymisSelectAll(true)">${t('ymis_sel_all')}</button>
+      <button class="btn btn-sm btn-outline" onclick="ymisSelectAll(false)">${t('ymis_sel_none')}</button>
+    </div>
     <div style="max-height:240px;overflow:auto;background:#fff;border:1px solid var(--border);border-radius:8px">
       <table style="width:100%;border-collapse:collapse;font-size:11px">
         <thead><tr style="background:var(--bg);position:sticky;top:0">
@@ -3752,6 +3776,7 @@ function ymisPadAll(){
   ymisImportRows.forEach(r=>{ r.exists=existing.has(r.ymis); });
   renderYmisPreview();
 }
+function ymisSelectAll(v){ ymisImportRows.forEach(r=>{ r.use=!!v&&!r.exists; }); renderYmisPreview(); }
 function ymisClearPreview(){ ymisImportRows=[]; renderYmisPreview(); }
 
 async function confirmYmisImport(){

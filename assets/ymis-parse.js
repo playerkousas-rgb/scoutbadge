@@ -17,12 +17,23 @@
   var YMIS_TOKEN_RE = /\b\d{6,12}\b/;
 
   // 報表抬頭 / 頁尾 / 欄位標題，遇到即整行略過
+  // 抬頭 / 欄名 / 頁尾等非資料列（多頁報表每頁都會重複出現）
   var SKIP_PATTERNS = [
+    // 中文欄名 / 抬頭
     /童軍成員編號/, /成員編號/, /中文姓名/, /英文姓名/, /電郵地址/, /聯絡電郵/,
     /香港童軍總會/, /青少年成員資訊系統/, /自訂報表/, /報告/, /列印日期/, /列印時間/,
-    /總數|合共|小計/,
-    /Scout\s*Association/i, /Member\s*(No|Number)/i, /Chinese\s*Name/i, /Email\s*Address/i,
-    /^page\s*\d+/i, /^第\s*\d+\s*頁/, /^\d+\s*\/\s*\d+$/
+    /總數|合共|小計|以上/,
+    // 英文欄名 / 抬頭（YMIS 報表為中英雙行標題）
+    /Scout\s*Association/i, /^scout\s*id$/i, /Member\s*(No|Number|ID)/i,
+    /Name\s*in\s*Chinese/i, /Chinese\s*Name/i, /^name$/i,
+    /Email\s*Address/i, /^e-?mail$/i,
+    /Hong\s*Kong\s*Group/i, /^group\b/i, /^district\b/i, /^region\b/i, /^total\b/i,
+    // 頁碼 / 頁尾
+    /^page\s*\d+/i, /page\s*\d+\s*(of|\/)\s*\d+/i, /^第\s*\d+\s*頁/, /共\s*\d+\s*頁/,
+    /^\d+\s*\/\s*\d+$/,
+    // 日期時間戳
+    /^\d{4}[-\/]\d{1,2}[-\/]\d{1,2}([\s,]+\d{1,2}:\d{2}(:\d{2})?)?$/,
+    /^\d{1,2}:\d{2}(:\d{2})?$/
   ];
 
   function isSkipLine(text) {
@@ -162,7 +173,20 @@
 
       var name = nameParts.join(' ').replace(/\s+/g, ' ').trim();
 
-      if (!ymis) { skipped.push({ line: idx + 1, text: joined, reason: 'no_ymis' }); return; }
+      if (!ymis) {
+        // 續行：長電郵被 PDF 換行拆到下一行 → 補回上一位成員
+        if (email && out.length && !out[out.length - 1].email) {
+          var prev = out[out.length - 1];
+          prev.email = email;
+          prev.warn = prev.warn.filter(function (w) { return w !== 'no_email'; });
+          return;
+        }
+        skipped.push({ line: idx + 1, text: joined, reason: 'no_ymis' });
+        return;
+      }
+
+      // 只有數字、既無姓名亦無電郵 → 多數是頁尾流水號 / 時間戳，不當成成員
+      if (!name && !email) { skipped.push({ line: idx + 1, text: joined, reason: 'no_name_email' }); return; }
 
       var digits = ymis.replace(/\D/g, '');
       if (opts.padTo10 && digits.length < 10) digits = ('0000000000' + digits).slice(-10);
@@ -186,6 +210,22 @@
     return parseRows(itemsToRows(items, opts), opts);
   }
 
+  /**
+   * 多頁報表：pages = [ rowsOfPage1, rowsOfPage2, ... ]
+   * 每頁重複出現的抬頭／欄名／頁碼會自動略過，成員編號重複亦只取一次。
+   */
+  function parsePages(pages, opts) {
+    var flat = [];
+    var pageOf = [];
+    (pages || []).forEach(function (rows, pi) {
+      (rows || []).forEach(function (r) { flat.push(r); pageOf.push(pi + 1); });
+    });
+    var res = parseRows(flat, opts);
+    res.pages = (pages || []).length;
+    res.skipped.forEach(function (s) { s.page = pageOf[s.line - 1] || 1; });
+    return res;
+  }
+
   /** 由純文字解析 */
   function parseText(text, opts) {
     return parseRows(textToRows(text), opts);
@@ -203,6 +243,7 @@
     textToRows: textToRows,
     parseRows: parseRows,
     parseItems: parseItems,
+    parsePages: parsePages,
     parseText: parseText,
     padTo10: padTo10,
     isSkipLine: isSkipLine

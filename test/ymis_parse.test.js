@@ -83,3 +83,85 @@ function run() {
 }
 
 run();
+
+/* =============================================================
+ * 真實 YMIS 自訂報表版面測試（依領袖提供的報表截圖版面重建；姓名／電郵已改為虛構測試資料）
+ * 版面：香港童軍總會 / Scout Association of Hong Kong / 82nd Hong Kong Group
+ *       欄名為中英雙行：童軍成員編號 Scout ID / 中文姓名 Name in Chinese / 電郵地址 Email
+ *       成員編號為 10 位數（20xx 開頭），部分帶「*」標記，部分成員無電郵
+ * ============================================================= */
+function runRealLayout() {
+  console.log('\n=== 真實 YMIS 報表版面（多頁）測試 ===\n');
+
+  const header = (yTop) => ([
+    { str: '香港童軍總會', x: 250, y: yTop, width: 60 },
+    { str: 'Scout Association of Hong Kong', x: 230, y: yTop - 18, width: 130 },
+    { str: '82nd Hong Kong Group', x: 250, y: yTop - 42, width: 100 },
+    { str: '童軍成員編號', x: 50, y: yTop - 70, width: 60 },
+    { str: '中文姓名', x: 250, y: yTop - 70, width: 40 },
+    { str: '電郵地址', x: 450, y: yTop - 70, width: 40 },
+    { str: 'Scout ID', x: 50, y: yTop - 84, width: 40 },
+    { str: 'Name in Chinese', x: 250, y: yTop - 84, width: 70 },
+    { str: 'Email', x: 450, y: yTop - 84, width: 30 }
+  ]);
+  const dataRow = (id, name, email, y) => {
+    const cells = [{ str: id, x: 50, y, width: 55 }];
+    // 中文姓名常被 pdf.js 逐字拆開
+    name.split('').forEach((ch, i) => cells.push({ str: ch, x: 250 + i * 12, y, width: 12 }));
+    if (email) cells.push({ str: email, x: 450, y, width: 100 });
+    return cells;
+  };
+
+  // 第 1 頁
+  const page1 = [].concat(
+    header(760),
+    dataRow('2019051156', '陳大文', 'a.chan@example.com', 640),
+    dataRow('2019072178', '梁小明', 'b.leung@example.com', 615),
+    dataRow('2019096664', '梁志文', '', 590),
+    dataRow('2019108618', '彭小晴', 'c.pang@example.com', 565),
+    dataRow('2019168125', '王家安', 'd.wong@example.edu.hk', 540),
+    [{ str: 'Page 1 of 2', x: 480, y: 40, width: 50 }]
+  );
+
+  // 第 2 頁：抬頭 / 欄名重複；帶「*」標記；長電郵被換行拆到下一行
+  const page2 = [].concat(
+    header(760),
+    dataRow('2019259338 *', '劉子彤', '', 640),
+    [{ str: 'e.lau@example.com', x: 450, y: 628, width: 100 }], // 續行電郵
+    dataRow('2019266200', '黎子柏', '', 600),
+    dataRow('2019266390', '徐家駿', '', 575),
+    dataRow('2026036356', '徐頌文', '', 550),
+    [{ str: '第 2 頁，共 2 頁', x: 480, y: 40, width: 60 }],
+    [{ str: '202608210505', x: 50, y: 25, width: 60 }] // 頁尾流水號（獨立一行），不可當成成員
+  );
+
+  const Y2 = require('../assets/ymis-parse.js');
+  const pages = [page1, page2].map(items => Y2.itemsToRows(items));
+  const res = Y2.parsePages(pages);
+
+  console.log('  pages:', res.pages, ' members:', res.members.length);
+  assert.strictEqual(res.pages, 2, '應處理 2 頁');
+  assert.strictEqual(res.members.length, 9, '兩頁合共 9 位成員');
+
+  const byId = Object.fromEntries(res.members.map(m => [m.ymis, m]));
+  assert.strictEqual(byId['2019051156'].name, '陳大文');
+  assert.strictEqual(byId['2019051156'].email, 'a.chan@example.com');
+  assert.strictEqual(byId['2019096664'].email, '', '無電郵者留空');
+  assert.ok(byId['2019096664'].warn.includes('no_email'));
+  // 「*」標記不會混入姓名，編號仍為純 10 位數
+  assert.strictEqual(byId['2019259338'].name, '劉子彤');
+  assert.ok(/^\d{10}$/.test(byId['2019259338'].ymis));
+  // 續行電郵補回上一位成員
+  assert.strictEqual(byId['2019259338'].email, 'e.lau@example.com');
+  assert.ok(!byId['2019259338'].warn.includes('no_email'));
+  // 每位編號均為 10 位、無 warn ymis_len
+  res.members.forEach(m => assert.ok(/^\d{10}$/.test(m.ymis), '編號應為10位: ' + m.ymis));
+  // 頁尾流水號 / 重複抬頭不會變成成員
+  assert.ok(!byId['202608210505'], '頁尾流水號不可當成成員');
+  assert.ok(res.skipped.some(s => s.reason === 'no_name_email'));
+  assert.ok(res.skipped.every(s => s.page >= 1 && s.page <= 2), 'skipped 應標示頁碼');
+  console.log('  [PASS] 中英雙行欄名、* 標記、空電郵、續行電郵、多頁頁尾全部處理正確');
+
+  console.log('\n=== 真實版面測試通過 ===');
+}
+runRealLayout();
