@@ -50,6 +50,11 @@ ScoutBadge 是為香港童軍支部設計的進度紀錄、專科徽章及領袖
    Members submit service / activity / course records under「📅 Activity Log → 📝 Claim a record」; leaders approve/reject under「✅ Approval Centre → 📅 Log claims」.
 3. 已批准的履歷要改：團員按 ✏️ 提交「修改申報」，領袖重批後以同一紀錄更新；批准前團員可自行取消。其他（進度獎章、其他獎章）批准後只有領袖可改。
    To change an approved record: a member submits an edit claim (✏️); once a leader re-approves, the SAME record is updated; members may cancel while pending. Progress badges and other awards remain leader-only after approval.
+4. 提交權分開控制（童軍支部特有）：
+   - **活動履歷申報（服務／活動／訓練班）：恆常開放**，不受任何開關限制——那是成員自己參與的活動，提交後一律由領袖審批即可。
+     Activity-log claims are ALWAYS available (no toggle) — these are activities the member personally took part in; every claim goes to a leader for approval.
+   - **進度考核項目的「📝 申請完成」：由團長用「用戶管理 → 系統設定 → 允許成員提交進度完成申請」開關決定**，按旅團情況判斷成員是否夠成熟使用；關閉後成員只可由領袖直接勾選。
+     Progress assessment "📝 Apply for Completion" IS controlled by the GSL via "User Management → System Settings → Allow member progress completion applications" — enabled per troop depending on member maturity; when off, leaders tick progress directly.
 
 **超管 sheep（與 VSBADGE v8.5 一致）/ Super-admin sheep**
 

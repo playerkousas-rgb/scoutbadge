@@ -349,7 +349,9 @@ function initializeSheets() {
   try{
     const ui=SpreadsheetApp.getUi();
     if(ui){
-      ui.alert('✅ v5.2 初始化完成！\n\nSheets：進度追蹤、成員名單、Users、Applications、Tokens、SystemConfig、待批完成、其他獎章、服務紀錄、操作紀錄、活動履歷、待批履歷\n\n🔑 API Key:\n'+apiKey+'\n\n👤 管理員 YMIS: '+ADMIN_YMIS+' 密碼: '+ADMIN_PASS+'\n👑 超管帳號: '+SUPER_ADMIN_LOGIN+' / 密碼 '+SUPER_ADMIN_PASSWORD+'（只存在於後端，不在「用戶管理」出現）\n\n🌐 URL:\n'+scriptUrl);
+      // v5.2：不再在初始化彈窗顯示超管（sheep）帳號密碼——超管為後端隱藏帳戶，憑證不向操作 Sheet 的人員展示。
+      // v5.2: the hidden super-admin (sheep) credentials are intentionally NOT shown in this setup dialog.
+      ui.alert('✅ v5.2 初始化完成！\n\nSheets：進度追蹤、成員名單、Users、Applications、Tokens、SystemConfig、待批完成、其他獎章、服務紀錄、操作紀錄、活動履歷、待批履歷\n\n🔑 API Key:\n'+apiKey+'\n\n👤 管理員 YMIS: '+ADMIN_YMIS+' 密碼: '+ADMIN_PASS+'\n\n🌐 URL:\n'+scriptUrl);
     }
   }catch(e){}
   return {success:true,apiKey:apiKey,scriptUrl:scriptUrl};
@@ -1096,7 +1098,7 @@ function handleReviewLogRequest(requestId, decision, note, reviewer){
     recordId=targetId;
   }else{
     recordId='LOG_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);
-    recorder=rec.name+'（自行申報）';
+    recorder=rec.name+'（自行申報 / self-reported）';
     lSheet.appendRow([recordId,rec.type,rec.ymis,rec.name,rec.date,rec.title,rec.role,rec.hours,rec.cert_no,rec.detail,recorder,now(),'']);
   }
   sheet.getRange(rowIndex,13).setValue('approved'); sheet.getRange(rowIndex,15).setValue(reviewer.ymis); sheet.getRange(rowIndex,16).setValue(now()); sheet.getRange(rowIndex,17).setValue(note||'');

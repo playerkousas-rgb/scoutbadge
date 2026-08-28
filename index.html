@@ -771,8 +771,8 @@ zh:{
   privacy_allow:'允許成員互相查看進度 (鼓勵模式)', privacy_on:'已開啟 - 成員可看全團', privacy_off:'已關閉 - 成員只看自己 (私隱)', privacy_now:'當前：',
   privacy_note:'說明：「只限隊長／副隊長」模式須在 Users 填寫 squad_role；隊員仍只能看自己。關閉時成員「我的進度」不能選其他人，全團總覽隱藏；開啟時成員可看全團 but 不能編輯。',
   privacy_scope:'成員可查看範圍：', scope_private:'只看自己', scope_team:'全隊（同小隊）', scope_leaders:'只限隊長／副隊長查看小隊', scope_troop:'全團', squad_compare:'開啟小隊完成率比較',
-  req_allow:'允許成員提交完成申請', req_allow_on:'已開啟 - 成員可按「📝申請完成」提交進度', req_allow_off:'已關閉 - 成員不能提交申請，需領袖直接剔',
-  req_allow_note:'說明：關閉後成員在「我的進度」看不到「📝申請」按鈕，所有進度需由領袖在「我的進度」選擇成員後直接勾選。已提交但尚未批准的申請不受影響。',
+  req_allow:'允許成員提交進度完成申請（考核項目）', req_allow_on:'已開啟 - 成員可按「📝申請完成」提交進度', req_allow_off:'已關閉 - 成員不能提交進度申請，需領袖直接剔',
+  req_allow_note:'說明：此開關只控制「📝 申請完成」（進度考核項目），由團長按旅團情況決定成員是否夠成熟使用。關閉後成員在「我的進度」看不到申請按鈕，所有進度需由領袖直接勾選。⚠️「📅 活動履歷」的團員自行申報（服務／活動／訓練班）恆常開放、不受此開關影響——因為是成員自己參與的活動，提交後一律由領袖審批。已提交但尚未批准的申請不受影響。',
   users_bulk_btn:'📥 批量開戶', users_add_btn:'➕ 新增成員', users_report_btn:'⬇️ 小隊報表', users_audit_btn:'🧾 操作紀錄', users_history_btn:'✅ 審批歷史', users_import_btn:'📥 匯入 CSV', users_search_ph:'搜尋姓名/ YMIS/ Email',
   can_tick_chip:'可勾選', perms_label:'權限: ', perms_none:'無', perms_all:'全部(*)',
   role_opt_member:'團員', role_opt_branch:'支部領袖', role_opt_group:'團長', role_opt_admin:'管理員',
@@ -1103,8 +1103,8 @@ en:{
   privacy_allow:'Allow members to view each other\'s progress (encouragement mode)', privacy_on:'ON — members can view the troop', privacy_off:'OFF — members see only themselves (private)', privacy_now:'Current: ',
   privacy_note:'Note: "patrol leaders only" mode requires squad_role in the Users sheet; plain members still see only themselves. When off, members cannot pick others in "My Progress" and Troop Overview is hidden; when on, members may view but not edit.',
   privacy_scope:'Member visibility scope: ', scope_private:'Self only', scope_team:'Whole patrol', scope_leaders:'Patrol leaders / APLs view patrol', scope_troop:'Whole troop', squad_compare:'Enable patrol completion comparison',
-  req_allow:'Allow member completion applications', req_allow_on:'ON — members can submit via "📝 Apply for Completion"', req_allow_off:'OFF — members cannot apply; leaders tick directly',
-  req_allow_note:'Note: when off, members no longer see the "📝 Apply" button in "My Progress"; all progress is ticked directly by leaders after selecting the member. Applications already submitted are unaffected.',
+  req_allow:'Allow member progress completion applications (assessment items)', req_allow_on:'ON — members can submit via "📝 Apply for Completion"', req_allow_off:'OFF — members cannot submit progress requests; leaders tick directly',
+  req_allow_note:'Note: this toggle controls ONLY "📝 Apply for Completion" (progress assessment items) — the GSL decides per troop whether members are mature enough to use it. When off, members see no apply button in "My Progress" and leaders tick directly. ⚠️ Member self-claims in "📅 Activity Log" (service / activity / courses) are ALWAYS available and not affected — members submit activities they actually took part in, and every claim is approved by a leader. Requests already submitted are unaffected.',
   users_bulk_btn:'📥 Bulk onboarding', users_add_btn:'➕ Add member', users_report_btn:'⬇️ Patrol report', users_audit_btn:'🧾 Audit log', users_history_btn:'✅ Approval history', users_import_btn:'📥 Import CSV', users_search_ph:'Search name / YMIS / Email',
   can_tick_chip:'Can tick', perms_label:'Scope: ', perms_none:'None', perms_all:'All (*)',
   role_opt_member:'Member', role_opt_branch:'Section Leader', role_opt_group:'GSL', role_opt_admin:'Admin',
@@ -4390,6 +4390,23 @@ async function submitLogRecord(){
 
 /* ===== v5.2 履歷申報：團員自行申報 → 領袖審批（批准後才寫入／更新活動履歷）=====
    Log claims: members self-declare → leaders approve (only then written/updated). */
+// 後端錯誤訊息為中文；英文介面時把常見錯誤映射為英文，其餘保留原文（顯示在 t('op_fail')/t('log_req_fail') 之後）
+// Backend errors are Chinese; in EN mode map the known claim errors to English, else keep as-is.
+function logErrEn(zh){
+  if(!inEn()) return zh;
+  const s=String(zh||'');
+  if(/工作表不存在|initializeSheets/.test(s)) return 'Backend not upgraded to v5.2 — please ask the admin to update Code.gs and run initializeSheets().';
+  if(/名稱及日期必填/.test(s)) return 'Title and date are required.';
+  if(/只可申請修改自己的紀錄/.test(s)) return 'You can only request edits to your own records.';
+  if(/已有待批修改申報/.test(s)) return 'This record already has a pending edit claim — wait for a leader or cancel it first.';
+  if(/找不到原紀錄/.test(s)) return 'Original record not found (it may have been deleted). Please reload.';
+  if(/只可取消自己的申報/.test(s)) return 'You can only cancel your own claims.';
+  if(/此申報已被審批/.test(s)) return 'This claim has already been reviewed and cannot be cancelled.';
+  if(/權限不足/.test(s)) return 'You do not have permission to do this.';
+  if(/找不到待批申報|找不到申報/.test(s)) return 'Claim not found.';
+  if(/無效決定/.test(s)) return 'Invalid decision.';
+  return s;
+}
 async function submitLogRequestFromModal(f){
   const btn=document.getElementById('btnSaveLogRecord');
   const oldRec=editingLogRecordId?logRecords.find(x=>x.record_id===editingLogRecordId):null;
@@ -4402,11 +4419,11 @@ async function submitLogRequestFromModal(f){
       closeModal('logRecordModal'); renderLogsTab(); showToast(t('log_req_demo_ok'),'success'); return;
     }
     const d=await apiRequest('requestLogRecord',{token:currentToken,kind,target_record_id:oldRec?oldRec.record_id:'',record});
-    if(!d.success) throw new Error(/工作表不存在|Unknown action/i.test(d.error||'')?t('log_req_need_upgrade'):(d.error||t('api_failed')));
+    if(!d.success) throw new Error(/工作表不存在|Unknown action/i.test(d.error||'')?t('log_req_need_upgrade'):logErrEn(d.error||t('api_failed')));
     logRequests.push({request_id:d.request_id,kind,target_record_id:oldRec?oldRec.record_id:'',...record,status:'pending',created_at:todayISO()});
     closeModal('logRecordModal'); renderLogsTab();
     showToast(t('log_req_sent'),'success');
-  }catch(e){ showToast(t('log_req_fail')+e.message,'error'); }
+  }catch(e){ showToast(t('log_req_fail')+logErrEn(e.message),'error'); }
   finally{ btn.disabled=false; btn.textContent=logModalMemberMode?t('log_req_submit'):t('save'); }
 }
 async function cancelLogRequest(reqId){
@@ -4418,10 +4435,10 @@ async function cancelLogRequest(reqId){
       renderLogsTab(); showToast(t('log_cancelled'),'success'); return;
     }
     const d=await apiRequest('cancelLogRequest',{token:currentToken,request_id:reqId});
-    if(!d.success) throw new Error(d.error||'');
+    if(!d.success) throw new Error(logErrEn(d.error||''));
     logRequests=logRequests.filter(x=>x.request_id!==reqId);
     renderLogsTab(); showToast(t('log_cancelled'),'success');
-  }catch(e){ showToast(t('op_fail')+e.message,'error'); }
+  }catch(e){ showToast(t('op_fail')+logErrEn(e.message),'error'); }
 }
 async function reviewLogRequest(reqId,decision){
   if(!canUserTickRole(currentUser.role)){ showToast(t('no_permission'),'warning'); return; }
@@ -4445,7 +4462,7 @@ async function reviewLogRequest(reqId,decision){
     }
     const d=await apiRequest('reviewLogRequest',{token:currentToken,request_id:reqId,decision,review_note:''});
     document.getElementById('savingOverlay').classList.remove('active');
-    if(!d.success) throw new Error(d.error||'');
+    if(!d.success) throw new Error(logErrEn(d.error||''));
     if(decision==='approved'&&d.record){
       const idx=logRecords.findIndex(x=>x.record_id===d.record.record_id);
       if(idx>=0) logRecords[idx]={...logRecords[idx],...d.record};
@@ -4453,11 +4470,12 @@ async function reviewLogRequest(reqId,decision){
       try{ localStorage.setItem(LS.cacheProgress(currentTroopId), JSON.stringify({flat:progressFlat,rich:progressRich,members,logs:logRecords,logRequests,savedAt:Date.now()})); }catch(e){}
     }
     logRequests=logRequests.filter(x=>x.request_id!==reqId);
-    showToast('✅ '+(d.message||(decision==='approved'?t('log_req_approved'):t('log_req_rejected'))),'success');
+    // 審批結果用 i18n 文字（英文介面顯示英文），不直接顯示後端中文訊息
+    showToast(decision==='approved'?t('log_req_approved'):t('log_req_rejected'),'success');
     renderRequestsTab();
   }catch(e){
     document.getElementById('savingOverlay').classList.remove('active');
-    showToast(t('op_fail')+e.message,'error');
+    showToast(t('op_fail')+logErrEn(e.message),'error');
   }
 }
 
