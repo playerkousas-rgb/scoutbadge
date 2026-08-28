@@ -345,7 +345,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
       </div>
       <div style="text-align:left">
         <h1 data-i18n="app_h1">童軍進度追蹤系統</h1>
-        <p data-i18n="app_tagline">Scout Progress Tracker v5.0 • 總領袖獎章 + 第11版綱要（中英對照）</p>
+        <p data-i18n="app_tagline">Scout Progress Tracker v5.2 • 總領袖獎章 + 第11版綱要（中英對照）</p>
       </div>
     </div>
     <div class="header-subtitle" data-i18n="app_subtitle">童軍支部訓練綱要及進度管理 • 成員紀錄 • 領袖審批 • 表格自動填寫</div>
@@ -463,7 +463,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
     <button class="btn btn-sm lang-toggle-btn" onclick="setLang(currentLang==='en'?'zh':'en')">🌐 English</button>
     <div class="logo-row" style="margin-bottom:0">
       <div class="logo-svg-wrap"><img src="assets/scout-logo-chief-256.png" alt="Logo" onerror="this.style.display='none'"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:32px;height:32px"><path d="M30 85 L50 38 L70 85" fill="none" stroke="#FFD700" stroke-width="3" stroke-linecap="round"/><rect x="47" y="42" width="6" height="34" fill="#8B0000" rx="2"/><ellipse cx="50" cy="42" rx="9" ry="2.5" fill="none" stroke="#FFD700" stroke-width="1.2"/><path d="M45 46 Q42 36 48 28 Q50 24 50 20 Q50 16 52 13 Q55 18 54 24 Q53 28 55 32 Q58 38 55 46" fill="#FFA000"/></svg></div>
-      <div><h1 style="font-size:18px" data-i18n="login_page_h1">童軍進度追蹤 v5.0</h1></div>
+      <div><h1 style="font-size:18px" data-i18n="login_page_h1">童軍進度追蹤 v5.2</h1></div>
     </div>
   </div>
   <div class="container">
@@ -615,6 +615,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
 <div id="logRecordModal" class="modal">
   <div class="modal-content">
     <h3 id="logModalTitle">➕ 新增活動履歷紀錄</h3>
+    <p id="lgMemberHint" style="display:none;font-size:11px;background:var(--blue-light);border:1px solid var(--blue);color:var(--blue);padding:8px 10px;border-radius:8px;margin-bottom:10px" data-i18n="logm_req_hint">💡 提交後由領袖審批，批准後才會寫入活動履歷。已批准的紀錄如需修改，可再提交修改申報，經領袖重批後更新。</p>
     <div class="form-group">
       <label data-i18n="logm_type">類型 *</label>
       <select id="lgType" onchange="syncLogTypeFields()">
@@ -657,7 +658,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
 <div id="toast" class="toast"></div>
 
 <footer style="text-align:center;padding:20px 16px;margin-top:20px;border-top:2px solid var(--border);font-size:12px;color:var(--text-light);background:var(--card)">
-  <div data-i18n="footer_line1">COPYRIGHT 2026 Scout System • 童軍進度追蹤系統 v5.0</div>
+  <div data-i18n="footer_line1">COPYRIGHT 2026 Scout System • 童軍進度追蹤系統 v5.2</div>
   <div style="margin-top:4px;font-size:11px" data-i18n="footer_line2">基於 2026年第11版《童軍訓練綱要》，內置官方英文版對照 | 支援離線暫存 • 批量寫入 • 活動履歷（服務／活動／訓練班） • 保護兒童 Safe from Harm</div>
   <div style="margin-top:4px;font-size:10px" data-i18n-html="footer_line3">Developed for 82 Troop • All rights reserved • <a href="https://www.scout.org.hk" target="_blank">香港童軍總會</a></div>
 </footer>
@@ -770,8 +771,8 @@ zh:{
   privacy_allow:'允許成員互相查看進度 (鼓勵模式)', privacy_on:'已開啟 - 成員可看全團', privacy_off:'已關閉 - 成員只看自己 (私隱)', privacy_now:'當前：',
   privacy_note:'說明：「只限隊長／副隊長」模式須在 Users 填寫 squad_role；隊員仍只能看自己。關閉時成員「我的進度」不能選其他人，全團總覽隱藏；開啟時成員可看全團 but 不能編輯。',
   privacy_scope:'成員可查看範圍：', scope_private:'只看自己', scope_team:'全隊（同小隊）', scope_leaders:'只限隊長／副隊長查看小隊', scope_troop:'全團', squad_compare:'開啟小隊完成率比較',
-  req_allow:'允許成員提交完成申請', req_allow_on:'已開啟 - 成員可按「📝申請完成」提交進度', req_allow_off:'已關閉 - 成員不能提交申請，需領袖直接剔',
-  req_allow_note:'說明：關閉後成員在「我的進度」看不到「📝申請」按鈕，所有進度需由領袖在「我的進度」選擇成員後直接勾選。已提交但尚未批准的申請不受影響。',
+  req_allow:'允許成員提交進度完成申請（考核項目）', req_allow_on:'已開啟 - 成員可按「📝申請完成」提交進度', req_allow_off:'已關閉 - 成員不能提交進度申請，需領袖直接剔',
+  req_allow_note:'說明：此開關只控制「📝 申請完成」（進度考核項目），由團長按旅團情況決定成員是否夠成熟使用。關閉後成員在「我的進度」看不到申請按鈕，所有進度需由領袖直接勾選。⚠️「📅 活動履歷」的團員自行申報（服務／活動／訓練班）恆常開放、不受此開關影響——因為是成員自己參與的活動，提交後一律由領袖審批。已提交但尚未批准的申請不受影響。',
   users_bulk_btn:'📥 批量開戶', users_add_btn:'➕ 新增成員', users_report_btn:'⬇️ 小隊報表', users_audit_btn:'🧾 操作紀錄', users_history_btn:'✅ 審批歷史', users_import_btn:'📥 匯入 CSV', users_search_ph:'搜尋姓名/ YMIS/ Email',
   can_tick_chip:'可勾選', perms_label:'權限: ', perms_none:'無', perms_all:'全部(*)',
   role_opt_member:'團員', role_opt_branch:'支部領袖', role_opt_group:'團長', role_opt_admin:'管理員',
@@ -790,20 +791,34 @@ zh:{
   template_dl:'已下載成員範本 CSV',
   /* logs */
   logs_upgrade_title:'📅 活動履歷（服務／活動／訓練班紀錄）',
-  logs_upgrade_desc:'⚠️ 此旅團後端尚未升級至 <b>v5.0</b>，暫未能使用活動履歷。進度、審批、用戶管理等現有功能完全不受影響。',
-  logs_upgrade_how:'升級方法（約 5 分鐘）：Apps Script 貼上最新 Code.gs → 執行 initializeSheets() 補建「活動履歷」工作表 → 部署 → 管理部署 → 編輯 → 版本選「新版本」→ 部署。URL 不變。',
+  logs_upgrade_desc:'⚠️ 此旅團後端尚未升級至 <b>v5.2</b>，暫未能使用活動履歷／團員申報。進度、審批、用戶管理等現有功能完全不受影響。',
+  logs_upgrade_how:'升級方法（約 5 分鐘）：Apps Script 貼上最新 Code.gs → 執行 initializeSheets() 補建「活動履歷」及「待批履歷」工作表 → 部署 → 管理部署 → 編輯 → 版本選「新版本」→ 部署。URL 不變。',
   logs_recheck:'🔄 重新檢查',
   log_service:'服務', log_activity:'活動', log_training:'訓練班', log_total_hours:'服務總時數', log_add_btn:'➕ 新增紀錄',
   log_none:'暫無紀錄', log_none_leader:'，可按上方「➕ 新增紀錄」補登',
   log_role:'崗位：', log_hours:'時數：', log_cert:'證書：', log_recorder:'記錄：', log_edit_title:'編輯', log_del_title:'刪除',
   log_updated:'✅ 活動履歷已更新', log_cannot_read:'未能讀取紀錄', log_read_fail:'讀取失敗：',
-  log_only_leader_add:'只有領袖可以新增／編輯紀錄', log_backend_old:'後端未升級 v5.0，暫未能儲存', log_not_found:'找不到紀錄，請先重新載入',
+  log_only_leader_add:'只有領袖可以新增／編輯紀錄', log_backend_old:'後端未升級 v5.2，暫未能儲存', log_not_found:'找不到紀錄，請先重新載入',
   log_modal_edit:'✏️ 編輯紀錄', log_modal_add:'➕ 新增活動履歷紀錄',
   log_title_service:'服務名稱', log_title_training:'訓練班名稱', log_title_activity:'活動名稱', log_label_hours:'時數', log_label_service_hours:'服務時數',
   log_fill_required:'請填寫日期及名稱', log_saving:'儲存中...', log_saved_demo:'✅ 已儲存（DEMO 本機模式，不寫入雲端）', log_saved:'✅ 已儲存 {0} 筆活動履歷', log_saved_partial:'已儲存 {0} 筆；{1} 筆失敗（{2}）',
-  log_save_fail:'儲存失敗：', log_backend_old_err:'旅團後端未升級 v5.0：請通知管理員更新 Code.gs 並執行 initializeSheets()', log_save_fail2:'儲存失敗',
+  log_save_fail:'儲存失敗：', log_backend_old_err:'旅團後端未升級 v5.2：請通知管理員更新 Code.gs 並執行 initializeSheets()（補建「活動履歷」及「待批履歷」）', log_save_fail2:'儲存失敗',
   log_del_confirm:'確定刪除「{0}」？此操作不能復原。', log_only_leader_del:'只有領袖可以刪除紀錄', log_deleted_demo:'已刪除（DEMO 本機模式）', log_deleted:'✅ 已刪除紀錄', log_del_fail:'刪除失敗：', log_del_fail2:'刪除失敗',
   log_type_service:'服務紀錄', log_type_activity:'活動紀錄', log_type_training:'訓練班紀錄',
+  /* v5.2 履歷申報（團員自行申報 → 領袖審批） */
+  log_self_add:'📝 申報紀錄', log_empty_self:'，可按上方「📝 申報紀錄」自行申報（需領袖批准）',
+  log_pending_h:'待領袖審批的申報', log_req_new:'新增申報', log_req_edit:'修改申報',
+  log_cancel_req:'↩️ 取消申報', log_cancel_confirm:'確定取消申報「{0}」？', log_cancelled:'✅ 已取消申報',
+  log_edit_pending:'⏳ 修改待批', log_edit_pending_toast:'此紀錄已有待批修改申報，請等待領袖審批或先取消',
+  log_req_edit_btn:'申請修改（需領袖重批）', log_only_own_edit:'只可申請修改自己的紀錄',
+  log_req_add_title:'📝 申報活動履歷（需領袖批准）', log_req_edit_title:'✏️ 申請修改紀錄（需領袖重批）',
+  log_req_submit:'📨 提交申報', log_req_sending:'提交中...', log_req_sent:'✅ 申報已提交，待領袖審批',
+  log_req_fail:'申報失敗：', log_req_demo_ok:'✅ 已提交申報（DEMO 本機模式）',
+  log_req_need_upgrade:'後端未升級 v5.2，暫未能自行申報，請聯絡領袖代為輸入',
+  logm_req_hint:'💡 提交後由領袖審批，批准後才會寫入活動履歷。已批准的紀錄如需修改，可再提交修改申報，經領袖重批後更新。',
+  log_orig_rec:'原紀錄：', log_orig_missing:'⚠️ 找不到原紀錄（可能已被刪除）',
+  log_req_approved:'✅ 已批准申報', log_req_rejected:'已拒絕申報',
+  req_tab_log:'📅 履歷申報 ({0})', req_log_section:'📅 履歷申報 - 成員自行申報的服務／活動／訓練班紀錄', req_log_none:'沒有待批履歷申報',
   /* lang */
   lang_toggle:'🌐 English', lang_switched:'🌐 已切換介面語言（內容相通，後端紀錄相同）',
   tab_escape:'已緊急退出至我的進度', tab_dblclick:'雙擊已返回首頁', tab_render_err:'⚠️ 載入此頁時出錯：', tab_render_err_toast:'此頁載入出錯，已防止卡死', tab_switch_err:'切頁出錯，已返回安全頁', tab_home:'🏠 緊急返回',
@@ -817,7 +832,7 @@ zh:{
   seed_role_server:'服務員', seed_role_participant:'參加者', seed_role_student:'學員', seed_role_organiser:'籌委',
   mock_squad:'紅隊',
   /* ---- 靜態頁面 ---- */
-  app_h1:'童軍進度追蹤系統', app_tagline:'Scout Progress Tracker v5.0 • 總領袖獎章 + 第11版綱要（中英對照）', app_subtitle:'童軍支部訓練綱要及進度管理 • 成員紀錄 • 領袖審批 • 表格自動填寫 • 中英一鍵切換',
+  app_h1:'童軍進度追蹤系統', app_tagline:'Scout Progress Tracker v5.2 • 總領袖獎章 + 第11版綱要（中英對照）', app_subtitle:'童軍支部訓練綱要及進度管理 • 成員紀錄 • 領袖審批 • 表格自動填寫 • 中英一鍵切換',
   tab_enter:'🏠 進入系統', tab_setup:'📋 新旅團部署', tab_guide:'📖 使用教學',
   home_awards_title:'童軍支部進度獎章', lv1:'會員章', lv1d:'2大項 • 含保護兒童', lv2:'探索獎章', lv3:'標準獎章', lv4:'高級獎章', lv5:'總領袖獎章', lvd:'逐項記錄及審批', lv5d:'最高進度獎章',
   home_pick_troop:'📍 請選擇您的旅團', home_reload:'🔄 重新載入', home_demo_l:'👀 示範：領袖功能', home_demo_m:'👤 示範：成員功能',
@@ -841,7 +856,7 @@ zh:{
   guide_member_card:'<b>👤 成員 member</b><ul style="font-size:11px;margin:6px 0 0 16px"><li>只能看自己進度</li><li>不能直接剔，按📝申請</li><li>待批查看自己申請</li><li>其他獎章只讀自己</li><li>表格列印官方格式</li><li>資料庫看綱要及安全指引</li></ul>',
   guide_leader_card:'<b>👨‍💼 領袖 leader</b><ul style="font-size:11px;margin:6px 0 0 16px"><li>全部功能</li><li>我的進度選任何成員看紀錄</li><li>全團一眼睇會員章+百分比</li><li>考驗營批量一鍵幫全團剔</li><li>離線暫存確認寫入</li><li>待批批量批准</li><li>用戶管理及⚙️權限設定</li><li>領袖默認全部，團長/管理員可改低層級</li><li>審批新帳號</li></ul>',
   login_h2:'🔐 登入系統', login_member_tab:'👤 成員<br><small style="font-weight:normal">YMIS 10位</small>', login_leader_tab:'👨‍💼 領袖<br><small style="font-weight:normal">Email</small>',
-  login_pw_label:'密碼', login_pw_ph:'請輸入密碼', login_apply:'🆕 申請成員帳戶', login_join:'旅團接入', login_back:'← 返回首頁', login_page_h1:'童軍進度追蹤 v5.0',
+  login_pw_label:'密碼', login_pw_ph:'請輸入密碼', login_apply:'🆕 申請成員帳戶', login_join:'旅團接入', login_back:'← 返回首頁', login_page_h1:'童軍進度追蹤 v5.2',
   nav_progress:'📊 我的進度', nav_overview:'👥 全團總覽', nav_requests:'✅ 審批中心', nav_logs:'📅 活動履曆', nav_forms:'🖨️ 表格列印', nav_help:'❓ 教學', nav_info:'📚 資料庫', nav_users:'👥 用戶管理', logout:'登出',
   pending_hint:'已暫存於瀏覽器', savebar_discard:'捨棄', savebar_confirm:'✅ 確認寫入雲端',
   cm_title:'📧 提交旅團接入申請', cm_tid:'旅團編號 *', cm_tname:'旅團名稱', cm_tname_ph:'第 82 旅', cm_url:'Apps Script URL (…/exec) *', cm_key:'API Key *', cm_note:'聯絡 Email / 備註', cm_note_ph:'請留下聯絡方式...',
@@ -851,7 +866,7 @@ zh:{
   reqm_note:'💡 本系統只作登記及進度紀錄，不儲存相片或 PDF；證書正本及現場證明請交領袖核實。提交後領袖會在「待批」頁看到，可批准即自動寫入進度。',
   logm_type:'類型 *', logm_member:'成員 *', logm_batch:'📥 批量：同一活動套用到多個成員', logm_batch_hint:'按住 Ctrl（電腦）或逐點（手機）可多選成員', logm_date:'日期 *', logm_role:'崗位／身份', logm_opt:'選填', logm_cert:'證書編號', logm_detail:'內容／備註', logm_detail_ph:'地點、主辦單位、內容摘要……（選填）', logm_hours_ph:'例如 6', logm_title_ph:'例如：全港童軍大露營 2026',
   apply_title:'📝 申請童軍成員帳戶', apply_desc:'提交後由旅團領袖在 APP 內審批，批准後會建立帳戶。', apply_ymis:'YMIS（10位數字）*', apply_name:'姓名 *', apply_squad:'小隊（可留空）', apply_email:'聯絡電郵（可留空）',
-  footer_line1:'COPYRIGHT 2026 Scout System • 童軍進度追蹤系統 v5.0',
+  footer_line1:'COPYRIGHT 2026 Scout System • 童軍進度追蹤系統 v5.2',
   footer_line2:'基於 2026年第11版《童軍訓練綱要》，內置官方英文版對照 | 支援離線暫存 • 批量寫入 • 活動履歷（服務／活動／訓練班） • 保護兒童 Safe from Harm',
   footer_line3:'Developed for 82 Troop • All rights reserved • <a href="https://www.scout.org.hk" target="_blank">香港童軍總會</a>',
   /* dynamic JS additions */
@@ -902,7 +917,7 @@ zh:{
   log_hours_service:'服務時數', log_hours_general:'時數', log_none_tail:'，可按上方「➕ 新增紀錄」補登',
   log_read_fail:'未能讀取紀錄', log_read_fail_colon:'讀取失敗：', log_save_fail_colon:'儲存失敗：', log_saving:'儲存中...',
   log_saved_fmt:'✅ 已儲存 {0} 筆活動履歷', log_saved_part_fmt:'已儲存 {0} 筆；{1} 筆失敗（{2}）',
-  log_upgrade_needed:'後端未升級 v5.0，暫未能儲存', log_upgrade_needed_long:'旅團後端未升級 v5.0：請通知管理員更新 Code.gs 並執行 initializeSheets()',
+  log_upgrade_needed:'後端未升級 v5.2，暫未能儲存', log_upgrade_needed_long:'旅團後端未升級 v5.2：請通知管理員更新 Code.gs 並執行 initializeSheets()（補建「活動履歷」及「待批履歷」）',
   log_saved_demo:'✅ 已儲存（DEMO 本機模式，不寫入雲端）', log_only_leader_del:'只有領袖可以刪除紀錄',
   log_saved_demo_done:'已刪除（DEMO 本機模式）', log_deleted:'✅ 已刪除紀錄', log_deleted_demo:'已刪除（DEMO 本機模式）',
   log_del_fail:'刪除失敗', log_del_fail_colon:'刪除失敗：', log_not_found:'找不到紀錄，請先重新載入', log_modal_add:'➕ 新增活動履歷紀錄',
@@ -1088,8 +1103,8 @@ en:{
   privacy_allow:'Allow members to view each other\'s progress (encouragement mode)', privacy_on:'ON — members can view the troop', privacy_off:'OFF — members see only themselves (private)', privacy_now:'Current: ',
   privacy_note:'Note: "patrol leaders only" mode requires squad_role in the Users sheet; plain members still see only themselves. When off, members cannot pick others in "My Progress" and Troop Overview is hidden; when on, members may view but not edit.',
   privacy_scope:'Member visibility scope: ', scope_private:'Self only', scope_team:'Whole patrol', scope_leaders:'Patrol leaders / APLs view patrol', scope_troop:'Whole troop', squad_compare:'Enable patrol completion comparison',
-  req_allow:'Allow member completion applications', req_allow_on:'ON — members can submit via "📝 Apply for Completion"', req_allow_off:'OFF — members cannot apply; leaders tick directly',
-  req_allow_note:'Note: when off, members no longer see the "📝 Apply" button in "My Progress"; all progress is ticked directly by leaders after selecting the member. Applications already submitted are unaffected.',
+  req_allow:'Allow member progress completion applications (assessment items)', req_allow_on:'ON — members can submit via "📝 Apply for Completion"', req_allow_off:'OFF — members cannot submit progress requests; leaders tick directly',
+  req_allow_note:'Note: this toggle controls ONLY "📝 Apply for Completion" (progress assessment items) — the GSL decides per troop whether members are mature enough to use it. When off, members see no apply button in "My Progress" and leaders tick directly. ⚠️ Member self-claims in "📅 Activity Log" (service / activity / courses) are ALWAYS available and not affected — members submit activities they actually took part in, and every claim is approved by a leader. Requests already submitted are unaffected.',
   users_bulk_btn:'📥 Bulk onboarding', users_add_btn:'➕ Add member', users_report_btn:'⬇️ Patrol report', users_audit_btn:'🧾 Audit log', users_history_btn:'✅ Approval history', users_import_btn:'📥 Import CSV', users_search_ph:'Search name / YMIS / Email',
   can_tick_chip:'Can tick', perms_label:'Scope: ', perms_none:'None', perms_all:'All (*)',
   role_opt_member:'Member', role_opt_branch:'Section Leader', role_opt_group:'GSL', role_opt_admin:'Admin',
@@ -1107,20 +1122,34 @@ en:{
   apps_title:'Pending account applications', apps_none:'No pending applications', review_confirm:'Confirm {0}?', approved_done:'Approved', rejected_done:'Rejected',
   template_dl:'Member template CSV downloaded',
   logs_upgrade_title:'📅 Activity Records (service / activity / training course)',
-  logs_upgrade_desc:'⚠️ This troop\'s backend has not been upgraded to <b>v5.0</b>, so activity records are unavailable. Progress, approvals and user management are unaffected.',
-  logs_upgrade_how:'Upgrade (~5 min): paste the latest Code.gs into Apps Script → run initializeSheets() to add the "Activity Records" sheet → Deploy → Manage deployments → Edit → choose "New version" → Deploy. URL stays the same.',
+  logs_upgrade_desc:'⚠️ This troop\'s backend has not been upgraded to <b>v5.2</b>, so activity records / member claims are unavailable. Progress, approvals and user management are unaffected.',
+  logs_upgrade_how:'Upgrade (~5 min): paste the latest Code.gs into Apps Script → run initializeSheets() to add the "Activity Records" and "Pending Log Claims" sheets → Deploy → Manage deployments → Edit → choose "New version" → Deploy. URL stays the same.',
   logs_recheck:'🔄 Re-check',
   log_service:'Service', log_activity:'Activities', log_training:'Training', log_total_hours:'Total service hours', log_add_btn:'➕ Add record',
   log_none:'No records yet', log_none_leader:' — leaders can add one via "➕ Add record" above',
   log_role:'Role: ', log_hours:'Hours: ', log_cert:'Cert: ', log_recorder:'Recorded by: ', log_edit_title:'Edit', log_del_title:'Delete',
   log_updated:'✅ Activity records updated', log_cannot_read:'Unable to read records', log_read_fail:'Read failed: ',
-  log_only_leader_add:'Only leaders can add/edit records', log_backend_old:'Backend not upgraded to v5.0 — cannot save yet', log_not_found:'Record not found — please reload first',
+  log_only_leader_add:'Only leaders can add/edit records', log_backend_old:'Backend not upgraded to v5.2 — cannot save yet', log_not_found:'Record not found — please reload first',
   log_modal_edit:'✏️ Edit record', log_modal_add:'➕ New activity record',
   log_title_service:'Service name', log_title_training:'Course name', log_title_activity:'Activity name', log_label_hours:'Hours', log_label_service_hours:'Service hours',
   log_fill_required:'Please fill in date and name', log_saving:'Saving...', log_saved_demo:'✅ Saved (DEMO local mode, not written to cloud)', log_saved:'✅ Saved {0} activity record(s)', log_saved_partial:'Saved {0}; {1} failed ({2})',
-  log_save_fail:'Save failed: ', log_backend_old_err:'Troop backend not on v5.0: ask the admin to update Code.gs and run initializeSheets()', log_save_fail2:'Save failed',
+  log_save_fail:'Save failed: ', log_backend_old_err:'Troop backend not on v5.2: ask the admin to update Code.gs and run initializeSheets() (adds the Activity Records + Pending Log Claims sheets)', log_save_fail2:'Save failed',
   log_del_confirm:'Delete "{0}"? This cannot be undone.', log_only_leader_del:'Only leaders can delete records', log_deleted_demo:'Deleted (DEMO local mode)', log_deleted:'✅ Record deleted', log_del_fail:'Delete failed: ', log_del_fail2:'Delete failed',
   log_type_service:'Service Records', log_type_activity:'Activity Records', log_type_training:'Training Course Records',
+  /* v5.2 log claims (members self-declare → leaders approve) */
+  log_self_add:'📝 Claim a record', log_empty_self:'. Tap “📝 Claim a record” above (leader approval needed).',
+  log_pending_h:'Claims awaiting a leader', log_req_new:'New claim', log_req_edit:'Edit claim',
+  log_cancel_req:'↩️ Cancel claim', log_cancel_confirm:'Cancel the claim “{0}”?', log_cancelled:'✅ Claim cancelled',
+  log_edit_pending:'⏳ Edit pending', log_edit_pending_toast:'This record already has a pending edit claim. Wait for a leader or cancel it first.',
+  log_req_edit_btn:'Request an edit (needs leader re-approval)', log_only_own_edit:'You can only request edits to your own records',
+  log_req_add_title:'📝 Claim an activity-log record (leader approval needed)', log_req_edit_title:'✏️ Request a record edit (leader re-approval needed)',
+  log_req_submit:'📨 Submit claim', log_req_sending:'Submitting...', log_req_sent:'✅ Claim submitted. Awaiting a leader.',
+  log_req_fail:'Claim failed: ', log_req_demo_ok:'✅ Claim submitted (DEMO, local only)',
+  log_req_need_upgrade:'Backend not on v5.2; self-claims unavailable. Ask a leader to enter it.',
+  logm_req_hint:'💡 A leader reviews each claim; it is written to the activity log only after approval. To change an approved record, submit an edit claim — it updates after a leader re-approves.',
+  log_orig_rec:'Current record: ', log_orig_missing:'⚠️ Original record not found (may have been deleted)',
+  log_req_approved:'✅ Claim approved', log_req_rejected:'Claim rejected',
+  req_tab_log:'📅 Log claims ({0})', req_log_section:'📅 Log claims — member-submitted service / activity / course records', req_log_none:'No pending log claims',
   lang_toggle:'🌐 中文', lang_switched:'🌐 Interface language switched (same content, same backend records)',
   tab_escape:'Exited to My Progress', tab_dblclick:'Double-tap returned home', tab_render_err:'⚠️ Error loading this tab: ', tab_render_err_toast:'Tab failed to load — prevented a hang', tab_switch_err:'Tab switch error — returned to a safe tab', tab_home:'🏠 Back',
   contact_missing:'Please fill in troop ID, Script URL and API Key', contact_submitting:'Submitting...', contact_done:'✅ Submitted! The admin will process it soon', contact_fail:'❌ Submit failed: ',
@@ -1132,7 +1161,7 @@ en:{
   seed_role_server:'Service volunteer', seed_role_participant:'Participant', seed_role_student:'Trainee', seed_role_organiser:'Organiser',
   mock_squad:'Red Patrol',
   /* ---- static pages ---- */
-  app_h1:'Scout Progress Tracker', app_tagline:'Scout Progress Tracker v5.0 • Chief Scout\'s Award + 11th ed. Scheme (bilingual 中/EN)', app_subtitle:'Scout Section Training Scheme & Progress • Member Records • Leader Approvals • Auto-filled Forms • One-click 中/EN toggle',
+  app_h1:'Scout Progress Tracker', app_tagline:'Scout Progress Tracker v5.2 • Chief Scout\'s Award + 11th ed. Scheme (bilingual 中/EN)', app_subtitle:'Scout Section Training Scheme & Progress • Member Records • Leader Approvals • Auto-filled Forms • One-click 中/EN toggle',
   tab_enter:'🏠 Enter System', tab_setup:'📋 New Troop Setup', tab_guide:'📖 User Guide',
   home_awards_title:'Scout Section Progressive Awards', lv1:'Membership Badge', lv1d:'2 areas • incl. Safe from Harm', lv2:'Pathfinder Award', lv3:'Standard Award', lv4:'Advanced Award', lv5:'Chief Scout\'s Award', lvd:'Item-by-item records & approval', lv5d:'Highest progressive award',
   home_pick_troop:'📍 Select Your Troop', home_reload:'🔄 Reload', home_demo_l:'👀 Demo: Leader Features', home_demo_m:'👤 Demo: Member Features',
@@ -1156,7 +1185,7 @@ en:{
   guide_member_card:'<b>👤 Member</b><ul style="font-size:11px;margin:6px 0 0 16px"><li>Sees own progress only</li><li>Cannot tick — applies via 📝</li><li>Tracks own applications in Approvals</li><li>Other badges read-only (own)</li><li>Prints official-format forms</li><li>Library: syllabus & safety guides</li></ul>',
   guide_leader_card:'<b>👨‍💼 Leader</b><ul style="font-size:11px;margin:6px 0 0 16px"><li>All features</li><li>View any member\'s records in My Progress</li><li>Troop-wide Membership at a glance + %</li><li>One-tap batch ticking for assessment camps</li><li>Offline cache → confirm write</li><li>Batch approvals</li><li>User management & ⚙️ fine-grained permissions</li><li>Leaders default to all; GSL/admin can narrow lower levels</li><li>Approve new accounts</li></ul>',
   login_h2:'🔐 Sign In', login_member_tab:'👤 Member<br><small style="font-weight:normal">10-digit YMIS</small>', login_leader_tab:'👨‍💼 Leader<br><small style="font-weight:normal">Email</small>',
-  login_pw_label:'Password', login_pw_ph:'Enter password', login_apply:'🆕 Apply for a member account', login_join:'Troop Integration', login_back:'← Back to Home', login_page_h1:'Scout Progress Tracker v5.0',
+  login_pw_label:'Password', login_pw_ph:'Enter password', login_apply:'🆕 Apply for a member account', login_join:'Troop Integration', login_back:'← Back to Home', login_page_h1:'Scout Progress Tracker v5.2',
   nav_progress:'📊 My Progress', nav_overview:'👥 Troop Overview', nav_requests:'✅ Approvals', nav_logs:'📅 Activity Records', nav_forms:'🖨️ Forms & Printing', nav_help:'❓ Guides', nav_info:'📚 Library', nav_users:'👥 User Management', logout:'Sign Out',
   pending_hint:'cached in browser', savebar_discard:'Discard', savebar_confirm:'✅ Confirm & write to cloud',
   cm_title:'📧 Submit Troop Integration Request', cm_tid:'Troop ID *', cm_tname:'Troop Name', cm_tname_ph:'Troop 82', cm_url:'Apps Script URL (…/exec) *', cm_key:'API Key *', cm_note:'Contact Email / Notes', cm_note_ph:'Leave your contact...',
@@ -1166,7 +1195,7 @@ en:{
   reqm_note:'💡 This system only registers progress — no photos or PDFs are stored; show original certificates and on-site proof to a leader. After submission, leaders see it in "Approvals" and approval writes progress automatically.',
   logm_type:'Type *', logm_member:'Member *', logm_batch:'📥 Batch: apply the same record to multiple members', logm_batch_hint:'Hold Ctrl (desktop) or tap (mobile) to multi-select members', logm_date:'Date *', logm_role:'Role / position', logm_opt:'Optional', logm_cert:'Certificate no.', logm_detail:'Details / notes', logm_detail_ph:'Venue, organiser, summary... (optional)', logm_hours_ph:'e.g. 6', logm_title_ph:'e.g. HK Scout Mega Camp 2026',
   apply_title:'📝 Apply for a Scout Member Account', apply_desc:'Troop leaders review applications in the app; an account is created once approved.', apply_ymis:'YMIS (10 digits) *', apply_name:'Name *', apply_squad:'Patrol (optional)', apply_email:'Contact email (optional)',
-  footer_line1:'COPYRIGHT 2026 Scout System • Scout Progress Tracker v5.0',
+  footer_line1:'COPYRIGHT 2026 Scout System • Scout Progress Tracker v5.2',
   footer_line2:'Based on the Scout Training Scheme (11th ed., 2026) with the official English version built in | Offline caching • batch writes • activity records (service / activity / training) • Safe from Harm',
   footer_line3:'Developed for 82 Troop • All rights reserved • <a href="https://www.scout.org.hk" target="_blank">Scout Association of Hong Kong</a>',
   /* dynamic JS additions */
@@ -1216,7 +1245,7 @@ en:{
   log_hours_service:'Service hours', log_hours_general:'Hours', log_none_tail:' — press "➕ Add record" above to add one',
   log_read_fail:'Could not read records', log_read_fail_colon:'Read failed: ', log_save_fail_colon:'Save failed: ', log_saving:'Saving...',
   log_saved_fmt:'✅ Saved {0} record(s)', log_saved_part_fmt:'Saved {0}; {1} failed ({2})',
-  log_upgrade_needed:'Backend not upgraded to v5.0; cannot save yet', log_upgrade_needed_long:'Troop backend not on v5.0: ask your admin to update Code.gs and run initializeSheets()',
+  log_upgrade_needed:'Backend not upgraded to v5.2; cannot save yet', log_upgrade_needed_long:'Troop backend not on v5.2: ask the admin to update Code.gs and run initializeSheets() (adds the Activity Records + Pending Log Claims sheets)',
   log_saved_demo:'✅ Saved (DEMO local mode, not written to cloud)', log_only_leader_del:'Only leaders can delete records',
   log_saved_demo_done:'Deleted (DEMO local mode)', log_deleted:'✅ Record deleted', log_deleted_demo:'Deleted (DEMO local mode)',
   log_del_fail:'Delete failed', log_del_fail_colon:'Delete failed: ', log_not_found:'Record not found — please reload', log_modal_add:'➕ Add record',
@@ -1497,7 +1526,8 @@ let selectedProgressYmis=null; // 領袖查看他人進度
 let appConfig={allow_member_view_others:'false',member_progress_scope:'private',allow_squad_comparison:'false',allow_member_requests:'true'}; // 系統設定
 // v5.0 活動履歷：服務／活動／訓練班紀錄
 let logRecords=[],logRecordsSupported=false,logFilterType='all';
-let editingLogRecordId=null;
+let logRequests=[],logRequestsSupported=false; // v5.2 履歷申報（團員自行申報 → 領袖審批）/ log claims
+let editingLogRecordId=null,logModalMemberMode=false; // v5.2：團員模式=申報（不直接寫入）/ member mode = claim, not direct write
 const LOG_TYPES_CONFIG={
   service:{icon:'🤝',labelKey:'log_type_service',color:'var(--green)',roleHints:['服務員','統籌','站崗','工作人員','領隊'],roleHintsEn:['Volunteer','Coordinator','Marshal','Staff','Leader'],showHours:true,showCert:false},
   activity:{icon:'🏕️',labelKey:'log_type_activity',color:'var(--blue)',roleHints:['參加者','籌委','領隊','工作人員'],roleHintsEn:['Participant','Organiser','Leader','Staff'],showHours:false,showCert:false},
@@ -1962,12 +1992,15 @@ async function loadItemsAndProgress(){
       // v5.0 活動履歷：從後端載入 logs
       logRecords=Array.isArray(backendData.logs)?backendData.logs:[];
       logRecordsSupported=backendData.logsSupported===true || Array.isArray(backendData.logs);
+      // v5.2 履歷申報：舊後端沒有 logRequests 欄位 → 隱藏申報功能（待 getLogRequests 再確認）
+      logRequests=Array.isArray(backendData.logRequests)?backendData.logRequests:[];
+      logRequestsSupported=backendData.logRequestsSupported===true;
       // cache (含 logs)
-      localStorage.setItem(LS.cacheProgress(currentTroopId), JSON.stringify({flat:progressFlat, rich:progressRich, members, logs:logRecords, savedAt:Date.now()}));
+      localStorage.setItem(LS.cacheProgress(currentTroopId), JSON.stringify({flat:progressFlat, rich:progressRich, members, logs:logRecords, logRequests, savedAt:Date.now()}));
     }else{
       // fallback to cache
       const cached=localStorage.getItem(LS.cacheProgress(currentTroopId));
-      if(cached){ const c=JSON.parse(cached); progressFlat=c.flat||{}; progressRich=c.rich||{}; members=c.members||[]; logRecords=c.logs||[]; logRecordsSupported=!!c.logs; showToast(t('offline_cache'),'warning'); }
+      if(cached){ const c=JSON.parse(cached); progressFlat=c.flat||{}; progressRich=c.rich||{}; members=c.members||[]; logRecords=c.logs||[]; logRecordsSupported=!!c.logs; logRequests=c.logRequests||[]; logRequestsSupported=!!c.logRequests; showToast(t('offline_cache'),'warning'); }
       else{ progressFlat={}; members=[]; }
     }
     selectedProgressYmis=currentUser.ymis;
@@ -2882,6 +2915,18 @@ async function renderRequestsTab(){
       if(d2.success) userApplications=d2.applications||[];
     }catch(e){ console.warn(e); }
   }
+  // v5.2 載入履歷申報：領袖見全部待批；團員只見自己的（可取消）
+  // Load log claims: leaders see all pending; members see only their own (cancellable).
+  let logReqList=[];
+  const isLogReviewer=canUserTickRole(currentUser.role);
+  if(currentTroopId==='DEMO'){
+    logReqList=logRequests.filter(r=>r.status==='pending'&&(isLogReviewer||r.ymis===currentUser.ymis));
+  }else if(logRequestsSupported){
+    try{
+      const d3=await apiRequest('getLogRequests',{token:currentToken});
+      if(d3.success){ logReqList=d3.requests||[]; logRequests=logReqList; }
+    }catch(e){ console.warn(e); }
+  }
   // 合併本地暫存
   try{
     const localKey=LS.requests(currentTroopId, currentUser.ymis);
@@ -2898,8 +2943,9 @@ async function renderRequestsTab(){
 
   const totalBadge=badgeRequests.length;
   const totalUser=userApplications.length;
-  const totalAll=totalBadge+totalUser;
-  // 更新紅點數字包含兩種
+  const totalLog=logReqList.length;
+  const totalAll=totalBadge+totalUser+totalLog;
+  // 更新紅點數字（獎章 + 用戶 + 履歷申報）
   const badgeEl=document.getElementById('badgeRequestsCount');
   if(badgeEl){ if(totalAll>0){ badgeEl.textContent=totalAll; badgeEl.style.display='inline-block'; } else badgeEl.style.display='none'; }
 
@@ -2908,8 +2954,10 @@ async function renderRequestsTab(){
     return;
   }
 
+  const showLogTab=(logRequestsSupported||currentTroopId==='DEMO');
   let html=`<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
     <button class="btn btn-sm btn-primary" onclick="showApprovalSubTab('badge')">${tf('req_tab_badge',totalBadge)}</button>
+    ${showLogTab?`<button class="btn btn-sm btn-secondary" onclick="showApprovalSubTab('log')">${tf('req_tab_log',totalLog)}</button>`:''}
     ${isManage?`<button class="btn btn-sm btn-secondary" onclick="showApprovalSubTab('user')">${tf('req_tab_user',totalUser)}</button>`:''}
     <button class="btn btn-sm btn-secondary" onclick="renderRequestsTab()">${t('refresh')}</button>
   </div>`;
@@ -2941,6 +2989,41 @@ async function renderRequestsTab(){
   }
   html+=`</div>`;
 
+  // v5.2 履歷申報審批區：領袖批准後才寫入／更新活動履歷；「修改申報」以同一 record_id 更新（重批機制）
+  // Log-claims approval: leader approves before anything is written/updated; edits reuse the same record_id.
+  if(showLogTab){
+    html+=`<div id="approvalLogView" style="display:none;margin-top:16px">`;
+    html+=`<h3 style="font-size:14px;color:var(--maroon);margin-bottom:8px">${t('req_log_section')}</h3>`;
+    if(totalLog===0){
+      html+=`<p style="color:var(--text-light);font-size:12px;padding:10px;background:var(--bg);border-radius:8px">${t('req_log_none')}</p>`;
+    }else{
+      html+=logReqList.map(r=>{
+        const orig=r.kind==='edit'?logRecords.find(x=>x.record_id===r.target_record_id):null;
+        return `<div class="app-item" style="align-items:flex-start">
+          <div class="app-item-info">
+            <div style="font-weight:600">${escapeHtmlText(r.name||r.ymis)} <small style="color:var(--text-light)">(${escapeHtmlText(r.ymis)})</small>
+              <span style="background:${r.kind==='edit'?'var(--orange)':'var(--blue)'};color:#fff;padding:2px 8px;border-radius:999px;font-size:9px">${r.kind==='edit'?t('log_req_edit'):t('log_req_new')}</span></div>
+            <div style="font-size:12px;margin:4px 0">${logTypeIcon(r.type)} ${logTypeLabel(r.type)} · <b>${escapeHtmlText(r.title)}</b> <small style="color:var(--text-light)">📅 ${escapeHtmlText(r.date)}</small></div>
+            <div style="font-size:11px;display:flex;gap:6px;flex-wrap:wrap">
+              ${r.role?`<span style="background:var(--bg);padding:1px 8px;border-radius:999px">${t('log_role')}${escapeHtmlText(r.role)}</span>`:''}
+              ${r.hours?`<span style="background:var(--bg);padding:1px 8px;border-radius:999px">${t('log_hours')}${escapeHtmlText(r.hours)}</span>`:''}
+              ${r.cert_no?`<span style="background:var(--bg);padding:1px 8px;border-radius:999px">${t('log_cert')}${escapeHtmlText(r.cert_no)}</span>`:''}
+            </div>
+            ${r.detail?`<div style="font-size:11px;background:#FAFAFA;padding:6px;border-radius:6px;margin-top:4px;border-left:2px solid var(--border)">${escapeHtmlText(r.detail)}</div>`:''}
+            ${orig?`<div style="font-size:10px;color:var(--text-light);margin-top:3px">${t('log_orig_rec')}${escapeHtmlText(orig.title)}（📅 ${escapeHtmlText(orig.date)}${orig.role?` · ${t('log_role')}${escapeHtmlText(orig.role)}`:''}${orig.hours?` · ${t('log_hours')}${escapeHtmlText(orig.hours)}`:''}）</div>`:(r.kind==='edit'?`<div style="font-size:10px;color:var(--orange);margin-top:3px">${t('log_orig_missing')}</div>`:'')}
+            <div style="font-size:11px;color:var(--text-light);margin-top:3px">${t('req_submitted')}${escapeHtmlText(r.created_at||'')}</div>
+          </div>
+          <div class="app-item-actions" style="flex-direction:column">
+            ${isLogReviewer?`<button class="btn btn-sm btn-success" onclick="reviewLogRequest('${escapeAttr(r.request_id)}','approved')">${t('approve')}</button>
+            <button class="btn btn-sm btn-danger" onclick="reviewLogRequest('${escapeAttr(r.request_id)}','rejected')">${t('reject')}</button>`
+            :(r.ymis===currentUser.ymis?`<button class="btn btn-sm btn-outline" onclick="cancelLogRequest('${escapeAttr(r.request_id)}')">${t('log_cancel_req')}</button>`:`<span style="font-size:11px;color:var(--text-light)">${t('req_pending_leader')}</span>`)}
+          </div>
+        </div>`;
+      }).join('');
+    }
+    html+=`</div>`;
+  }
+
   // 用戶審批區 (僅管理層)
   if(isManage){
     html+=`<div id="approvalUserView" style="display:none;margin-top:16px">`;
@@ -2957,14 +3040,11 @@ async function renderRequestsTab(){
 }
 function showApprovalSubTab(which){
   const bv=document.getElementById('approvalBadgeView');
+  const lv=document.getElementById('approvalLogView');
   const uv=document.getElementById('approvalUserView');
-  if(which==='badge'){
-    if(bv) bv.style.display='block';
-    if(uv) uv.style.display='none';
-  }else{
-    if(bv) bv.style.display='none';
-    if(uv) uv.style.display='block';
-  }
+  if(bv) bv.style.display=which==='badge'?'block':'none';
+  if(lv) lv.style.display=which==='log'?'block':'none';
+  if(uv) uv.style.display=which==='user'?'block':'none';
 }
 
 async function reviewSingleRequest(reqId, decision){
@@ -3278,8 +3358,8 @@ const EMBEDDED_GUIDES={
   <ul>
     <li><b>📊 我的進度</b>：預設只顯示你自己的完成度，綠色進度條=已完成，點擊獎章展開，右側ⓘ查看考驗說明，<b>不能直接剔</b>，只能按「📝申請完成」</li>
     <li><b>⭐ 其他獎章</b>：已併入我的進度最底虛線卡片</li>
-    <li><b>📅 活動履歷</b>：查看你的服務／活動／訓練班紀錄（如旅團後端已升級）</li>
-    <li><b>📝 待批</b>：查看你提交的申請是否已批</li>
+    <li><b>📅 活動履歷</b>：查看你的服務／活動／訓練班紀錄；可按「📝 申報紀錄」自行申報（v5.2 起，需領袖批准才寫入）</li>
+    <li><b>📝 待批</b>：查看你提交的申請（進度申請＋履歷申報）是否已批</li>
     <li><b>🖨️ 表格列印</b>：自動填入童軍支部進度日期，可編輯後列印官方格式</li>
     <li><b>📚 資料庫</b>：保護兒童課程連結、訓練綱要</li>
   </ul>
@@ -3288,14 +3368,17 @@ const EMBEDDED_GUIDES={
   <h4>為何看不到其他成員？</h4>
   <p>預設私隱，成員只看自己。團長可在用戶管理開啟「允許成員互相查看進度」。</p>
   <h4>活動履歷找不到？</h4>
-  <p>若「📅 活動履歷」頁顯示升級提示，代表旅團後端還未更新至 v5.0 表格結構，可請領袖通知管理員更新 Code.gs 並執行 initializeSheets()。</p>`,
+  <p>若「📅 活動履歷」頁顯示升級提示，代表旅團後端還未更新至 v5.2 表格結構，可請領袖通知管理員更新 Code.gs 並執行 initializeSheets()。</p>
+  <h4>如何申報活動履歷？（v5.2 新增）</h4>
+  <ol><li>「📅 活動履歷」按「📝 申報紀錄」</li><li>填類型、日期、名稱（服務可填時數、訓練班可填證書編號）</li><li>提交後進入「待領袖審批」，可自行取消</li><li>領袖批准後才寫入活動履歷</li><li>已批准的紀錄要改？按 ✏️ 提交「修改申報」，領袖重批後以同一紀錄更新</li></ol>
+  <p>注意：進度獎章、其他獎章「批了不能改」，只有領袖可改；只有履歷可以自行申報修改。</p>`,
 
   leader: `<h2>👨‍💼 領袖使用教學 (Leader)</h2>
   <blockquote>你擁有全部權限</blockquote>
   <h3>1. 我的進度</h3><ul><li>選任何成員看所有紀錄</li><li>直接勾選+日期，離線暫存確認寫入</li></ul>
   <h3>2. 全團總覽</h3><ul><li>卡片一眼睇會員章✓</li><li>表格矩陣最多30欄</li><li>🚀考驗營批量：選成員+選項目→一鍵標記→暫存→確認寫入</li><li>子切換：按成員/按項目</li></ul>
   <h3>3. 審批中心</h3><ul><li>🏅獎章審批+👤用戶審批合併</li></ul>
-  <h3>4. 📅 活動履歷（v5.0 新增）</h3><ul><li>為成員記錄服務、活動、訓練班三類活動</li><li>支援同一活動批量套用到多個成員</li><li>可編輯／刪除已有紀錄</li><li>後端需升級至 v5.0 才可寫入雲端</li></ul>
+  <h3>4. 📅 活動履歷（v5.0 新增；v5.2 加入團員申報）</h3><ul><li>領袖可為成員記錄服務、活動、訓練班三類活動，支援批量、編輯、刪除</li><li>v5.2 起團員可在「📅 活動履歷」按「📝 申報紀錄」自行申報；領袖在「✅ 審批中心 → 📅 履歷申報」批准／拒絕</li><li>團員對已批紀錄按 ✏️ 可提交「修改申報」，批准後以同一紀錄更新（即重批機制）；批准前團員可取消</li><li>進度獎章、其他獎章流程不變：批了只有領袖可改</li><li>後端需升級至 v5.2（執行 initializeSheets() 補建「待批履歷」表）</li></ul>
   <h3>5. 表格列印</h3><p>自動填入，官方PT/18/PT/120A格式</p>
   <h3>6. 用戶管理</h3><ul><li>更變成員角色</li><li>⚙️權限設定：預設領袖全部 (*)，可按個別成員設定可考核範圍</li><li>🔒 系統設定：可控制是否開放成員提交完成申請</li></ul>
   <h3>7. 📥 批量開戶（YMIS 報表匯入）</h3>
@@ -3320,8 +3403,8 @@ const EMBEDDED_GUIDES_EN={
   <ul>
     <li><b>📊 My Progress</b>: shows only your own completion by default. Green bar = completed. Click a badge to expand, tap ⓘ for assessment details. <b>You cannot tick directly</b> — use "📝 Apply for completion".</li>
     <li><b>⭐ Other Badges</b>: merged into the dashed card at the bottom of My Progress</li>
-    <li><b>📅 Activity Log</b>: your service / activity / training course records (if the troop backend is upgraded)</li>
-    <li><b>📝 Pending</b>: check whether your submitted requests are approved</li>
+    <li><b>📅 Activity Log</b>: your service / activity / training course records; tap “📝 Claim a record” to self-declare (from v5.2, written only after a leader approves)</li>
+    <li><b>📝 Pending</b>: check your requests (progress claims + log claims)</li>
     <li><b>🖨️ Forms</b>: auto-filled with your progress dates; edit then print in the official format</li>
     <li><b>📚 Library</b>: Safe from Harm course links and the training scheme</li>
   </ul>
@@ -3330,13 +3413,16 @@ const EMBEDDED_GUIDES_EN={
   <h4>Why can't I see other members?</h4>
   <p>Privacy by default: members only see themselves. A Group Leader can enable "allow members to view each other's progress" in User Management.</p>
   <h4>Can't find Activity Log?</h4>
-  <p>If the "📅 Activity Log" tab shows an upgrade notice, the troop backend has not been updated to the v5.0 sheet structure — ask a leader to have the admin update Code.gs and run initializeSheets().</p>`,
+  <p>If the "📅 Activity Log" tab shows an upgrade notice, the troop backend has not been updated to the v5.2 sheet structure — ask a leader to have the admin update Code.gs and run initializeSheets().</p>
+  <h4>How do I claim an activity-log record? (new in v5.2)</h4>
+  <ol><li>In "📅 Activity Log", tap "📝 Claim a record"</li><li>Fill type, date and title (service hours / course certificate no. where applicable)</li><li>After submitting it shows "awaiting a leader" and you may cancel it</li><li>It appears in the activity log only once a leader approves</li><li>Need to change an approved record? Tap ✏️ to submit an edit claim — it updates in place after a leader re-approves</li></ol>
+  <p>Note: progressive badges and other awards stay "locked after approval" — only leaders may change those; only the activity log can be self-claimed and edit-claimed.</p>`,
   leader: `<h2>👨‍💼 Leader Guide</h2>
   <blockquote>You have full permissions</blockquote>
   <h3>1. My Progress</h3><ul><li>Select any member to view all records</li><li>Tick directly with a date — saved offline first, then confirm to write</li></ul>
   <h3>2. Troop Overview</h3><ul><li>Cards show Membership Badge ✓ at a glance</li><li>Matrix table up to 30 columns</li><li>🚀 Assessment camp batch: pick members + items → one-tap mark → staged → confirm</li><li>Sub-views: by member / by item</li></ul>
   <h3>3. Approval Centre</h3><ul><li>🏅 Badge approvals + 👤 user approvals combined</li></ul>
-  <h3>4. 📅 Activity Log (new in v5.0)</h3><ul><li>Record service, activities and training courses for members</li><li>Batch-apply one activity to multiple members</li><li>Edit / delete existing records</li><li>Cloud writing requires the v5.0 backend upgrade</li></ul>
+  <h3>4. 📅 Activity Log (v5.0; member claims added in v5.2)</h3><ul><li>Leaders record service, activities and training courses for members, with batch / edit / delete</li><li>From v5.2, members tap "📝 Claim a record" in "📅 Activity Log"; leaders approve/reject under "✅ Approval Centre → 📅 Log claims"</li><li>Members can tap ✏️ on an approved own record to submit an edit claim; on approval it updates the SAME record (re-approval flow); members may cancel while pending</li><li>Progressive badges and other awards are unchanged: once approved, only leaders may change them</li><li>Backend must be on v5.2 (run initializeSheets() to create the "待批履歷" sheet)</li></ul>
   <h3>5. Forms</h3><p>Auto-filled, official PT/18 / PT/120A format</p>
   <h3>6. User Management</h3><ul><li>Change member roles</li><li>⚙️ Permission settings: leaders default to all (*); per-member assessable scope can be set</li><li>🔒 System settings: control whether members may submit completion requests</li></ul>
   <h3>7. 📥 Bulk onboarding (import the YMIS report)</h3>
@@ -3958,6 +4044,12 @@ async function enterDemoMode(demoRole='leader'){
         const m=demoY[i%demoY.length];
         logRecords.push({record_id:'DEMOLOG_seed_'+i,type:tp,ymis:m.y,name:m.n,date,title,role,hours,cert_no:tp==='training'?'CERT-N2305-'+m.y.slice(-4):'',detail:t('demo_log_detail'),recorder:'DEMO Leader',recorded_at:date});
       });
+    // v5.2：DEMO 範例履歷申報（團員自行申報 → 領袖審批，僅本機記憶體）
+    logRequestsSupported=true;
+    logRequests=[
+      {request_id:'DEMOLREQ_seed_0',kind:'new',target_record_id:'',type:'service',ymis:demoY[0].y,name:demoY[0].n,date:todayISO(),title:inEn()?'Beach clean-up (self-reported)':'海灘清潔日（自行申報）',role:inEn()?'Volunteer':'義工',hours:'3',cert_no:'',detail:inEn()?'DEMO: member-submitted claim awaiting approval':'DEMO：成員自行申報，待領袖批准',status:'pending',created_at:todayISO()},
+      {request_id:'DEMOLREQ_seed_1',kind:'edit',target_record_id:'DEMOLOG_seed_0',type:'service',ymis:demoY[0].y,name:demoY[0].n,date:todayISO(),title:inEn()?'Summer Flag Day fundraiser (hours corrected)':'暑期賣旗籌款（時數更正）',role:inEn()?'Helper':'服務員',hours:'6',cert_no:'',detail:inEn()?'DEMO: edit claim — needs leader re-approval':'DEMO：修改申報，需領袖重批',status:'pending',created_at:todayISO()}
+    ];
     document.getElementById('homePage').style.display='none';
     document.getElementById('loginPage').style.display='none';
     document.getElementById('mainApp').style.display='block';
@@ -4068,9 +4160,12 @@ async function reviewApp(id,dec){
 function renderLogsTab(){
   const c=document.getElementById('tab-logs');
   const isLeader=canUserTickRole(currentUser.role);
+  // v5.2：團員可用「申報」（後端需升級 v5.2）；領袖沿用直接寫入
+  const canClaim=(logRequestsSupported||currentTroopId==='DEMO') && !isLeader;
+  const needAny=logRecordsSupported||canClaim;
   const targetYmis=isLeader?(selectedProgressYmis||currentUser.ymis):currentUser.ymis;
-  // 後端未升級至 v5.0 → 顯示升級提示（不影響現有功能）
-  if(!logRecordsSupported && currentTroopId!=='DEMO'){
+  // 後端未升級 → 顯示升級提示（不影響現有功能）
+  if(!needAny && currentTroopId!=='DEMO'){
     c.innerHTML=`<div class="info-section" style="border-left:4px solid var(--orange);background:#FFFBEB">
       <h3>${t('logs_upgrade_title')}</h3>
       <p style="font-size:13px;margin-top:6px">${t('logs_upgrade_desc')}</p>
@@ -4090,9 +4185,25 @@ function renderLogsTab(){
   html+=`<span style="font-size:11px;color:var(--text-light)">🤝 ${t('log_srv_word')} ${countOf('service')} · 🏕️ ${t('log_act_word')} ${countOf('activity')} · 🎓 ${t('log_trn_word')} ${countOf('training')}${serviceHours?` · ${t('log_total_hours')} <b>${serviceHours}</b>`:''}</span>`;
   html+=`<button class="btn btn-sm btn-secondary" onclick="refreshLogRecords()" title="${t('refresh')}">🔄</button>`;
   if(isLeader) html+=`<button class="btn btn-sm btn-primary" onclick="openLogRecordModal()">${t('log_add_btn')}</button>`;
+  else if(canClaim) html+=`<button class="btn btn-sm btn-primary" onclick="openLogRecordModal()">${t('log_self_add')}</button>`;
   html+='</div>';
   // 類型篩選
   html+=`<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">${['all','service','activity','training'].map(tp=>`<button class="btn btn-sm ${logFilterType===tp?'btn-primary':'btn-outline'}" onclick="logFilterType='${tp}';renderLogsTab()">${tp==='all'?t('all'):logTypeIcon(tp)+' '+logTypeLabel(tp)}</button>`).join('')}</div>`;
+  // v5.2：此成員的待批申報（新增／修改）。批准前不會寫入活動履歷；申報人可取消。
+  // This member's pending claims (new/edit): nothing is written until approval; the claimant may cancel.
+  const myPendingReqs=logRequests.filter(r=>r.status==='pending'&&r.ymis===targetYmis);
+  if(myPendingReqs.length){
+    html+=`<div class="info-section" style="border-left:4px solid var(--orange);background:#FFFBEB"><h3>⏳ ${t('log_pending_h')} <small style="color:var(--text-light)">(${myPendingReqs.length})</small></h3>`;
+    html+=myPendingReqs.map(r=>`<div class="app-item" style="align-items:flex-start">
+      <div class="app-item-info">
+        <b>${logTypeIcon(r.type)} ${escapeHtmlText(r.title)}</b> <small style="color:var(--text-light)">📅 ${escapeHtmlText(r.date)}</small>
+        <span style="background:${r.kind==='edit'?'var(--orange)':'var(--blue)'};color:#fff;padding:1px 8px;border-radius:999px;font-size:9px;margin-left:4px">${r.kind==='edit'?t('log_req_edit'):t('log_req_new')}</span>
+        <div style="font-size:11px;color:var(--text-light);margin-top:3px">${t('req_pending_leader')}</div>
+      </div>
+      ${r.ymis===currentUser.ymis?`<div class="app-item-actions"><button class="btn btn-sm btn-outline" onclick="cancelLogRequest('${escapeAttr(r.request_id)}')">${t('log_cancel_req')}</button></div>`:''}
+    </div>`).join('');
+    html+='</div>';
+  }
   // 三類區塊
   ['service','activity','training'].forEach(tp=>{
     if(logFilterType!=='all'&&logFilterType!==tp) return;
@@ -4100,7 +4211,7 @@ function renderLogsTab(){
     const rows=memberLogs.filter(r=>r.type===tp).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
     html+=`<div class="info-section" style="border-left:4px solid ${cfg.color}"><h3>${cfg.icon} ${logTypeLabel(tp)} <small style="color:var(--text-light)">(${rows.length})</small></h3>`;
     if(rows.length===0){
-      html+=`<p style="font-size:12px;color:var(--text-light);padding:8px 0">${t('log_none')}${isLeader?t('log_none_tail'):''}</p>`;
+      html+=`<p style="font-size:12px;color:var(--text-light);padding:8px 0">${t('log_none')}${isLeader?t('log_none_tail'):(canClaim?t('log_empty_self'):'')}</p>`;
     }else{
       html+=rows.map(r=>`<div class="app-item" style="align-items:flex-start">
         <div class="app-item-info">
@@ -4116,7 +4227,9 @@ function renderLogsTab(){
         ${isLeader?`<div class="app-item-actions" style="flex-direction:column">
           <button class="btn btn-sm btn-outline" title="${t('edit_word')}" onclick="openLogRecordModal('${escapeAttr(r.record_id)}')">✏️</button>
           <button class="btn btn-sm btn-danger" title="${t('delete_word')}" onclick="deleteLogRecord('${escapeAttr(r.record_id)}')">🗑️</button>
-        </div>`:''}
+        </div>`:(canClaim&&r.ymis===currentUser.ymis?`<div class="app-item-actions" style="flex-direction:column">
+          ${logRequests.some(q=>q.status==='pending'&&q.kind==='edit'&&q.target_record_id===r.record_id)?`<span style="font-size:10px;color:var(--orange);white-space:nowrap">${t('log_edit_pending')}</span>`:`<button class="btn btn-sm btn-outline" title="${t('log_req_edit_btn')}" onclick="openLogRecordModal('${escapeAttr(r.record_id)}')">✏️</button>`}
+        </div>`:'')}
       </div>`).join('');
     }
     html+='</div>';
@@ -4129,27 +4242,52 @@ async function refreshLogRecords(){
     const d=await apiRequest('getLogRecords',{token:currentToken});
     if(d.success){
       logRecords=d.logs||[]; logRecordsSupported=true;
-      renderLogsTab(); showToast(t('log_updated'),'success');
     }else{
-      logRecordsSupported=false; renderLogsTab();
+      logRecordsSupported=false;
       showToast(d.error||t('log_read_fail'),'warning');
     }
   }catch(e){ showToast(t('log_read_fail_colon')+e.message,'error'); }
+  // v5.2：一併重新載入待批履歷申報（不支援時靜默隱藏申報功能）
+  if(currentTroopId!=='DEMO'){
+    try{
+      const d2=await apiRequest('getLogRequests',{token:currentToken});
+      if(d2.success){ logRequests=d2.requests||[]; logRequestsSupported=true; }
+      else logRequestsSupported=false;
+    }catch(e){ logRequestsSupported=false; }
+  }
+  renderLogsTab();
+  if(logRecordsSupported) showToast(t('log_updated'),'success');
 }
 
 function openLogRecordModal(recordId){
-  if(!canUserTickRole(currentUser.role)){ showToast(t('log_only_leader_add'),'warning'); return; }
-  if(!logRecordsSupported && currentTroopId!=='DEMO'){ showToast(t('log_upgrade_needed'),'error'); return; }
+  const isLeader=canUserTickRole(currentUser.role);
+  // v5.2：團員模式 = 申報（新增／修改自己的紀錄），提交後待領袖審批；領袖維持直接寫入
+  // Member mode = claim (add / edit own records) → pending leader approval; leaders still write directly.
+  logModalMemberMode=!isLeader;
+  if(isLeader){
+    if(!logRecordsSupported && currentTroopId!=='DEMO'){ showToast(t('log_upgrade_needed'),'error'); return; }
+  }else{
+    if(!(logRequestsSupported||currentTroopId==='DEMO')){ showToast(t('log_req_need_upgrade'),'error'); return; }
+  }
   editingLogRecordId=recordId||null;
-  const opts=members.map(m=>`<option value="${m.ymis}">${escapeHtmlText(m.name)} (${m.ymis})</option>`).join('');
+  const opts=isLeader
+    ? members.map(m=>`<option value="${m.ymis}">${escapeHtmlText(m.name)} (${m.ymis})</option>`).join('')
+    : `<option value="${escapeAttr(currentUser.ymis)}">${escapeHtmlText(currentUser.name)} (${escapeHtmlText(currentUser.ymis)})</option>`;
   document.getElementById('lgMember').innerHTML=opts;
   document.getElementById('lgBatchMembers').innerHTML=opts;
   document.getElementById('lgBatchMode').checked=false;
+  document.getElementById('lgBatchToggleLabel').style.display=isLeader?'flex':'none';
+  document.getElementById('lgMemberHint').style.display=isLeader?'none':'block';
   syncLogBatchMode();
   if(recordId){
     const r=logRecords.find(x=>x.record_id===recordId);
     if(!r){ showToast(t('log_not_found'),'error'); return; }
-    document.getElementById('logModalTitle').textContent=t('log_modal_edit');
+    if(!isLeader){
+      // 團員只可申請修改自己的紀錄；同一紀錄有待批修改時不可再申報
+      if(r.ymis!==currentUser.ymis){ showToast(t('log_only_own_edit'),'warning'); return; }
+      if(logRequests.some(q=>q.status==='pending'&&q.kind==='edit'&&q.target_record_id===recordId)){ showToast(t('log_edit_pending_toast'),'warning'); return; }
+    }
+    document.getElementById('logModalTitle').textContent=isLeader?t('log_modal_edit'):t('log_req_edit_title');
     document.getElementById('lgType').value=r.type; document.getElementById('lgType').disabled=true;
     document.getElementById('lgMember').value=r.ymis; document.getElementById('lgMember').disabled=true;
     document.getElementById('lgBatchMode').disabled=true;
@@ -4160,15 +4298,16 @@ function openLogRecordModal(recordId){
     document.getElementById('lgCertNo').value=r.cert_no||'';
     document.getElementById('lgDetail').value=r.detail||'';
   }else{
-    document.getElementById('logModalTitle').textContent=t('log_modal_add');
-    document.getElementById('lgType').disabled=false;
-    document.getElementById('lgMember').disabled=false;
-    document.getElementById('lgBatchMode').disabled=false;
+    document.getElementById('logModalTitle').textContent=isLeader?t('log_modal_add'):t('log_req_add_title');
+    document.getElementById('lgType').disabled=!isLeader;
+    document.getElementById('lgMember').disabled=!isLeader;
+    document.getElementById('lgBatchMode').disabled=!isLeader;
     document.getElementById('lgType').value='service';
-    document.getElementById('lgMember').value=selectedProgressYmis||currentUser.ymis;
+    document.getElementById('lgMember').value=isLeader?(selectedProgressYmis||currentUser.ymis):currentUser.ymis;
     document.getElementById('lgDate').value=todayISO();
     ['lgTitle','lgRole','lgHours','lgCertNo','lgDetail'].forEach(id=>document.getElementById(id).value='');
   }
+  document.getElementById('btnSaveLogRecord').textContent=isLeader?t('save'):t('log_req_submit');
   syncLogTypeFields();
   document.getElementById('logRecordModal').classList.add('active');
 }
@@ -4202,6 +4341,9 @@ async function submitLogRecord(){
   const cert_no=document.getElementById('lgCertNo').value.trim();
   const detail=document.getElementById('lgDetail').value.trim();
   if(!date||!title){ showToast(t('log_fill_required'),'error'); return; }
+  // v5.2：團員模式 → 提交申報（待領袖審批），不直接寫入
+  // Member mode → submit a claim (pending leader approval); nothing is written directly.
+  if(logModalMemberMode){ await submitLogRequestFromModal({type,date,title,role,hours,cert_no,detail}); return; }
   // 目標成員：編輯=原成員；批量=多選；否則單選
   let targets=[];
   if(oldRec){
@@ -4243,7 +4385,98 @@ async function submitLogRecord(){
     if(failed.length===0) showToast(tf('log_saved_fmt', d.processed||records.length),'success');
     else showToast(tf('log_saved_part_fmt', d.processed||0, failed.length, failed[0].error||''),'error');
   }catch(e){ showToast(t('log_save_fail_colon')+e.message,'error'); }
-  finally{ btn.disabled=false; btn.textContent=t('save'); }
+  finally{ btn.disabled=false; btn.textContent=logModalMemberMode?t('log_req_submit'):t('save'); }
+}
+
+/* ===== v5.2 履歷申報：團員自行申報 → 領袖審批（批准後才寫入／更新活動履歷）=====
+   Log claims: members self-declare → leaders approve (only then written/updated). */
+// 後端錯誤訊息為中文；英文介面時把常見錯誤映射為英文，其餘保留原文（顯示在 t('op_fail')/t('log_req_fail') 之後）
+// Backend errors are Chinese; in EN mode map the known claim errors to English, else keep as-is.
+function logErrEn(zh){
+  if(!inEn()) return zh;
+  const s=String(zh||'');
+  if(/工作表不存在|initializeSheets/.test(s)) return 'Backend not upgraded to v5.2 — please ask the admin to update Code.gs and run initializeSheets().';
+  if(/名稱及日期必填/.test(s)) return 'Title and date are required.';
+  if(/只可申請修改自己的紀錄/.test(s)) return 'You can only request edits to your own records.';
+  if(/已有待批修改申報/.test(s)) return 'This record already has a pending edit claim — wait for a leader or cancel it first.';
+  if(/找不到原紀錄/.test(s)) return 'Original record not found (it may have been deleted). Please reload.';
+  if(/只可取消自己的申報/.test(s)) return 'You can only cancel your own claims.';
+  if(/此申報已被審批/.test(s)) return 'This claim has already been reviewed and cannot be cancelled.';
+  if(/權限不足/.test(s)) return 'You do not have permission to do this.';
+  if(/找不到待批申報|找不到申報/.test(s)) return 'Claim not found.';
+  if(/無效決定/.test(s)) return 'Invalid decision.';
+  return s;
+}
+async function submitLogRequestFromModal(f){
+  const btn=document.getElementById('btnSaveLogRecord');
+  const oldRec=editingLogRecordId?logRecords.find(x=>x.record_id===editingLogRecordId):null;
+  const kind=oldRec?'edit':'new';
+  const record={type:oldRec?oldRec.type:f.type,ymis:currentUser.ymis,name:currentUser.name,date:f.date,title:f.title,role:f.role,hours:f.hours!==''?String(f.hours):'',cert_no:f.cert_no,detail:f.detail};
+  btn.disabled=true; btn.textContent=t('log_req_sending');
+  try{
+    if(currentTroopId==='DEMO'){
+      logRequests.push({request_id:'DEMOLREQ_'+Date.now()+'_'+Math.random().toString(36).slice(2,5),kind,target_record_id:oldRec?oldRec.record_id:'',...record,status:'pending',created_at:todayISO()});
+      closeModal('logRecordModal'); renderLogsTab(); showToast(t('log_req_demo_ok'),'success'); return;
+    }
+    const d=await apiRequest('requestLogRecord',{token:currentToken,kind,target_record_id:oldRec?oldRec.record_id:'',record});
+    if(!d.success) throw new Error(/工作表不存在|Unknown action/i.test(d.error||'')?t('log_req_need_upgrade'):logErrEn(d.error||t('api_failed')));
+    logRequests.push({request_id:d.request_id,kind,target_record_id:oldRec?oldRec.record_id:'',...record,status:'pending',created_at:todayISO()});
+    closeModal('logRecordModal'); renderLogsTab();
+    showToast(t('log_req_sent'),'success');
+  }catch(e){ showToast(t('log_req_fail')+logErrEn(e.message),'error'); }
+  finally{ btn.disabled=false; btn.textContent=logModalMemberMode?t('log_req_submit'):t('save'); }
+}
+async function cancelLogRequest(reqId){
+  const r=logRequests.find(x=>x.request_id===reqId);
+  if(!confirm(tf('log_cancel_confirm', r?r.title:reqId))) return;
+  try{
+    if(currentTroopId==='DEMO'){
+      logRequests=logRequests.filter(x=>x.request_id!==reqId);
+      renderLogsTab(); showToast(t('log_cancelled'),'success'); return;
+    }
+    const d=await apiRequest('cancelLogRequest',{token:currentToken,request_id:reqId});
+    if(!d.success) throw new Error(logErrEn(d.error||''));
+    logRequests=logRequests.filter(x=>x.request_id!==reqId);
+    renderLogsTab(); showToast(t('log_cancelled'),'success');
+  }catch(e){ showToast(t('op_fail')+logErrEn(e.message),'error'); }
+}
+async function reviewLogRequest(reqId,decision){
+  if(!canUserTickRole(currentUser.role)){ showToast(t('no_permission'),'warning'); return; }
+  if(!confirm(tf('req_confirm_review', decision==='approved'?t('req_approved_word'):t('req_rejected_word')))) return;
+  try{
+    document.getElementById('savingOverlay').classList.add('active');
+    document.getElementById('savingText').textContent=decision==='approved'?t('saving_approve'):t('saving_reject');
+    if(currentTroopId==='DEMO'){
+      const r=logRequests.find(x=>x.request_id===reqId);
+      if(r&&decision==='approved'){
+        if(r.kind==='edit'){
+          const idx=logRecords.findIndex(x=>x.record_id===r.target_record_id);
+          if(idx>=0) logRecords[idx]={...logRecords[idx],date:r.date,title:r.title,role:r.role,hours:r.hours,cert_no:r.cert_no,detail:r.detail};
+        }else{
+          logRecords.push({record_id:'DEMOLOG_'+Date.now()+'_'+Math.random().toString(36).slice(2,5),type:r.type,ymis:r.ymis,name:r.name,date:r.date,title:r.title,role:r.role,hours:r.hours,cert_no:r.cert_no,detail:r.detail,recorder:r.name+(inEn()?' (self-reported)':'（自行申報）')});
+        }
+      }
+      logRequests=logRequests.filter(x=>x.request_id!==reqId);
+      document.getElementById('savingOverlay').classList.remove('active');
+      renderRequestsTab(); showToast(decision==='approved'?t('log_req_approved'):t('log_req_rejected'),'success'); return;
+    }
+    const d=await apiRequest('reviewLogRequest',{token:currentToken,request_id:reqId,decision,review_note:''});
+    document.getElementById('savingOverlay').classList.remove('active');
+    if(!d.success) throw new Error(logErrEn(d.error||''));
+    if(decision==='approved'&&d.record){
+      const idx=logRecords.findIndex(x=>x.record_id===d.record.record_id);
+      if(idx>=0) logRecords[idx]={...logRecords[idx],...d.record};
+      else logRecords.push(d.record);
+      try{ localStorage.setItem(LS.cacheProgress(currentTroopId), JSON.stringify({flat:progressFlat,rich:progressRich,members,logs:logRecords,logRequests,savedAt:Date.now()})); }catch(e){}
+    }
+    logRequests=logRequests.filter(x=>x.request_id!==reqId);
+    // 審批結果用 i18n 文字（英文介面顯示英文），不直接顯示後端中文訊息
+    showToast(decision==='approved'?t('log_req_approved'):t('log_req_rejected'),'success');
+    renderRequestsTab();
+  }catch(e){
+    document.getElementById('savingOverlay').classList.remove('active');
+    showToast(t('op_fail')+logErrEn(e.message),'error');
+  }
 }
 
 async function deleteLogRecord(recordId){
