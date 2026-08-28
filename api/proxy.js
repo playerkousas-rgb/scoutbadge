@@ -104,7 +104,11 @@ module.exports = async function handler(req, res) {
     let gasResponse;
 
     // 5. Forward request to Google Apps Script
-    if (action === 'load' && req.method === 'GET') {
+    if (action === 'load') {
+      // Apps Script implements load in doGet(), while the frontend sends all
+      // apiRequest calls as POST. Translate both proxy methods to the same
+      // upstream GET so login and the post-login data load use compatible
+      // Apps Script entry points.
       const targetUrl = new URL(gasUrl);
       targetUrl.searchParams.set('action', 'load');
       if (payload.token) targetUrl.searchParams.set('token', payload.token);

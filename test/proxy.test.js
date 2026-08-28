@@ -85,8 +85,33 @@ async function runTests() {
   assert(troopsResObj.troops['0082'], 'Troop 0082 should be present in /api/troops');
   console.log('  [PASS] /api/troops lists all registered troops');
 
-  // Test 7: Sensitive Data Logging Check
-  console.log('\nTest 7: Sensitive Data Logging Check');
+  // Test 7: POST load is translated to Apps Script doGet
+  console.log('\nTest 7: POST load forwarding');
+  let loadFetchUrl = null;
+  const origLoadFetch = global.fetch;
+  global.fetch = async (url, options) => {
+    loadFetchUrl = { url: String(url), options };
+    return { status: 200, text: async () => JSON.stringify({ success: true, members: [] }) };
+  };
+  const mockResLoad = {
+    setHeader: () => {},
+    status: (c) => mockResLoad,
+    json: () => mockResLoad
+  };
+  await proxyHandler({
+    method: 'POST',
+    body: { troopId: '0082', action: 'load', token: 'LOAD_TOKEN', apikey: 'LOAD_KEY' }
+  }, mockResLoad);
+  global.fetch = origLoadFetch;
+  assert(loadFetchUrl, 'load should call the upstream backend');
+  assert.strictEqual(loadFetchUrl.options.method, 'GET');
+  assert(loadFetchUrl.url.includes('action=load'));
+  assert(loadFetchUrl.url.includes('token=LOAD_TOKEN'));
+  assert(loadFetchUrl.url.includes('apikey=LOAD_KEY'));
+  console.log('  [PASS] POST load is forwarded as GET to Apps Script doGet');
+
+  // Test 8: Sensitive Data Logging Check
+  console.log('\nTest 8: Sensitive Data Logging Check');
   let loggedMessages = [];
   const origLog = console.log;
   console.log = (...args) => {
