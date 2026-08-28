@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node test/proxy.test.js && node test/multi_troop_pipeline.test.js && node test/log_claims.test.js && node test/ymis_parse.test.js"
+  }
+}
