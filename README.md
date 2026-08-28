@@ -14,6 +14,7 @@ ScoutBadge 是為香港童軍支部設計的進度紀錄、專科徽章及領袖
 - 可選私隱模式：只看自己、全隊、隊長／副隊長、全團
 - 可選小隊完成率比較
 - 服務時數、證書編號及現場核實資料登記
+- **活動履歷「團員自行申報 → 領袖審批」（v5.2）**：團員可為自己申報服務／活動／訓練班紀錄；批准後才寫入活動履歷；已批准的紀錄要改，由團員再提交「修改申報」，經領袖重批後以同一紀錄更新（只有履歷可自行申報修改；進度獎章及其他獎章批准後只有領袖可改）
 - PT/18、PT/120A 等支部表格資料帶入及列印
 - 主系統 Portal / iframe 接入
 - 離線暫存，連線後由 Apps Script 寫入 Google Sheet
@@ -38,6 +39,26 @@ ScoutBadge 是為香港童軍支部設計的進度紀錄、專科徽章及領袖
 
 完整步驟見 [`TROOP_ONBOARDING.md`](TROOP_ONBOARDING.md) 及 [`VERCEL_ENV_SETUP.md`](VERCEL_ENV_SETUP.md)。
 批量開戶（YMIS 報表匯出、PDF 密碼處理）見 [`docs/YMIS_EXPORT.md`](docs/YMIS_EXPORT.md) 及 [`docs/BULK_ONBOARD.md`](docs/BULK_ONBOARD.md)。
+
+## v5.2 升級（對齊 VSBADGE v8.4/v8.5）
+
+**活動履歷：團員自行申報 → 領袖審批 / Activity-log claims: members self-declare, leaders approve**
+
+1. 將最新 `apps-script/Code.gs` 貼入 Apps Script → 執行一次 `initializeSheets()`（會自動補建「待批履歷」工作表，不影響既有資料）→ 重新部署「新版本」，URL 不變。
+   Paste the latest `apps-script/Code.gs`, run `initializeSheets()` once (auto-creates the new「待批履歷 / Pending log claims」sheet; existing data untouched), then deploy a new version — URL unchanged.
+2. 團員在「📅 活動履歷」按「📝 申報紀錄」提交服務／活動／訓練班；領袖在「✅ 審批中心 → 📅 履歷申報」批准／拒絕。
+   Members submit service / activity / course records under「📅 Activity Log → 📝 Claim a record」; leaders approve/reject under「✅ Approval Centre → 📅 Log claims」.
+3. 已批准的履歷要改：團員按 ✏️ 提交「修改申報」，領袖重批後以同一紀錄更新；批准前團員可自行取消。其他（進度獎章、其他獎章）批准後只有領袖可改。
+   To change an approved record: a member submits an edit claim (✏️); once a leader re-approves, the SAME record is updated; members may cancel while pending. Progress badges and other awards remain leader-only after approval.
+
+**超管 sheep（與 VSBADGE v8.5 一致）/ Super-admin sheep**
+
+- `sheep` / `0728`（或 `sheep@scoutbadge.local`）登入照樣有效——後門寫死在 `handleLogin`，不靠 Users 工作表；密碼可用「改密碼」自訂（存於 Script Properties）。
+  Login as `sheep` / `0728` (or `sheep@scoutbadge.local`) still works — the backdoor is hardcoded in `handleLogin` and never relies on the Users sheet; the password can be self-changed (stored in Script Properties).
+- sheep 不會寫入 Users 工作表、不會在「用戶管理」或成員名單出現；`initializeSheets()` 會自動清除舊部署遺留的 sheep 列。
+  sheep is never written to the Users sheet and never appears in user management / member lists; `initializeSheets()` removes any legacy sheep rows.
+- 防護保留：sheep 不能被停用／重設密碼／改角色，亦不能被申請／開戶佔用保留帳號。
+  Protected: sheep cannot be deactivated / password-reset / role-changed, and the reserved id/email cannot be taken by applications or account creation.
 
 ## 主系統宣傳語
 
