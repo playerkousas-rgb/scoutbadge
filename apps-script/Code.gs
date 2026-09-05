@@ -23,6 +23,7 @@
 //     Protected: sheep cannot be deactivated / password-reset / role-changed; reserved id/email blocked everywhere
 // v5.2.1 新增（對齊 VSBADGE v8.2：帳戶自助申請支援領袖）:
 //   - apply 只接受 requested_role = member / branch_leader（童軍無執委；團長／管理員須由現任管理層直接開立）
+// v5.3.0：團長全團只可一位（addUser／updateUserRole 強制執行；審批只可開出 member／branch_leader）＋領袖免 YMIS（用電郵登入，留空自動編配內部 L 編號）＋開戶權限收緊（只可開立自己可管理的角色）
 //   - 成員申請：YMIS 10 位必填；領袖申請：Email 必填，YMIS 選填（留空則批准時自動編配 L 開頭臨時編號）
 //   - reviewApplication 按申請角色開戶（審批者權限不足時退回 member），回應加 final_role + temp_password
 //   - 無新工作表、無新欄位（force_change_password 欄若缺會自動補）：覆蓋 Code.gs 並重新部署即可，毋須 initializeSheets()
@@ -223,6 +224,26 @@ function canUserTick(r){ return CAN_TICK_ROLES.indexOf(r)>=0; }
 function getRoleLevel(r){ return ROLE_HIERARCHY[r]||0; }
 function canManageRole(m,t){ return (CAN_MANAGE_ROLES[m]||[]).indexOf(t)>=0; }
 function canManageUser(manager,targetRole){ return manager && (manager.role==='super_admin' || canManageRole(manager.role,targetRole)); }
+// v5.3.0：領袖免 YMIS（用電郵登入）—— 為領袖帳戶自動編配內部唯一 L 編號（只做 Users 表鍵值，不會向領袖展示為 YMIS）
+function generateLeaderId(){
+  for(let i=0;i<20;i++){
+    const id='L'+Date.now().toString().substring(7)+Math.floor(Math.random()*90+10);
+    if(!getUser(id)) return id;
+  }
+  return 'L'+Date.now().toString()+Math.floor(Math.random()*900+100);
+}
+// v5.3.0：團長全團只可有一位 —— 取現任在職團長（可排除指定 YMIS；換人流程：先將現任轉為其他角色，再升新人）
+function findActiveGroupLeader(excludeYmis){
+  const uSheet=getSheet().getSheetByName('Users');
+  if(!uSheet) return null;
+  const data=uSheet.getDataRange().getValues();
+  for(let i=1;i<data.length;i++){
+    if(data[i][0] && String(data[i][0])!==String(excludeYmis||'') && data[i][3] && String(data[i][3])==='group_leader' && data[i][11] && String(data[i][11])==='active'){
+      return {ymis:String(data[i][0]), name:data[i][1]?String(data[i][1]):''};
+    }
+  }
+  return null;
+}
 
 // v5.2.1（對齊 VSBADGE v8.2）：公開申請入口只接受 member / branch_leader（童軍無執委）
 // 團長／管理員必須由現任管理層在「用戶管理」直接開立，不可自行申請。
@@ -489,7 +510,7 @@ function doPost(e){
       }
       if(action==='save') return handleSave(body.changes, body.confirmer||'');
       if(action==='addMember'){ let my=body.token?validateToken(body.token):null; let mgr=my?getUser(my):null; if(!mgr && body.apikey && body.apikey===getApiKey()) mgr={role:'admin'}; if(!mgr || getRoleLevel(mgr.role)<40) return jsonResponse({success:false,error:'只有領袖可以新增成員'}); return handleAddMember(body.ymis,body.name,body.squad||'',body.squad_role||'member'); }
-      if(action==='addUser'){ let my=body.token?validateToken(body.token):null; let mgr=my?getUser(my):null; if(!mgr && body.apikey && body.apikey===getApiKey()) mgr={role:'admin'}; if(!mgr || getRoleLevel(mgr.role)<40) return jsonResponse({success:false,error:'只有領袖可以新增帳號'}); return handleAddUser(body); }
+      if(action==='addUser'){ let my=body.token?validateToken(body.token):null; let mgr=my?getUser(my):null; if(!mgr && body.apikey && body.apikey===getApiKey()) mgr={role:'admin'}; if(!mgr || getRoleLevel(mgr.role)<40) return jsonResponse({success:false,error:'只有領袖可以新增帳號'}); return handleAddUser(body,mgr); }
       if(action==='saveOtherBadge') return handleSaveOtherBadge(body.records, body.apikey);
     }
     // member request - needs token but also allow apikey for member self
@@ -669,6 +690,7 @@ function handleChangePassword(ymis,oldP,newP){
 }
 function handleApply(ymis,name,email,role,branch){
   // v5.2.1（對齊 VSBADGE v8.2）：成員／領袖都可自行申請；角色嚴格驗證，只限 member / branch_leader。
+  // v5.3.0：領袖免 YMIS（用電郵登入），領袖申請一律忽略 YMIS。
   ymis=String(ymis||'').trim(); name=safeSheetText(name,100);
   email=String(email||'').trim().substring(0,160); branch=safeSheetText(branch,100);
   role=String(role||'member').trim()||'member';
@@ -677,8 +699,8 @@ function handleApply(ymis,name,email,role,branch){
   if(role==='member'){
     if(!/^\d{10}$/.test(ymis)) return jsonResponse({success:false,error:'成員需 10位 YMIS'});
   }else{
-    // 領袖：Email 必填；YMIS 選填（若填寫須為 10 位數字，留空則批准時自動編配 L 開頭編號）
-    if(ymis && !/^\d{10}$/.test(ymis)) return jsonResponse({success:false,error:'YMIS 須為 10 位數字'});
+    // v5.3.0：領袖免 YMIS（用電郵登入）—— 忽略任何傳入的 YMIS，批准時一律自動編配內部 L 編號
+    ymis='';
     if(!email) return jsonResponse({success:false,error:'領袖申請必須填寫聯絡電郵'});
   }
   if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return jsonResponse({success:false,error:'Email 格式不正確'});
@@ -707,6 +729,7 @@ function handleGetApplications(){
 function handleReviewApplication(appId,decision,note,manager,tempPassword){
   // v5.2.1（對齊 VSBADGE v8.2）：按申請人要求的角色開戶；若審批者權限層級不能設定該角色則退回 member
   // （批准後團長仍可在「用戶管理」調整）。回應加 final_role + temp_password，首次登入須更改密碼。
+  // v5.3.0：審批只可開出 member／branch_leader（即使有人手改 Sheet 寫入 group_leader／admin 亦會退回 member，配合團長唯一鎖）
   if(decision!=='approved' && decision!=='rejected') return jsonResponse({success:false,error:'無效決定'});
   const sheet=getSheet().getSheetByName('Applications');
   if(!sheet) return jsonResponse({success:false,error:'找不到 Applications 工作表'});
@@ -724,14 +747,14 @@ function handleReviewApplication(appId,decision,note,manager,tempPassword){
     return jsonResponse({success:true,message:'已拒絕申請'});
   }
   const requestedRole=String(appData[4]||'member');
-  const finalRole=(VALID_ROLES.indexOf(requestedRole)>=0 && canManageUser(manager,requestedRole))?requestedRole:'member';
+  const finalRole=(APPLY_ROLES.indexOf(requestedRole)>=0 && canManageUser(manager,requestedRole))?requestedRole:'member';
   let ymis=String(appData[1]||'').trim();
   const appName=String(appData[2]||'');
   const appEmail=String(appData[3]||'').trim();
   const branchVal=safeSheetText(appData[5],100);
-  // 領袖申請可留空 YMIS：批准時一律自動編配 L 開頭編號（即使因審批者權限不足而退回 member 也一樣，
-  // 否則該申請會永遠卡在待批無法批准；L 編號可用 Email 登入，團長日後可在「用戶管理」補回正確 YMIS／角色）
-  if(!ymis){ ymis='L'+Date.now().toString().substring(7); }
+  // v5.3.0：領袖免 YMIS —— 批准時一律自動編配內部 L 編號（即使因審批者權限不足而退回 member 也一樣，
+  // 否則該申請會永遠卡在待批無法批准；一律用 Email 登入）
+  if(!ymis){ ymis=generateLeaderId(); }
   if(isSuperAdminReserved(ymis,appEmail)) return jsonResponse({success:false,error:'此帳號已被保留，不能開戶'});
   if(getUser(ymis)) return jsonResponse({success:false,error:'YMIS 已註冊（可能已開戶）'});
   if(appEmail && getUserByEmail(appEmail)) return jsonResponse({success:false,error:'Email 已註冊（可能已開戶）'});
@@ -771,6 +794,11 @@ function handleUpdateUserRole(targetYmis,newRole,canTick,managerYmis, allowedBad
   if(!manager) return jsonResponse({success:false,error:'找不到管理員'});
   // super_admin 可以改任何人，admin 可以改團長/支部領袖/成員，團長可改支部領袖/成員，支部領袖可改成員
   if(manager.role!=='super_admin' && !canManageRole(manager.role,newRole) && manager.role!=='admin') return jsonResponse({success:false,error:'權限不足，你的等級不可設定此角色'});
+  // v5.3.0：團長全團只可有一位（換人流程：先將現任轉為其他角色，再升新人）
+  if(newRole==='group_leader'){
+    const cur=findActiveGroupLeader(targetYmis);
+    if(cur) return jsonResponse({success:false,error:'團長只能有一位（現任：'+cur.name+' '+cur.ymis+'），如需更換請先將現任團長轉為其他角色'});
+  }
   const sheet=getSheet().getSheetByName('Users'); const data=sheet.getDataRange().getValues();
   for(let i=1;i<data.length;i++){
     if(data[i][0].toString()===targetYmis && data[i][11].toString()==='active'){
@@ -885,20 +913,35 @@ function handleAddMember(ymis,name,squad,squadRole){
   return jsonResponse({success:true});
 }
 
-function handleAddUser(body){
-  const ymis=(body.ymis||'').toString().trim();
+function handleAddUser(body,mgr){
+  let ymis=(body.ymis||'').toString().trim();
   const name=(body.name||'').toString().trim();
   const role=(body.role||'member').toString().trim();
+  const email=(body.email||'').toString().trim();
   const password=(body.password||'').toString();
   const squad=(body.squad||'').toString().trim();
   const squadRole=(body.squad_role||'member').toString().trim();
   const canTick=body.can_tick===true||body.can_tick==='true'||body.can_tick==='TRUE';
-  if(!/^\d{10}$/.test(ymis)) return jsonResponse({success:false,error:'YMIS 須為 10 位數字'});
+  // v5.3.0：角色嚴格驗證＋權限收緊 —— 開戶者只可開立自己等級可管理的角色
+  // （sheep 經 getUser 取回 role==='super_admin'，canManageUser 一律通過，行為不變）
+  if(VALID_ROLES.indexOf(role)<0) return jsonResponse({success:false,error:'無效角色：'+role});
+  if(!canManageUser(mgr,role)) return jsonResponse({success:false,error:'權限不足，你的等級不可開立此角色'});
+  // v5.3.0：領袖免 YMIS（用電郵登入）—— 領袖留空 YMIS 且有 Email 即自動編配內部 L 編號
+  if(!ymis && role!=='member'){
+    if(!email) return jsonResponse({success:false,error:'領袖開戶必須填寫 Email（用作登入帳號）'});
+    ymis=generateLeaderId();
+  }
+  if(!/^(\d{10}|L\d+)$/.test(ymis)) return jsonResponse({success:false,error:'YMIS 須為 10 位數字（領袖可留空，會自動編配）'});
   if(!name) return jsonResponse({success:false,error:'請填寫姓名'});
   if(password && !role) return jsonResponse({success:false,error:'開立帳號需指定 role'});
   if(isSuperAdminReserved(ymis,body.email)) return jsonResponse({success:false,error:'此帳號已被保留，請使用其他帳號'});
   if(getUser(ymis)) return jsonResponse({success:false,error:'YMIS 已註冊'});
-  if(body.email && getUserByEmail(body.email)) return jsonResponse({success:false,error:'Email 已註冊'});
+  if(email && getUserByEmail(email)) return jsonResponse({success:false,error:'Email 已註冊'});
+  // v5.3.0：團長全團只可有一位
+  if(role==='group_leader'){
+    const cur=findActiveGroupLeader('');
+    if(cur) return jsonResponse({success:false,error:'團長只能有一位（現任：'+cur.name+'），如需更換請先將現任團長轉為其他角色'});
+  }
   const nowStr=now();
   const uSheet=getSheet().getSheetByName('Users');
   if(!uSheet) return jsonResponse({success:false,error:'找不到 Users 工作表'});

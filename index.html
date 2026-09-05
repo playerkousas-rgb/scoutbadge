@@ -646,7 +646,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
   </div>
 </div>
 
-<div id="accountApplyModal" class="modal"><div class="modal-content"><h3 data-i18n="apply_title">📝 申請帳戶</h3><div style="font-size:12px;background:var(--blue-light);border:1px solid var(--blue);color:var(--blue);padding:8px 10px;border-radius:8px;margin-bottom:12px"><span data-i18n="apply_troop">📍 旅團：</span><b id="applyTroopName">—</b><br><span style="font-size:11px" data-i18n="apply_hint">支部＝童軍、單位＝所屬旅團，系統自動帶入，毋須填寫。提交後由團長／領袖在「審批中心」批准。</span></div><div class="form-group"><label data-i18n="apply_role">申請身份 *</label><select id="applyRole" onchange="syncApplyRole()"><option value="member" data-i18n="apply_member">童軍成員</option><option value="branch_leader" data-i18n="apply_leader">領袖（童軍團長）</option></select><div style="font-size:10px;color:var(--text-light);margin-top:3px" data-i18n="apply_role_hint">成員、領袖都可自行申請；團長／管理員須由現任團長在「用戶管理」直接開立。</div></div><div class="form-group"><label><span data-i18n="apply_ymis">YMIS（10位數字）*</span> <span id="applyYmisOpt" style="font-size:10px;color:var(--text-light);display:none" data-i18n="apply_ymis_opt">（領袖選填）</span></label><input id="applyYmis" maxlength="10" inputmode="numeric"></div><div class="form-group"><label data-i18n="apply_name">姓名 *</label><input id="applyName"></div><div class="form-group" id="applySquadGroup"><label data-i18n="apply_squad">小隊（可留空）</label><input id="applySquad"></div><div class="form-group"><label><span data-i18n="apply_email">聯絡電郵</span> <span id="applyEmailReq" style="color:var(--red);display:none" data-i18n="apply_email_req">* 領袖必填</span></label><input id="applyEmail" type="email"></div><div id="applyMsg" class="login-msg"></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal('accountApplyModal')" data-i18n="cancel">取消</button><button class="btn btn-primary" id="btnAccountApply" onclick="submitAccountApply()" data-i18n="submit">提交申請</button></div></div></div>
+<div id="accountApplyModal" class="modal"><div class="modal-content"><h3 data-i18n="apply_title">📝 申請帳戶</h3><div style="font-size:12px;background:var(--blue-light);border:1px solid var(--blue);color:var(--blue);padding:8px 10px;border-radius:8px;margin-bottom:12px"><span data-i18n="apply_troop">📍 旅團：</span><b id="applyTroopName">—</b><br><span style="font-size:11px" data-i18n="apply_hint">支部＝童軍、單位＝所屬旅團，系統自動帶入，毋須填寫。提交後由團長／領袖在「審批中心」批准。</span></div><div class="form-group"><label data-i18n="apply_role">申請身份 *</label><select id="applyRole" onchange="syncApplyRole()"><option value="member" data-i18n="apply_member">童軍成員</option><option value="branch_leader" data-i18n="apply_leader">領袖（童軍團長）</option></select><div style="font-size:10px;color:var(--text-light);margin-top:3px" data-i18n="apply_role_hint">成員、領袖都可自行申請；團長／管理員須由現任團長在「用戶管理」直接開立。</div></div><div class="form-group" id="applyYmisGroup"><label><span data-i18n="apply_ymis">YMIS（10位數字）*</span></label><input id="applyYmis" maxlength="10" inputmode="numeric"></div><div class="form-group"><label data-i18n="apply_name">姓名 *</label><input id="applyName"></div><div class="form-group" id="applySquadGroup"><label data-i18n="apply_squad">小隊（可留空）</label><input id="applySquad"></div><div class="form-group"><label><span data-i18n="apply_email">聯絡電郵</span> <span id="applyEmailReq" style="color:var(--red);display:none" data-i18n="apply_email_req">* 領袖必填</span></label><input id="applyEmail" type="email"></div><div id="applyMsg" class="login-msg"></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal('accountApplyModal')" data-i18n="cancel">取消</button><button class="btn btn-primary" id="btnAccountApply" onclick="submitAccountApply()" data-i18n="submit">提交申請</button></div></div></div>
 
 <div id="savingOverlay" class="saving-overlay">
   <div class="spinner"></div>
@@ -780,8 +780,9 @@ zh:{
   reset_pw_confirm:'確定重設此成員密碼？', reset_pw_result:'一次性密碼：', reset_pw_fail:'重設失敗：',
   import_done:'已匯入 {0} 名成員，略過 {1} 筆',
   audit_search:'輸入搜尋字詞（可留空）', audit_fail:'讀取操作紀錄失敗：', approval_search:'搜尋 YMIS／姓名／項目／狀態', approval_fail:'讀取審批歷史失敗：', no_records:'沒有紀錄',
-  bulk_json_bad:'JSON 格式錯誤', bulk_no_valid:'沒有有效資料（YMIS 須為10位數字）', bulk_done:'批量開戶完成：成功 {0} 筆，略過 {1} 筆', fail_word:'失敗',
+  bulk_json_bad:'JSON 格式錯誤', bulk_no_valid:'沒有有效資料（成員 YMIS 須為10位數字；領袖須填姓名＋電郵）', bulk_err_title:'以下開戶失敗（原因）：', bulk_done:'批量開戶完成：成功 {0} 筆，略過 {1} 筆', fail_word:'失敗',
   deactivate_confirm:'確定停用此帳號？停用後將無法登入，資料會保留。', deactivated:'已停用 ', deactivate_fail:'停用失敗：',
+  gsl_only_one:'團長只能有一位，全團已有現任團長。如需更換，請先將現任團長轉為其他角色。', gsl_demote_warn:'此人是全團唯一的團長，轉走後全團將暫時沒有團長。確定繼續嗎？', gsl_deactivate_warn:'此人是全團唯一的團長，停用後全團將暫時沒有團長。確定繼續嗎？',
   addm_pw:'成員 YMIS（10位數字）', addm_name:'成員姓名', addm_squad:'小隊（可留空）', addm_done:'成員已新增', addm_fail:'新增失敗：',
   squad_prompt:'小隊名稱（留空代表未分配）', squad_role_prompt:'小隊職務：隊長／副隊長／member', squad_updated:'小隊及職務已更新', update_fail:'更新失敗：',
   role_updated:'角色已更新', tick_granted:'已授權勾選', tick_revoked:'已收回權限',
@@ -868,13 +869,13 @@ zh:{
   apply_title:'📝 申請帳戶', apply_desc:'提交後由旅團領袖在 APP 內審批，批准後會建立帳戶。',
   apply_troop:'📍 旅團：', apply_hint:'支部＝童軍、單位＝所屬旅團，系統自動帶入，毋須填寫。提交後由團長／領袖在「審批中心」批准。',
   apply_role:'申請身份 *', apply_member:'童軍成員', apply_leader:'領袖（童軍團長）',
-  apply_role_hint:'成員、領袖都可自行申請；團長／管理員須由現任團長在「用戶管理」直接開立。',
+  apply_role_hint:'成員、領袖都可自行申請（領袖用電郵登入、毋須 YMIS）；團長／管理員須由現任管理層在「用戶管理」直接開立。',
   apply_ymis:'YMIS（10位數字）*', apply_ymis_opt:'（領袖選填）', apply_name:'姓名 *', apply_squad:'小隊（可留空）', apply_email:'聯絡電郵', apply_email_req:'* 領袖必填',
   apply_need_mail:'領袖申請必須填寫聯絡電郵', apply_need_ymis_leader:'領袖 YMIS 如填寫須為 10 位數字', apply_bad_mail:'Email 格式不正確',
   apply_pick_troop:'請先選擇旅團', apply_sending:'提交中...', apply_fail:'提交失敗',
   appv_ok:'✅ 帳戶已建立', appv_as:'已按申請開立為 {0} 帳戶。', appv_member:'帳戶角色：成員。',
   appv_fallback:'申請人要求 {0}，但你的權限未能設定該角色，已建立為成員，請由團長在「用戶管理」調整。',
-  appv_temp:'臨時密碼（首次登入須更改）：', appv_ymis:'登入帳號（YMIS）：',
+  appv_temp:'臨時密碼（首次登入須更改）：', appv_ymis:'登入帳號（YMIS）：', appv_loginmail:'登入方式：電郵＋臨時密碼（領袖毋須 YMIS）。',
   footer_line1:'COPYRIGHT 2026 Scout System • 童軍進度追蹤系統 v5.2',
   footer_line2:'基於 2026年第11版《童軍訓練綱要》，內置官方英文版對照 | 支援離線暫存 • 批量寫入 • 活動履歷（服務／活動／訓練班） • 保護兒童 Safe from Harm',
   footer_line3:'Developed for 82 Troop • All rights reserved • <a href="https://www.scout.org.hk" target="_blank">香港童軍總會</a>',
@@ -972,7 +973,7 @@ zh:{
   users_hist_btn:'✅ 審批歷史', users_csv_btn:'📥 匯入 CSV',
   wearing_guide:'徽章佩戴指引 (2024-04-01起)', wearing_url:'童軍支部資料',
   wearing_points_html:'<b>佩戴重點（2024新指引）：</b><br>• 和平使者章佩戴左胸袋中央，取代會員章<br>• 急救章統一左袖上方AYP下方<br>• 拯溺布章佩戴左袖上方中央<br>• 世界童軍獎章最多右袖平行4枚<br>• 童軍支部徽章須按現行制服及佩戴指引佩戴',
-  bulk_no_valid:'沒有有效資料（YMIS 須為10位數字）', bulk_done_fmt:'批量開戶完成：成功 {0} 筆，略過 {1} 筆',
+  bulk_no_valid:'沒有有效資料（成員 YMIS 須為10位數字；領袖須填姓名＋電郵）', bulk_done_fmt:'批量開戶完成：成功 {0} 筆，略過 {1} 筆',
   deactivate_fail:'停用失敗：', deactivate_confirm:'確定停用此帳號？停用後將無法登入，資料會保留。',
   /* ---- 帳戶申請／資料匯入教學 ---- */
   guide_onboard_h3:'🆕 帳戶申請／資料匯入教學',
@@ -1121,8 +1122,9 @@ en:{
   reset_pw_confirm:'Reset this member\'s password?', reset_pw_result:'One-time password: ', reset_pw_fail:'Reset failed: ',
   import_done:'Imported {0} member(s), skipped {1}',
   audit_search:'Enter search text (may be empty)', audit_fail:'Failed to load audit log: ', approval_search:'Search YMIS / name / item / status', approval_fail:'Failed to load approval history: ', no_records:'No records',
-  bulk_json_bad:'Invalid JSON format', bulk_no_valid:'No valid rows (YMIS must be 10 digits)', bulk_done:'Bulk onboarding done: {0} succeeded, {1} skipped', fail_word:'failed',
+  bulk_json_bad:'Invalid JSON format', bulk_no_valid:'No valid rows (members need 10-digit YMIS; leaders need name + email)', bulk_err_title:'These rows failed (reason):', bulk_done:'Bulk onboarding done: {0} succeeded, {1} skipped', fail_word:'failed',
   deactivate_confirm:'Deactivate this account? The user can no longer sign in; data is kept.', deactivated:'Deactivated ', deactivate_fail:'Deactivation failed: ',
+  gsl_only_one:'There can only be one GSL in the troop. To replace them, change the current GSL to another role first.', gsl_demote_warn:'This person is the only GSL. The troop will temporarily have no GSL. Continue?', gsl_deactivate_warn:'This person is the only GSL. Deactivating them leaves the troop with no GSL. Continue?', 
   addm_pw:'Member YMIS (10 digits)', addm_name:'Member name', addm_squad:'Patrol (optional)', addm_done:'Member added', addm_fail:'Add failed: ',
   squad_prompt:'Patrol name (blank = unassigned)', squad_role_prompt:'Patrol duty: 隊長 (PL) / 副隊長 (APL) / member', squad_updated:'Patrol & duty updated', update_fail:'Update failed: ',
   role_updated:'Role updated', tick_granted:'Ticking granted', tick_revoked:'Permission revoked',
@@ -1206,13 +1208,13 @@ en:{
   apply_title:'📝 Apply for an Account', apply_desc:'Troop leaders review applications in the app; an account is created once approved.',
   apply_troop:'📍 Troop: ', apply_hint:'Branch = Scout, unit = your troop — filled in automatically. A GSL / leader approves it under “Approvals”.',
   apply_role:'Apply as *', apply_member:'Scout Member', apply_leader:'Leader (Scout Leader)',
-  apply_role_hint:'Members and leaders may self-apply. GSL / admin accounts must be created by the current GSL under Users.',
+  apply_role_hint:'Members and leaders may self-apply (leaders sign in with email, no YMIS needed). GSL / admin accounts must be created by the current management under Users.',
   apply_ymis:'YMIS (10 digits) *', apply_ymis_opt:'(optional for leaders)', apply_name:'Name *', apply_squad:'Patrol (optional)', apply_email:'Contact email', apply_email_req:'* required for leaders',
   apply_need_mail:'Leader applications require a contact email', apply_need_ymis_leader:'A leader YMIS, if given, must be 10 digits', apply_bad_mail:'Email format is invalid',
   apply_pick_troop:'Please select a troop first', apply_sending:'Submitting...', apply_fail:'Submit failed',
   appv_ok:'✅ Account created', appv_as:'Opened as a {0} account as requested.', appv_member:'Account role: member.',
   appv_fallback:'The applicant requested {0}, but your level cannot set that role — created as member; ask the GSL to adjust it under Users.',
-  appv_temp:'Temporary password (must be changed at first sign-in): ', appv_ymis:'Sign-in ID (YMIS): ',
+  appv_temp:'Temporary password (must be changed at first sign-in): ', appv_ymis:'Sign-in ID (YMIS): ', appv_loginmail:'Sign-in with email + temporary password (leaders need no YMIS).',
   footer_line1:'COPYRIGHT 2026 Scout System • Scout Progress Tracker v5.2',
   footer_line2:'Based on the Scout Training Scheme (11th ed., 2026) with the official English version built in | Offline caching • batch writes • activity records (service / activity / training) • Safe from Harm',
   footer_line3:'Developed for 82 Troop • All rights reserved • <a href="https://www.scout.org.hk" target="_blank">Scout Association of Hong Kong</a>',
@@ -1935,14 +1937,14 @@ function showAccountApplyModal(){
   const msg=document.getElementById('applyMsg'); msg.className='login-msg'; msg.textContent='';
   document.getElementById('accountApplyModal').classList.add('active');
 }
-// v5.2.1（對齊 VSBADGE v8.2）：領袖申請須填電郵、YMIS 可留空、小隊只適用於成員
+// v5.3.0：領袖免 YMIS（用電郵登入）—— 領袖直接隱藏 YMIS 欄；小隊只適用於成員
 function syncApplyRole(){
   const role=(document.getElementById('applyRole')&&document.getElementById('applyRole').value)||'member';
   const isLeader=(role!=='member');
   const req=document.getElementById('applyEmailReq');
   if(req) req.style.display=isLeader?'inline':'none';
-  const yOpt=document.getElementById('applyYmisOpt');
-  if(yOpt) yOpt.style.display=isLeader?'inline':'none';
+  const yg=document.getElementById('applyYmisGroup');
+  if(yg) yg.style.display=isLeader?'none':'block';
   const sq=document.getElementById('applySquadGroup');
   if(sq) sq.style.display=isLeader?'none':'block';
 }
@@ -1958,15 +1960,15 @@ async function submitAccountApply(){
   if(role==='member'){
     if(!/^\d{10}$/.test(ymis)){ msg.textContent=t('apply_invalid'); msg.className='login-msg error'; return; }
   }else{
-    if(ymis && !/^\d{10}$/.test(ymis)){ msg.textContent=t('apply_need_ymis_leader'); msg.className='login-msg error'; return; }
+    // v5.3.0：領袖免 YMIS，只須電郵
     if(!email){ msg.textContent=t('apply_need_mail'); msg.className='login-msg error'; return; }
   }
   if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ msg.textContent=t('apply_bad_mail'); msg.className='login-msg error'; return; }
   btn.disabled=true; btn.textContent=t('apply_sending');
   try{
-    // 成員：branch 沿用小隊（向後兼容）；領袖：branch 自動帶入所屬旅團名稱，毋須填寫
+    // 成員：branch 沿用小隊（向後兼容）；領袖：branch 自動帶入所屬旅團名稱，YMIS 一律留空（免 YMIS，用電郵登入）
     const branch=(role==='member')?squad:(currentTroopName||'');
-    const d=await apiRequest('apply',{ymis,name,email,branch,requested_role:role});
+    const d=await apiRequest('apply',{ymis:(role==='member'?ymis:''),name,email,branch,requested_role:role});
     if(!d.success) throw new Error(d.error||t('apply_fail'));
     msg.textContent=d.message||t('apply_done'); msg.className='login-msg success';
     setTimeout(()=>closeModal('accountApplyModal'),1400);
@@ -3681,8 +3683,11 @@ async function loadUsers(){
       }
 
       let h=roleExplain+systemSettingHtml+mockTool+`<div class="filter-bar"><button class="btn btn-sm btn-warning" onclick="openBulkOnboardModal()">${t('users_bulk_btn')}</button><button class="btn btn-sm btn-primary" onclick="addMemberFromApp()">${t('users_add_btn')}</button><button class="btn btn-sm btn-secondary" onclick="downloadSquadReport()">${t('users_report_btn')}</button><button class="btn btn-sm btn-outline" onclick="loadAuditHistory()">${t('users_audit_btn')}</button><button class="btn btn-sm btn-outline" onclick="loadApprovalHistory()">${t('users_hist_btn')}</button><label class="btn btn-sm btn-secondary">${t('users_csv_btn')}<input type="file" accept=".csv" onchange="importMembersFull(this.files[0])" style="display:none"></label><input type="text" id="userSearch" placeholder="${t('user_search_ph')}" oninput="filterUsers()" style="flex:1"></div><div id="userList">`;
-      h+=d.users.map(u=>`<div class="user-item" data-search="${(u.name+u.ymis+u.email).toLowerCase()}"><div class="user-item-info"><b>${u.name}</b> ${u.ymis?`(${u.ymis})`:''} ${u.email?` - ${u.email}`:''}<span class="role-badge role-${u.role}">${getRoleName(u.role)}</span> ${u.can_tick?`<span style="background:var(--green-light);color:var(--green);padding:1px 6px;border-radius:999px;font-size:9px">${t('can_tick_chip')}</span>`:''}<br><small style="font-size:10px;color:var(--text-light)">${t('perm_prefix')}${u.allowed_badges|| (u.role==='member'?t('perm_none_word'):t('perm_all_word'))}</small></div><div class="user-item-actions">`+
-        (['admin','group_leader','branch_leader','super_admin'].includes(currentUser.role)&&u.ymis!==currentUser.ymis?`<select onchange="updateUserRole('${u.ymis}',this.value)"><option value="member" ${u.role==='member'?'selected':''}>${t('role_opt_member')}</option><!-- 童軍無執委 --><option value="branch_leader" ${u.role==='branch_leader'?'selected':''}>${t('role_opt_branch')}</option><option value="group_leader" ${u.role==='group_leader'?'selected':''}>${t('role_opt_group')}</option><option value="admin" ${u.role==='admin'?'selected':''}>${t('role_opt_admin')}</option></select><button class="btn btn-sm ${u.can_tick?'btn-danger':'btn-success'}" onclick="toggleCanTick('${u.ymis}',${!u.can_tick})">${u.can_tick?t('tick_revoke'):t('tick_grant')}</button><button class="btn btn-sm btn-warning" onclick="openPermissionModal('${u.ymis}','${u.name.replace(/'/g,"\'") }','${u.role}','${(u.allowed_badges||'').replace(/'/g,"")}')">${t('perm_btn')}</button><button class="btn btn-sm btn-warning" onclick="resetMemberPassword('${u.ymis}')">${t('pw_reset_btn')}</button><button class="btn btn-sm btn-outline" onclick="editSquad('${u.ymis}','${(u.squad||'').replace(/'/g,"\'")}','${(u.squad_role||'member').replace(/'/g,"\'")}')">${t('squad_btn')}</button><button class="btn btn-sm btn-danger" onclick="deactivateUser('${u.ymis}')">${t('deactivate_btn')}</button>`:'' )+
+      // v5.3.0：團長全團只可一位 —— 預先找出在職團長，渲染時停用其他人的「升為團長」選項
+      const gslHolder=(d.users||[]).find(u=>u.role==='group_leader')||null;
+      const gslCount=(d.users||[]).filter(u=>u.role==='group_leader').length;
+      h+=d.users.map(u=>`<div class="user-item" data-search="${(u.name+u.ymis+u.email).toLowerCase()}"><div class="user-item-info"><b>${u.name}</b> ${u.ymis&&String(u.ymis).charAt(0)!=='L'?`(${u.ymis})`:''} ${u.email?` - ${u.email}`:''}<span class="role-badge role-${u.role}">${getRoleName(u.role)}</span> ${u.can_tick?`<span style="background:var(--green-light);color:var(--green);padding:1px 6px;border-radius:999px;font-size:9px">${t('can_tick_chip')}</span>`:''}<br><small style="font-size:10px;color:var(--text-light)">${t('perm_prefix')}${u.allowed_badges|| (u.role==='member'?t('perm_none_word'):t('perm_all_word'))}</small></div><div class="user-item-actions">`+
+        (['admin','group_leader','branch_leader','super_admin'].includes(currentUser.role)&&u.ymis!==currentUser.ymis?`<select onchange="updateUserRole('${u.ymis}',this.value,'${u.role}',${!!(gslHolder&&gslHolder.ymis!==u.ymis)},${u.role==='group_leader'&&gslCount<2})"><option value="member" ${u.role==='member'?'selected':''}>${t('role_opt_member')}</option><!-- 童軍無執委 --><option value="branch_leader" ${u.role==='branch_leader'?'selected':''}>${t('role_opt_branch')}</option><option value="group_leader" ${u.role==='group_leader'?'selected':''} ${gslHolder&&gslHolder.ymis!==u.ymis?'disabled':''}>${t('role_opt_group')}</option><option value="admin" ${u.role==='admin'?'selected':''}>${t('role_opt_admin')}</option></select><button class="btn btn-sm ${u.can_tick?'btn-danger':'btn-success'}" onclick="toggleCanTick('${u.ymis}',${!u.can_tick})">${u.can_tick?t('tick_revoke'):t('tick_grant')}</button><button class="btn btn-sm btn-warning" onclick="openPermissionModal('${u.ymis}','${u.name.replace(/'/g,"\'") }','${u.role}','${(u.allowed_badges||'').replace(/'/g,"")}')">${t('perm_btn')}</button><button class="btn btn-sm btn-warning" onclick="resetMemberPassword('${u.ymis}')">${t('pw_reset_btn')}</button><button class="btn btn-sm btn-outline" onclick="editSquad('${u.ymis}','${(u.squad||'').replace(/'/g,"\'")}','${(u.squad_role||'member').replace(/'/g,"\'")}')">${t('squad_btn')}</button><button class="btn btn-sm btn-danger" onclick="deactivateUser('${u.ymis}',${u.role==='group_leader'&&gslCount<2})">${t('deactivate_btn')}</button>`:'' )+
         `</div></div>`).join('');
       h+='</div>';
       c.innerHTML=h;
@@ -3701,7 +3706,7 @@ async function loadAuditHistory(){
 }
 /* ================== Bulk Onboarding ================== */
 function downloadMembersTemplate(){
-  const csv='ymis,name,email,squad,squad_role,role,can_tick,password,note\n1234560001,王小明,wong@example.org,紅隊,member,member,false,,新團員\n1234560002,李小華,lee@example.org,藍隊,member,member,false,,轉隊\n';
+  const csv='ymis,name,email,squad,squad_role,role,can_tick,password,note\n1234560001,王小明,wong@example.org,紅隊,member,member,false,,新團員\n1234560002,李小華,lee@example.org,藍隊,member,member,false,,轉隊\n,陳領袖,chan@example.org,,,branch_leader,true,Scout654321,領袖免填YMIS\n';
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='members_template.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   showToast(t('template_dl'),'success');
 }
@@ -3713,7 +3718,9 @@ function parseMemberCSV(text){
   for(const line of lines.slice(1)){
     const cols=line.split(',');
     const o={};headers.forEach((h,i)=>o[h]=(cols[i]||'').trim());
-    if(/^\d{10}$/.test(o.ymis||'')) out.push({ymis:o.ymis,name:o.name||'',email:o.email||'',squad:o.squad||'',squad_role:o.squad_role||'member',role:o.role||'member',can_tick:['true','1','yes','y'].includes((o.can_tick||'').toLowerCase()),password:o.password||'',note:o.note||''});
+    // v5.3.0：領袖免 YMIS —— 領袖列（role 非 member）有姓名＋電郵即收，YMIS 留空由後端自動編配
+    const prowRole=o.role||'member';
+    if(/^\d{10}$/.test(o.ymis||'')||(prowRole!=='member'&&(o.email||'')&&(o.name||''))) out.push({ymis:o.ymis||'',name:o.name||'',email:o.email||'',squad:o.squad||'',squad_role:o.squad_role||'member',role:o.role||'member',can_tick:['true','1','yes','y'].includes((o.can_tick||'').toLowerCase()),password:o.password||'',note:o.note||''});
   }
   return out;
 }
@@ -3729,16 +3736,18 @@ async function bulkAddMembers(list){
   for(const m of list){
     done++;
     if(list.length>5&&done%3===1) showToast(tf('bulk_progress_fmt',done,list.length));
-    if(existing.has(m.ymis)){skip++;continue;}
+    if(m.ymis&&existing.has(m.ymis)){skip++;continue;}
     try{
-      const action=m.password?'addUser':'addMember';
+      // v5.3.0：領袖列一律經 addUser（領袖可留空 YMIS 由後端編配；未設密碼可日後重設）
+      const action=(m.password||m.role!=='member')?'addUser':'addMember';
       const payload={action,ymis:m.ymis,name:m.name,email:m.email,squad:m.squad,squad_role:m.squad_role,role:m.role,can_tick:m.can_tick,password:m.password};
       const d=await apiRequest(action, payload);
-      if(d.success){ok++;existing.add(m.ymis);}else{skip++;errs.push(m.ymis+':'+(d.error||t('fail_word')));}
+      if(d.success){ok++;if(m.ymis)existing.add(m.ymis);}else{skip++;errs.push((m.ymis||m.email||m.name)+':'+(d.error||t('fail_word')));}
     }catch(e){skip++;errs.push(m.ymis+':'+e.message);}
   }
   showToast(tf('bulk_done_fmt',ok,skip),errs.length?'warning':'success');
-  if(errs.length) console.warn('批量開戶失敗：',errs);
+  // v5.3.0：批量失敗原因直接彈出（以前只寫 console，管理員睇唔到點解失敗）
+  if(errs.length){ console.warn('批量開戶失敗：',errs); alert(t('bulk_err_title')+'\n'+errs.slice(0,12).join('\n')+(errs.length>12?'\n…':'')); }
   loadUsers();
 }
 function openBulkOnboardModal(){ document.getElementById('bulkOnboardModal').classList.add('active'); applyStaticI18n(); }
@@ -3941,13 +3950,15 @@ async function bulkAddFromJSON(){
   const raw=document.getElementById('bulkJson').value;
   let arr; try{ arr=JSON.parse(raw); }catch(e){ showToast(t('bulk_json_bad'),'error'); return; }
   if(!Array.isArray(arr)) arr=[arr];
-  const list=arr.filter(o=>/^\d{10}$/.test(String(o.ymis))).map(o=>({ymis:String(o.ymis),name:o.name||'',email:o.email||'',squad:o.squad||'',squad_role:o.squad_role||'member',role:o.role||'member',can_tick:['true','1','yes','y'].includes(String(o.can_tick||'').toLowerCase()),password:o.password||'',note:o.note||''}));
+  // v5.3.0：領袖免 YMIS —— 領袖列有姓名＋電郵即收
+  const list=arr.filter(o=>/^\d{10}$/.test(String(o.ymis||''))||(String(o.role||'member')!=='member'&&o.email&&o.name)).map(o=>({ymis:String(o.ymis||''),name:o.name||'',email:o.email||'',squad:o.squad||'',squad_role:o.squad_role||'member',role:o.role||'member',can_tick:['true','1','yes','y'].includes(String(o.can_tick||'').toLowerCase()),password:o.password||'',note:o.note||''}));
   await bulkAddMembers(list);
   closeModal('bulkOnboardModal');
 }
 
-async function deactivateUser(ymis){
-  if(!confirm(t('deactivate_confirm')))return;
+async function deactivateUser(ymis,isSoleGsl){
+  // v5.3.0：停用唯一團長時加強警告（換人流程照樣容許：先停用／轉走現任，再升新人）
+  if(!confirm(isSoleGsl?t('gsl_deactivate_warn'):t('deactivate_confirm')))return;
   try{
     const d=await apiRequest('deactivateUser', { target_ymis: ymis });
     if(!d.success)throw new Error(d.error);
@@ -4179,11 +4190,15 @@ async function editSquad(ymis,currentSquad,currentRole){
   const role=prompt(t('squad_role_prompt'),currentRole||'member'); if(role===null)return;
   try{const d=await apiRequest('updateUserRole', { target_ymis: ymis, new_role: 'member', can_tick: false, squad, squad_role: role });if(!d.success)throw new Error(d.error);showToast(t('squad_updated'),'success');loadUsers();}catch(e){showToast(t('upd_fail_colon')+e.message,'error');}
 }
-async function updateUserRole(tid,nr){
+// v5.3.0：團長全團只可有一位（後端亦有同樣鎖，前端先攔截；轉走唯一團長時警告）
+async function updateUserRole(tid,nr,curRole,hasOtherGsl,isSoleGsl){
+  if(nr==='group_leader'&&curRole!=='group_leader'&&hasOtherGsl){ showToast(t('gsl_only_one'),'error'); loadUsers(); return; }
+  if(curRole==='group_leader'&&nr!=='group_leader'&&isSoleGsl&&!confirm(t('gsl_demote_warn'))){ loadUsers(); return; }
   try{
     const d=await apiRequest('updateUserRole', { target_ymis: tid, new_role: nr, can_tick: true });
-    if(d.success){ showToast(t('role_updated'),'success'); loadUsers(); } else showToast(d.error||t('upd_fail'),'error');
-  }catch(e){ showToast(t('error_colon')+e.message,'error'); }
+    if(d.success){ showToast(t('role_updated'),'success'); } else showToast(d.error||t('upd_fail'),'error');
+    loadUsers();
+  }catch(e){ showToast(t('error_colon')+e.message,'error'); loadUsers(); }
 }
 async function toggleCanTick(tid,ct){
   try{
@@ -4220,7 +4235,9 @@ async function reviewApp(id,dec,requestedRole){
       const finalRole=d.final_role||'member';
       let roleLine=d.final_role?tf('appv_as', getRoleName(finalRole)):t('appv_member');
       if(requestedRole && d.final_role && d.final_role!==requestedRole){ roleLine=tf('appv_fallback', getRoleName(requestedRole)); }
-      alert(t('appv_ok')+'\n'+roleLine+'\n'+(d.ymis?(t('appv_ymis')+d.ymis+'\n'):'')+t('appv_temp')+(d.temp_password||tempPassword));
+      // v5.3.0：領袖免 YMIS —— 內部 L 編號不展示，改為提示用電郵登入
+      const loginLine=((d.ymis||'').charAt(0)==='L')?(t('appv_loginmail')+'\n'):(d.ymis?(t('appv_ymis')+d.ymis+'\n'):'');
+      alert(t('appv_ok')+'\n'+roleLine+'\n'+loginLine+t('appv_temp')+(d.temp_password||tempPassword));
     }
     loadApplications();
     if(document.getElementById('tab-requests')) renderRequestsTab();
