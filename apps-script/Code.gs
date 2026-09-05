@@ -571,7 +571,10 @@ function doPost(e){
     // 以下為高權限
     if(action==='changePassword') return handleChangePassword(ymis,body.old_password,body.new_password);
     if(action==='resetPassword'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'}); return handleResetPassword(body.target_ymis,ymis); }
-    if(action==='addServiceRecord'){ if(!candServiceRecord(body.record,ymis); }
+    if(action==='addServiceRecord'){
+  if(!canUserTick(user.role)) return jsonResponse({success:false,error:'權限不足'});
+  return handleAddServiceRecord(body.record,ymis);
+}
     if(action==='getServiceRecords'){ return handleGetServiceRecords(body.target_ymis||ymis); }
     if(action==='getAuditLog'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'}); return handleGetAuditLog(); }
     if(action==='getApprovalHistory'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'}); return handleGetApprovalHistory(); }
