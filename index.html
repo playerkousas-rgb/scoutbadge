@@ -774,6 +774,9 @@ zh:{
   req_allow:'允許成員提交進度完成申請（考核項目）', req_allow_on:'已開啟 - 成員可按「📝申請完成」提交進度', req_allow_off:'已關閉 - 成員不能提交進度申請，需領袖直接剔',
   req_allow_note:'說明：此開關只控制「📝 申請完成」（進度考核項目），由團長按旅團情況決定成員是否夠成熟使用。關閉後成員在「我的進度」看不到申請按鈕，所有進度需由領袖直接勾選。⚠️「📅 活動履歷」的團員自行申報（服務／活動／訓練班）恆常開放、不受此開關影響——因為是成員自己參與的活動，提交後一律由領袖審批。已提交但尚未批准的申請不受影響。',
   users_bulk_btn:'📥 批量開戶', users_add_btn:'➕ 新增成員', users_report_btn:'⬇️ 小隊報表', users_audit_btn:'🧾 操作紀錄', users_history_btn:'✅ 審批歷史', users_import_btn:'📥 匯入 CSV', users_search_ph:'搜尋姓名/ YMIS/ Email',
+  users_empty:'尚無成員。請用「➕ 新增成員」或「📥 批量開戶」加入，加入後可在此刪除或修改。',
+  users_count_fmt:'共 {0} 人（成員 {1}／領袖 {2}）',
+  users_roster_chip:'未開登入',
   can_tick_chip:'可勾選', perms_label:'權限: ', perms_none:'無', perms_all:'全部(*)',
   role_opt_member:'團員', role_opt_branch:'支部領袖', role_opt_group:'團長', role_opt_admin:'管理員',
   tick_revoke:'收回勾選', tick_grant:'授權勾選', perm_btn:'⚙️ 權限', reset_pw_btn:'🔑 重設密碼', squad_btn:'🧭 小隊', deactivate_btn:'🗑️ 停用',
@@ -1116,6 +1119,9 @@ en:{
   req_allow:'Allow member progress completion applications (assessment items)', req_allow_on:'ON — members can submit via "📝 Apply for Completion"', req_allow_off:'OFF — members cannot submit progress requests; leaders tick directly',
   req_allow_note:'Note: this toggle controls ONLY "📝 Apply for Completion" (progress assessment items) — the GSL decides per troop whether members are mature enough to use it. When off, members see no apply button in "My Progress" and leaders tick directly. ⚠️ Member self-claims in "📅 Activity Log" (service / activity / courses) are ALWAYS available and not affected — members submit activities they actually took part in, and every claim is approved by a leader. Requests already submitted are unaffected.',
   users_bulk_btn:'📥 Bulk onboarding', users_add_btn:'➕ Add member', users_report_btn:'⬇️ Patrol report', users_audit_btn:'🧾 Audit log', users_history_btn:'✅ Approval history', users_import_btn:'📥 Import CSV', users_search_ph:'Search name / YMIS / Email',
+  users_empty:'No members yet. Use "➕ Add member" or "📥 Bulk onboarding". Once added, you can delete or edit them here.',
+  users_count_fmt:'{0} people ({1} members / {2} leaders)',
+  users_roster_chip:'No login',
   can_tick_chip:'Can tick', perms_label:'Scope: ', perms_none:'None', perms_all:'All (*)',
   role_opt_member:'Member', role_opt_branch:'Section Leader', role_opt_group:'GSL', role_opt_admin:'Admin',
   tick_revoke:'Revoke ticking', tick_grant:'Grant ticking', perm_btn:'⚙️ Scope', reset_pw_btn:'🔑 Reset PW', squad_btn:'🧭 Patrol', deactivate_btn:'🗑️ Deactivate',
@@ -3616,12 +3622,25 @@ function renderInfoTab(){
 }
 
 /* ================== Users / Apps ================== */
+function mergeRosterIntoUsers(apiUsers){
+  // 舊後端 getAllUsers 只讀 Users 表，匯入而未開登入的團員會消失；把 load() 的成員名單併入，讓用戶管理可刪除／修改
+  const list=Array.isArray(apiUsers)?apiUsers.slice():[];
+  const seen=new Set(list.map(u=>String(u.ymis||'').trim()));
+  (members||[]).forEach(m=>{
+    const y=String(m.ymis||'').trim();
+    if(!y || seen.has(y)) return;
+    seen.add(y);
+    list.push({ymis:y, name:m.name||'', email:m.email||m.contact||'', role:m.role||'member', can_tick:false, allowed_badges:'', squad:m.squad||'', squad_role:m.squad_role||'member', roster_only:true});
+  });
+  return list;
+}
 async function loadUsers(){
   const c=document.getElementById('tab-users');
       c.innerHTML=`<div style="text-align:center;padding:20px"><div class="spinner" style="margin:0 auto 8px"></div>${t('loading_users')}</div>`;
   try{
     const d = await apiRequest('getAllUsers', { token: currentToken });
     if(d.success){
+      d.users=mergeRosterIntoUsers(d.users);
       // 超管帳號僅超管可見：若非超管，過濾掉 super_admin
       if(currentUser.role!=='super_admin'){
         d.users=d.users.filter(u=>u.role!=='super_admin' && u.ymis!=='sheep');
@@ -3686,7 +3705,11 @@ async function loadUsers(){
       // v5.3.0：團長全團只可一位 —— 預先找出在職團長；有人嘗試升第二位時由 updateUserRole 彈提示阻擋（唔直接 disabled，令人知點解唔得）
       const gslHolder=(d.users||[]).find(u=>u.role==='group_leader')||null;
       const gslCount=(d.users||[]).filter(u=>u.role==='group_leader').length;
-      h+=d.users.map(u=>`<div class="user-item" data-search="${(u.name+u.ymis+u.email).toLowerCase()}"><div class="user-item-info"><b>${u.name}</b> ${u.ymis&&String(u.ymis).charAt(0)!=='L'?`(${u.ymis})`:''} ${u.email?` - ${u.email}`:''}<span class="role-badge role-${u.role}">${getRoleName(u.role)}</span> ${u.can_tick?`<span style="background:var(--green-light);color:var(--green);padding:1px 6px;border-radius:999px;font-size:9px">${t('can_tick_chip')}</span>`:''}<br><small style="font-size:10px;color:var(--text-light)">${t('perm_prefix')}${u.allowed_badges|| (u.role==='member'?t('perm_none_word'):t('perm_all_word'))}</small></div><div class="user-item-actions">`+
+      const memberCount=(d.users||[]).filter(u=>u.role==='member').length;
+      const leaderCount=(d.users||[]).length-memberCount;
+      h+=`<div style="font-size:12px;color:var(--text-light);margin:4px 0 10px">${tf('users_count_fmt',(d.users||[]).length,memberCount,leaderCount)}</div>`;
+      if(!(d.users||[]).length) h+=`<p style="color:var(--text-light);padding:16px;background:var(--bg);border-radius:8px">${t('users_empty')}</p>`;
+      h+=d.users.map(u=>`<div class="user-item" data-search="${(u.name+u.ymis+(u.email||'')).toLowerCase()}"><div class="user-item-info"><b>${u.name}</b> ${u.ymis&&String(u.ymis).charAt(0)!=='L'?`(${u.ymis})`:''} ${u.email?` - ${u.email}`:''}<span class="role-badge role-${u.role}">${getRoleName(u.role)}</span> ${u.roster_only?`<span style="background:var(--orange);color:#fff;padding:1px 6px;border-radius:999px;font-size:9px;margin-left:4px">${t('users_roster_chip')}</span>`:''} ${u.can_tick?`<span style="background:var(--green-light);color:var(--green);padding:1px 6px;border-radius:999px;font-size:9px">${t('can_tick_chip')}</span>`:''}<br><small style="font-size:10px;color:var(--text-light)">${t('perm_prefix')}${u.allowed_badges|| (u.role==='member'?t('perm_none_word'):t('perm_all_word'))}</small></div><div class="user-item-actions">`+
         (['admin','group_leader','branch_leader','super_admin'].includes(currentUser.role)&&u.ymis!==currentUser.ymis?`<select onchange="updateUserRole('${u.ymis}',this.value,'${u.role}',${!!(gslHolder&&gslHolder.ymis!==u.ymis)},${u.role==='group_leader'&&gslCount<2})"><option value="member" ${u.role==='member'?'selected':''}>${t('role_opt_member')}</option><!-- 童軍無執委 --><option value="branch_leader" ${u.role==='branch_leader'?'selected':''}>${t('role_opt_branch')}</option><option value="group_leader" ${u.role==='group_leader'?'selected':''} ${gslHolder&&u.role!=='group_leader'?'disabled':''}>${gslHolder&&u.role!=='group_leader'?tf('gsl_opt_taken',gslHolder.name):t('role_opt_group')}</option><option value="admin" ${u.role==='admin'?'selected':''}>${t('role_opt_admin')}</option></select><button class="btn btn-sm ${u.can_tick?'btn-danger':'btn-success'}" onclick="toggleCanTick('${u.ymis}',${!u.can_tick})">${u.can_tick?t('tick_revoke'):t('tick_grant')}</button><button class="btn btn-sm btn-warning" onclick="openPermissionModal('${u.ymis}','${u.name.replace(/'/g,"\'") }','${u.role}','${(u.allowed_badges||'').replace(/'/g,"")}')">${t('perm_btn')}</button><button class="btn btn-sm btn-warning" onclick="resetMemberPassword('${u.ymis}')">${t('pw_reset_btn')}</button><button class="btn btn-sm btn-outline" onclick="editSquad('${u.ymis}','${(u.squad||'').replace(/'/g,"\'")}','${(u.squad_role||'member').replace(/'/g,"\'")}')">${t('squad_btn')}</button><button class="btn btn-sm btn-danger" onclick="deactivateUser('${u.ymis}',${u.role==='group_leader'&&gslCount<2})">${t('deactivate_btn')}</button>`:'' )+
         `</div></div>`).join('');
       h+='</div>';
@@ -3732,6 +3755,7 @@ async function importMembersFull(file){
 async function bulkAddMembers(list){
   if(!list.length){showToast(t('bulk_no_valid'),'warning');return;}
   const existing=new Set(members.map(m=>m.ymis));
+  const existingEmails=new Set((members||[]).map(m=>String(m.email||m.contact||'').toLowerCase()).filter(Boolean));
   let ok=0,skip=0,done=0;const errs=[];
   for(const m of list){
     done++;
@@ -3742,7 +3766,7 @@ async function bulkAddMembers(list){
       const action=(m.password||m.role!=='member')?'addUser':'addMember';
       const payload={action,ymis:m.ymis,name:m.name,email:m.email,squad:m.squad,squad_role:m.squad_role,role:m.role,can_tick:m.can_tick,password:m.password};
       const d=await apiRequest(action, payload);
-      if(d.success){ok++;if(m.ymis)existing.add(m.ymis);}else{skip++;errs.push((m.ymis||m.email||m.name)+':'+(d.error||t('fail_word')));}
+      if(d.success){ok++;if(m.ymis)existing.add(m.ymis);if(m.email)existingEmails.add(String(m.email).toLowerCase());}else{skip++;errs.push((m.ymis||m.email||m.name)+':'+(d.error||t('fail_word')));}
     }catch(e){skip++;errs.push(m.ymis+':'+e.message);}
   }
   showToast(tf('bulk_done_fmt',ok,skip),errs.length?'warning':'success');
@@ -4666,11 +4690,6 @@ async function toggleAllowMemberRequests(checked){
       <button class="btn btn-sm btn-success" style="flex:1" onclick="bulkAddFromJSON()" data-i18n="bulk_go">🚀 由 JSON 批量開戶</button>
       <button class="btn btn-sm btn-secondary" style="flex:1" onclick="closeModal('bulkOnboardModal')" data-i18n="close">關閉</button>
     </div>
-  </div>
-</div>
-
-</body>
-</html>
   </div>
 </div>
 

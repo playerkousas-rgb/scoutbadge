@@ -20,9 +20,18 @@ function mockSheet(headers, rows = []) {
       const owner = this;
       const rows = nr || 1, cols = nc || 1;
       return {
-        setValue(v){ for (let k = 0; k < rows; k++) for (let m = 0; m < cols; m++) owner._data[r - 1 + k][c - 1 + m] = v; },
-        setValues(vv){ for (let k = 0; k < rows; k++) for (let m = 0; m < cols; m++) owner._data[r - 1 + k][c - 1 + m] = vv[k][m]; },
+        setValue(v){ for (let k = 0; k < rows; k++) for (let m = 0; m < cols; m++) { if(!owner._data[r - 1 + k]) owner._data[r - 1 + k]=[]; owner._data[r - 1 + k][c - 1 + m] = v; } },
+        setValues(vv){ for (let k = 0; k < rows; k++) for (let m = 0; m < cols; m++) { if(!owner._data[r - 1 + k]) owner._data[r - 1 + k]=[]; owner._data[r - 1 + k][c - 1 + m] = vv[k][m]; } },
         getValue(){ return owner._data[r - 1][c - 1]; },
+        getValues(){
+          const out=[];
+          for (let k = 0; k < rows; k++){
+            const row=[];
+            for (let m = 0; m < cols; m++) row.push((owner._data[r - 1 + k]||[])[c - 1 + m]);
+            out.push(row);
+          }
+          return out;
+        },
         setFontWeight(){ return this; }, setBackground(){ return this; }, setFontColor(){ return this; }
       };
     }
@@ -56,7 +65,7 @@ function installEnv() {
     DigestAlgorithm: { SHA_256: 'SHA_256' }
   };
   global.__lastOut = null;
-  global.ContentService = { createTextOutput: o => { global.__lastOut = JSON.parse(o); return { setMimeType(){ return this; } }; }, MimeType: { JSON: 'JSON' } };
+  global.ContentService = { createTextOutput: o => { global.__lastOut = JSON.parse(o); return { _content: o, getContent(){ return this._content; }, setMimeType(){ return this; } }; }, MimeType: { JSON: 'JSON' } };
   global.ScriptApp = { getService(){ return { getUrl(){ return 'https://script.example/exec'; } }; } };
   global.Logger = { log(){} };
   // hashPassword in Code.gs expects Utilities.computeDigest byte array → hex
@@ -70,7 +79,7 @@ installEnv();
 // ---------- Load Code.gs into global scope ----------
 const code = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'Code.gs'), 'utf8');
 // run inside this context: define functions globally
-const fn = new Function('global', code + '\n;return {handleLogin, handleRequestLogRecord, handleGetLogRequests, handleReviewLogRequest, handleCancelLogRequest, handleGetLogRecords, handleSaveLogRecord, getMembers, getAllUsers, getUser, validateToken, canUserTick, initializeSheets, handleChangePassword, handleResetPassword, handleApply, handleAddUser, doPost, doGet, getLogRequestsList: typeof getLogRequestsList!=="undefined"?getLogRequestsList:null};');
+const fn = new Function('global', code + '\n;return {handleLogin, handleRequestLogRecord, handleGetLogRequests, handleReviewLogRequest, handleCancelLogRequest, handleGetLogRecords, handleSaveLogRecord, getMembers, getAllUsers, getUser, getUserByEmail, validateToken, canUserTick, initializeSheets, handleChangePassword, handleResetPassword, handleApply, handleAddUser, handleAddMember, handleReviewApplication, handleBulkAddUsers, uniquenessError, normalizeYmis, doPost, doGet, getLogRequestsList: typeof getLogRequestsList!=="undefined"?getLogRequestsList:null};');
 const api = fn(global);
 
 // ---------- Seed sheets ----------
@@ -259,6 +268,80 @@ check('舊 Users 表含 sheep 列（測試前置）', sheets['Users']._data.some
 api.initializeSheets();
 check('initializeSheets 後 Users 不再含 sheep', !sheets['待批履歷'] ? false : sheets['Users']._data.every(r => r[0] !== 'sheep' && r[2] !== 'sheep@scoutbadge.local'));
 check('initializeSheets 補建「待批履歷」工作表', !!sheets['待批履歷']);
+
+
+console.log('\n【D】v5.3.1 YMIS／Email 唯一 + 用戶管理列出成員名單');
+seed();
+const leaderD = login('1234567890', 'LeaderA!234');
+
+// 數字型 YMIS（Sheet 常把 10 位編號存成 number）仍可登入／查到
+sheets['Users']._data[1][0] = 1234560001;
+check('normalizeYmis 去掉 .0', api.normalizeYmis(1234560001.0) === '1234560001');
+check('getUser 接受數字型 YMIS', !!api.getUser(1234560001) && api.getUser('1234560001').name === '成員甲');
+check('getUserByEmail 不分大小寫', !!api.getUserByEmail('MEMBER@example.org'));
+
+const dupY = out(api.handleApply('1234560001', '重覆甲', 'dup-a@example.org', 'member', ''));
+check('apply 不可重用已註冊 YMIS', dupY.success === false && /YMIS/.test(dupY.error || ''), dupY.error);
+const dupE = out(api.handleApply('1234568888', '重覆電郵', 'member@example.org', 'member', ''));
+check('apply 不可重用已註冊 Email', dupE.success === false && /Email/.test(dupE.error || ''), dupE.error);
+
+const addDupY = call('addUser', { token: leaderD.token, ymis: '1234560001', name: '另一人', email: 'other-a@example.org', role: 'member' });
+check('addUser 不可重用已註冊 YMIS', addDupY.success === false && /YMIS/.test(addDupY.error || ''), addDupY.error);
+const addDupE = call('addUser', { token: leaderD.token, ymis: '1234568888', name: '另一人', email: 'LEADER@example.org', role: 'member' });
+check('addUser 不可重用已註冊 Email（大小寫）', addDupE.success === false && /Email/.test(addDupE.error || ''), addDupE.error);
+
+// 已停用帳號的 YMIS／Email 仍佔位
+sheets['Users']._data.push(['1234567777','停用者','inactive@example.org','member', hashPw('x'),'','','','','','','inactive','','','member',false]);
+const reuseInact = out(api.handleApply('1234567777', '想重用', 'fresh7777@example.org', 'member', ''));
+check('已停用 YMIS 不可再開另一戶', reuseInact.success === false && /YMIS/.test(reuseInact.error || ''), reuseInact.error);
+const reuseInactE = out(api.handleApply('1234566666', '想重用電郵', 'inactive@example.org', 'member', ''));
+check('已停用 Email 不可再開另一戶', reuseInactE.success === false && /Email/.test(reuseInactE.error || ''), reuseInactE.error);
+
+// 待審批申請佔位
+const firstApp = out(api.handleApply('1234565555', '待批甲', 'pending5555@example.org', 'member', ''));
+check('首次申請成功', firstApp.success === true, JSON.stringify(firstApp));
+const secondApp = out(api.handleApply('1234565555', '待批乙', 'pending5555b@example.org', 'member', ''));
+check('同一 YMIS 第二份待批申請被拒', secondApp.success === false && /待審批/.test(secondApp.error || ''), secondApp.error);
+const secondAppE = out(api.handleApply('1234564444', '待批丙', 'pending5555@example.org', 'member', ''));
+check('同一 Email 第二份待批申請被拒', secondAppE.success === false && /待審批/.test(secondAppE.error || ''), secondAppE.error);
+
+// 成員名單-only 出現在用戶管理
+sheets['成員名單'].appendRow(['1234563333','名單only','2026-01-01','b4','roster-only@example.org','綠隊']);
+const allU = api.getAllUsers();
+const rosterOnly = allU.find(u => u.ymis === '1234563333');
+check('getAllUsers 列出成員名單-only 團員', !!rosterOnly && rosterOnly.roster_only === true && rosterOnly.name === '名單only', JSON.stringify(rosterOnly));
+check('getAllUsers 不含 sheep', allU.every(u => u.ymis !== 'sheep'));
+
+const addMemDup = out(api.handleAddMember('1234560001', '重覆加入', '紅隊', 'member'));
+check('addMember 不可重用已有 YMIS', addMemDup.success === false, addMemDup.error);
+const addMemOk = out(api.handleAddMember('1234562222', '新團員丙', '黃隊', 'member'));
+check('addMember 新 YMIS 成功並寫入 Users', addMemOk.success === true && !!api.getUser('1234562222'), JSON.stringify(addMemOk));
+check('addMember 後 getAllUsers 可見', api.getAllUsers().some(u => u.ymis === '1234562222'));
+
+// 為成員名單-only 補開登入（同一 YMIS）應成功
+const attach = call('addUser', { token: leaderD.token, ymis: '1234563333', name: '名單only', email: 'roster-only@example.org', role: 'member', password: '1234' });
+check('addUser 可為成員名單同一人補開登入', attach.success === true, JSON.stringify(attach));
+const stealEmail = call('addUser', { token: leaderD.token, ymis: '1234561111', name: '搶電郵', email: 'roster-only@example.org', role: 'member' });
+check('其他人不可佔用成員名單電郵', stealEmail.success === false && /Email/.test(stealEmail.error || ''), stealEmail.error);
+
+// 停用成員名單-only（未開登入）
+sheets['成員名單'].appendRow(['1234561010','可刪名單','2026-01-01','b4','','橙隊']);
+const deactRoster = call('deactivateUser', { token: leaderD.token, target_ymis: '1234561010' });
+check('用戶管理可停用／刪除成員名單-only', deactRoster.success === true, JSON.stringify(deactRoster));
+check('停用後成員名單不再有該 YMIS', !sheets['成員名單']._data.some(r => String(r[0]) === '1234561010'));
+
+// 批量開戶：第二筆相同 YMIS 失敗
+const bulk = out(api.handleBulkAddUsers([
+  {ymis:'1234560901', name:'批量一', email:'bulk0901@example.org', role:'member', password:'1234'},
+  {ymis:'1234560901', name:'批量重覆', email:'bulk0901b@example.org', role:'member', password:'1234'}
+], {role:'group_leader', ymis:'1234567890'}));
+check('bulkAddUsers 第二筆相同 YMIS 失敗', bulk.success === true && bulk.created === 1 && bulk.failed === 1, JSON.stringify(bulk));
+
+// 批准申請時撞上已有帳號
+const appId = sheets['Applications']._data.find(r => r[1] === '1234565555' && r[6] === 'pending')[0];
+sheets['Users'].appendRow(['1234565555','已有人','taken5555@example.org','member','','','','','','','','active','','','member',false]);
+const reviewClash = out(api.handleReviewApplication(appId, 'approved', '', {ymis: leaderD.user.ymis, role: 'group_leader'}, '1234'));
+check('批准申請時若 YMIS 已被佔用則拒絕', reviewClash.success === false && /YMIS/.test(reviewClash.error || ''), reviewClash.error);
 
 console.log(`\n=== 結果：${passed} 通過，${failed} 失敗 ===`);
 process.exit(failed ? 1 : 0);
