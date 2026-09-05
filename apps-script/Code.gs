@@ -21,6 +21,11 @@
 //     sheep never appears in the Users sheet / user management / member list
 //   - 防護保留：sheep 不能被停用／重設密碼／改角色／申請／批量開戶佔用保留帳號
 //     Protected: sheep cannot be deactivated / password-reset / role-changed; reserved id/email blocked everywhere
+// v5.2.1 新增（對齊 VSBADGE v8.2：帳戶自助申請支援領袖）:
+//   - apply 只接受 requested_role = member / branch_leader（童軍無執委；團長／管理員須由現任管理層直接開立）
+//   - 成員申請：YMIS 10 位必填；領袖申請：Email 必填，YMIS 選填（留空則批准時自動編配 L 開頭臨時編號）
+//   - reviewApplication 按申請角色開戶（審批者權限不足時退回 member），回應加 final_role + temp_password
+//   - 無新工作表、無新欄位（force_change_password 欄若缺會自動補）：覆蓋 Code.gs 並重新部署即可，毋須 initializeSheets()
 // ============================================================
 
 const ADMIN_YMIS = '1111111111';
@@ -208,15 +213,22 @@ function safeSheetText(v,maxLen){
 
 const ROLE_HIERARCHY = { 'super_admin':100,'admin':80,'group_leader':60,'branch_leader':40,'member':0 };
 const CAN_TICK_ROLES = ['admin','group_leader','branch_leader','super_admin'];
-const CAN_MANAGE_ROLES = { 
+const CAN_MANAGE_ROLES = {
   'super_admin': ['admin','group_leader','branch_leader','member'],
-  'admin': ['group_leader','branch_leader','member'], 
-  'group_leader': ['branch_leader','member'], 
-  'branch_leader': ['member'] 
+  'admin': ['group_leader','branch_leader','member'],
+  'group_leader': ['branch_leader','member'],
+  'branch_leader': ['member']
 };
 function canUserTick(r){ return CAN_TICK_ROLES.indexOf(r)>=0; }
 function getRoleLevel(r){ return ROLE_HIERARCHY[r]||0; }
 function canManageRole(m,t){ return (CAN_MANAGE_ROLES[m]||[]).indexOf(t)>=0; }
+function canManageUser(manager,targetRole){ return manager && (manager.role==='super_admin' || canManageRole(manager.role,targetRole)); }
+
+// v5.2.1（對齊 VSBADGE v8.2）：公開申請入口只接受 member / branch_leader（童軍無執委）
+// 團長／管理員必須由現任管理層在「用戶管理」直接開立，不可自行申請。
+const VALID_ROLES = ['admin','group_leader','branch_leader','member'];
+const APPLY_ROLES = ['member','branch_leader'];
+function generateTemporaryPassword(){ return 'Scout'+Math.floor(100000+Math.random()*900000); }
 
 // ===== 初始化 =====
 function initializeSheets() {
@@ -463,7 +475,8 @@ function doPost(e){
     const action=body.action;
     if(action==='login') return handleLogin(body.login_id,body.password);
     if(action==='logout'){ destroyToken(body.token); return jsonResponse({success:true}); }
-    if(action==='apply') return handleApply(body.ymis,body.name,body.email,body.requested_role,body.branch);
+    // v5.2.1：公開入口接受成員／領袖申請（角色在 handleApply 內嚴格驗證，只限 member / branch_leader）
+    if(action==='apply') return handleApply(body.ymis,body.name,body.email,body.requested_role||'member',body.branch);
 
     // save & addMember 需要 apikey (v4 向下兼容：若無 apikey 但有有效 token 也允許)
     if(action==='save' || action==='addMember' || action==='addUser' || action==='saveOtherBadge'){
@@ -503,7 +516,7 @@ function doPost(e){
     if(action==='reviewRequest'){ if(!canUserTick(user.role)) return jsonResponse({success:false,error:'權限不足，需領袖權限'}); return handleReviewRequest(body.request_id, body.decision, body.review_note, ymis, body.confirmed_date); }
     if(action==='getOtherBadges'){ return handleGetOtherBadges(body.target_ymis||ymis); }
     if(action==='getApplications'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足，需團長/支部領袖'}); return handleGetApplications(); }
-    if(action==='reviewApplication'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'}); return handleReviewApplication(body.app_id,body.decision,body.review_note,ymis); }
+    if(action==='reviewApplication'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'}); return handleReviewApplication(body.app_id,body.decision,body.review_note,user,body.temp_password); }
     if(action==='getConfig'){
       // 任何已登入用戶都可讀取公開設定
       return handleGetConfig();
@@ -655,33 +668,103 @@ function handleChangePassword(ymis,oldP,newP){
   return jsonResponse({success:false,error:'原密碼錯誤'});
 }
 function handleApply(ymis,name,email,role,branch){
+  // v5.2.1（對齊 VSBADGE v8.2）：成員／領袖都可自行申請；角色嚴格驗證，只限 member / branch_leader。
+  ymis=String(ymis||'').trim(); name=safeSheetText(name,100);
+  email=String(email||'').trim().substring(0,160); branch=safeSheetText(branch,100);
+  role=String(role||'member').trim()||'member';
+  if(APPLY_ROLES.indexOf(role)<0) return jsonResponse({success:false,error:'無效的申請角色'});
   if(!name) return jsonResponse({success:false,error:'請填寫姓名'});
-  if(role==='member' && (!ymis||ymis.length!==10)) return jsonResponse({success:false,error:'成員需 10位 YMIS'});
-  if(role!=='member' && !email) return jsonResponse({success:false,error:'領袖需 Email'});
+  if(role==='member'){
+    if(!/^\d{10}$/.test(ymis)) return jsonResponse({success:false,error:'成員需 10位 YMIS'});
+  }else{
+    // 領袖：Email 必填；YMIS 選填（若填寫須為 10 位數字，留空則批准時自動編配 L 開頭編號）
+    if(ymis && !/^\d{10}$/.test(ymis)) return jsonResponse({success:false,error:'YMIS 須為 10 位數字'});
+    if(!email) return jsonResponse({success:false,error:'領袖申請必須填寫聯絡電郵'});
+  }
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return jsonResponse({success:false,error:'Email 格式不正確'});
   if(isSuperAdminReserved(ymis,email)) return jsonResponse({success:false,error:'此帳號已被保留，請使用其他帳號'});
   if(ymis && getUser(ymis)) return jsonResponse({success:false,error:'YMIS 已註冊'});
   if(email && getUserByEmail(email)) return jsonResponse({success:false,error:'Email 已註冊'});
   const sheet=getSheet().getSheetByName('Applications');
-  sheet.appendRow(['APP_'+Date.now(),ymis||'',name,email||'',role||'member',branch||'b4','pending',now(),'','', '']);
-  return jsonResponse({success:true,message:'申請已提交'});
+  if(!sheet) return jsonResponse({success:false,error:'Applications 工作表不存在，請先執行 initializeSheets()'});
+  const data=sheet.getDataRange().getValues();
+  for(let i=1;i<data.length;i++){
+    if(String(data[i][6])==='pending'){
+      if(ymis && String(data[i][1])===ymis) return jsonResponse({success:false,error:'此 YMIS 已有待審批申請'});
+      if(email && String(data[i][3]).toLowerCase()===email.toLowerCase()) return jsonResponse({success:false,error:'此 Email 已有待審批申請'});
+    }
+  }
+  sheet.appendRow(['APP_'+Date.now(),ymis,name,email,role,branch||'','pending',now(),'','','']);
+  return jsonResponse({success:true,message:'申請已提交，請等待領袖在前端審批'});
 }
 function handleGetApplications(){
-  const sheet=getSheet().getSheetByName('Applications'); const apps=[]; const data=sheet.getDataRange().getValues();
-  for(let i=1;i<data.length;i++){ if(data[i][6].toString()==='pending'){ apps.push({app_id:data[i][0].toString(),ymis:data[i][1].toString(),name:data[i][2].toString(),email:data[i][3].toString(),requested_role:data[i][4].toString(),branch:data[i][5].toString(),applied_at:data[i][7]?formatDate(data[i][7]):''}); } }
+  const sheet=getSheet().getSheetByName('Applications'); const apps=[];
+  if(!sheet) return jsonResponse({success:true,applications:apps});
+  const data=sheet.getDataRange().getValues();
+  for(let i=1;i<data.length;i++){ if(data[i][6].toString()==='pending'){ apps.push({app_id:data[i][0].toString(),ymis:data[i][1]?data[i][1].toString():'',name:data[i][2].toString(),email:data[i][3]?data[i][3].toString():'',requested_role:(data[i][4]||'member').toString()||'member',branch:data[i][5]?data[i][5].toString():'',applied_at:data[i][7]?formatDate(data[i][7]):''}); } }
   return jsonResponse({success:true,applications:apps});
 }
-function handleReviewApplication(appId,decision,note,reviewer){
-  const sheet=getSheet().getSheetByName('Applications'); const data=sheet.getDataRange().getValues(); let appData=null;
-  for(let i=1;i<data.length;i++){ if(data[i][0].toString()===appId){ appData=data[i]; sheet.getRange(i+1,7).setValue(decision); sheet.getRange(i+1,9).setValue(reviewer); sheet.getRange(i+1,10).setValue(now()); sheet.getRange(i+1,11).setValue(note||''); break; } }
-  if(!appData) return jsonResponse({success:false,error:'找不到申請'});
-  if(decision==='approved'){
-    const uSheet=getSheet().getSheetByName('Users'); let ymis=appData[1].toString(); if(!ymis && (appData[4]==='group_leader'||appData[4]==='branch_leader')){ ymis='L'+Date.now().toString().substring(7); }
-    if(isSuperAdminReserved(ymis,appData[3])) return jsonResponse({success:false,error:'此帳號已被保留，不能開戶'});
-    uSheet.appendRow([ymis,appData[2],appData[3],appData[4],hashPassword(ADMIN_PASS),appData[5],true,reviewer,now(),now(),'', 'active','*',appData[5],'member']);
-    const mSheet=getSheet().getSheetByName('成員名單'); if(mSheet) mSheet.appendRow([ymis,appData[2],new Date(),appData[5],'',appData[5]]);
-    return jsonResponse({success:true,message:'已批准，預設密碼：'+ADMIN_PASS});
+function handleReviewApplication(appId,decision,note,manager,tempPassword){
+  // v5.2.1（對齊 VSBADGE v8.2）：按申請人要求的角色開戶；若審批者權限層級不能設定該角色則退回 member
+  // （批准後團長仍可在「用戶管理」調整）。回應加 final_role + temp_password，首次登入須更改密碼。
+  if(decision!=='approved' && decision!=='rejected') return jsonResponse({success:false,error:'無效決定'});
+  const sheet=getSheet().getSheetByName('Applications');
+  if(!sheet) return jsonResponse({success:false,error:'找不到 Applications 工作表'});
+  const data=sheet.getDataRange().getValues();
+  let rowIndex=-1, appData=null;
+  for(let i=1;i<data.length;i++){ if(String(data[i][0])===String(appId)){ rowIndex=i+1; appData=data[i]; break; } }
+  if(!appData || String(appData[6])!=='pending') return jsonResponse({success:false,error:'找不到待審批申請'});
+  const reviewerYmis=(manager && manager.ymis)?String(manager.ymis):String(manager||'');
+  if(decision==='rejected'){
+    sheet.getRange(rowIndex,7).setValue('rejected');
+    sheet.getRange(rowIndex,9).setValue(reviewerYmis);
+    sheet.getRange(rowIndex,10).setValue(now());
+    sheet.getRange(rowIndex,11).setValue(note||'');
+    writeAudit(reviewerYmis,'reject_application',String(appData[1]),String(appId));
+    return jsonResponse({success:true,message:'已拒絕申請'});
   }
-  return jsonResponse({success:true,message:'已拒絕'});
+  const requestedRole=String(appData[4]||'member');
+  const finalRole=(VALID_ROLES.indexOf(requestedRole)>=0 && canManageUser(manager,requestedRole))?requestedRole:'member';
+  let ymis=String(appData[1]||'').trim();
+  const appName=String(appData[2]||'');
+  const appEmail=String(appData[3]||'').trim();
+  const branchVal=safeSheetText(appData[5],100);
+  // 領袖申請可留空 YMIS：批准時一律自動編配 L 開頭編號（即使因審批者權限不足而退回 member 也一樣，
+  // 否則該申請會永遠卡在待批無法批准；L 編號可用 Email 登入，團長日後可在「用戶管理」補回正確 YMIS／角色）
+  if(!ymis){ ymis='L'+Date.now().toString().substring(7); }
+  if(isSuperAdminReserved(ymis,appEmail)) return jsonResponse({success:false,error:'此帳號已被保留，不能開戶'});
+  if(getUser(ymis)) return jsonResponse({success:false,error:'YMIS 已註冊（可能已開戶）'});
+  if(appEmail && getUserByEmail(appEmail)) return jsonResponse({success:false,error:'Email 已註冊（可能已開戶）'});
+  const password=String(tempPassword||generateTemporaryPassword());
+  const isLeaderFinal=(finalRole!=='member');
+  // member：branch 欄沿用小隊（向後兼容舊申請）；leader：squad 留空，branch 存旅團／分支名稱
+  const userBranch=branchVal;
+  const userSquad=isLeaderFinal?'':branchVal;
+  const uSheet=getSheet().getSheetByName('Users');
+  if(!uSheet) return jsonResponse({success:false,error:'找不到 Users 工作表'});
+  // 按表頭寫入（兼容 15／16 欄舊表；缺欄自動補上，確保首次登入強制更改密碼生效）
+  let headers=uSheet.getRange(1,1,1,Math.max(uSheet.getLastColumn(),1)).getValues()[0].map(function(h){return String(h).trim();});
+  ['allowed_badges','squad','squad_role','force_change_password'].forEach(function(h){
+    if(headers.indexOf(h)<0){ uSheet.getRange(1,headers.length+1).setValue(h); headers.push(h); }
+  });
+  const row=new Array(headers.length).fill('');
+  function set(n,v){ const c=headers.indexOf(n); if(c>=0) row[c]=v; }
+  const nowStr=now();
+  set('ymis',ymis); set('name',appName); set('email',appEmail); set('role',finalRole);
+  set('password_hash',hashPassword(password)); set('branch',userBranch);
+  set('can_tick',isLeaderFinal); set('auth_by',reviewerYmis); set('auth_date',nowStr);
+  set('created_at',nowStr); set('last_login',''); set('status','active');
+  set('allowed_badges',isLeaderFinal?'*':''); set('squad',userSquad); set('squad_role','member');
+  set('force_change_password',true);
+  uSheet.appendRow(row);
+  const mSheet=getSheet().getSheetByName('成員名單');
+  if(mSheet) mSheet.appendRow([ymis,appName,new Date(),isLeaderFinal?'':userBranch,appEmail,userSquad]);
+  sheet.getRange(rowIndex,7).setValue('approved');
+  sheet.getRange(rowIndex,9).setValue(reviewerYmis);
+  sheet.getRange(rowIndex,10).setValue(nowStr);
+  sheet.getRange(rowIndex,11).setValue(note||'');
+  writeAudit(reviewerYmis,'approve_application',ymis,String(appId)+' → '+finalRole);
+  return jsonResponse({success:true,message:'已批准並建立帳戶',temp_password:password,final_role:finalRole,ymis:ymis});
 }
 function handleUpdateUserRole(targetYmis,newRole,canTick,managerYmis, allowedBadges, squad, squadRole){
   const manager=getUser(managerYmis);
