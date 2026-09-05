@@ -96,6 +96,13 @@ auth_date, created_at, last_login, status, allowed_badges, squad, squad_role, fo
 > 提示：若你想要這份 Sheet 完全由 app 使用（含進度追蹤、操作紀錄等其他工作表），
 > 請先執行 app 後端的 `initializeSheets()` 一次性建立所有工作表，再執行批量開戶。
 
+## 預設密碼與團長鎖
+
+- 批核／開戶若未指定密碼，預設初始密碼為 **1234**，首次登入必須更改（最少 4 位）。
+- 領袖可留空 YMIS，以電郵登入；系統內部編號 `L0001` 起不對外顯示。
+- 全團只可有一位團長；支部領袖不可開立 admin／團長／其他支部領袖。
+- `branch_leader` 不可建立 `admin` / `group_leader` / `branch_leader`。
+
 ## 注意
 
 - YMIS 必須為 10 位數字，否則該列會被忽略。

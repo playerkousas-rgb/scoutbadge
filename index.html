@@ -646,7 +646,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
   </div>
 </div>
 
-<div id="accountApplyModal" class="modal"><div class="modal-content"><h3 data-i18n="apply_title">📝 申請帳戶</h3><div style="font-size:12px;background:var(--blue-light);border:1px solid var(--blue);color:var(--blue);padding:8px 10px;border-radius:8px;margin-bottom:12px"><span data-i18n="apply_troop">📍 旅團：</span><b id="applyTroopName">—</b><br><span style="font-size:11px" data-i18n="apply_hint">支部＝童軍、單位＝所屬旅團，系統自動帶入，毋須填寫。提交後由團長／領袖在「審批中心」批准。</span></div><div class="form-group"><label data-i18n="apply_role">申請身份 *</label><select id="applyRole" onchange="syncApplyRole()"><option value="member" data-i18n="apply_member">童軍成員</option><option value="branch_leader" data-i18n="apply_leader">領袖（童軍團長）</option></select><div style="font-size:10px;color:var(--text-light);margin-top:3px" data-i18n="apply_role_hint">成員、領袖都可自行申請；團長／管理員須由現任團長在「用戶管理」直接開立。</div></div><div class="form-group" id="applyYmisGroup"><label><span data-i18n="apply_ymis">YMIS（10位數字）*</span></label><input id="applyYmis" maxlength="10" inputmode="numeric"></div><div class="form-group"><label data-i18n="apply_name">姓名 *</label><input id="applyName"></div><div class="form-group" id="applySquadGroup"><label data-i18n="apply_squad">小隊（可留空）</label><input id="applySquad"></div><div class="form-group"><label><span data-i18n="apply_email">聯絡電郵</span> <span id="applyEmailReq" style="color:var(--red);display:none" data-i18n="apply_email_req">* 領袖必填</span></label><input id="applyEmail" type="email"></div><div id="applyMsg" class="login-msg"></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal('accountApplyModal')" data-i18n="cancel">取消</button><button class="btn btn-primary" id="btnAccountApply" onclick="submitAccountApply()" data-i18n="submit">提交申請</button></div></div></div>
+<div id="accountApplyModal" class="modal"><div class="modal-content"><h3 data-i18n="apply_title">📝 申請帳戶</h3><div style="font-size:12px;background:var(--blue-light);border:1px solid var(--blue);color:var(--blue);padding:8px 10px;border-radius:8px;margin-bottom:12px"><span data-i18n="apply_troop">📍 旅團：</span><b id="applyTroopName">—</b><br><span style="font-size:11px" data-i18n="apply_hint">支部＝童軍、單位＝所屬旅團，系統自動帶入，毋須填寫。提交後由團長／領袖在「審批中心」批准。</span></div><div class="form-group"><label data-i18n="apply_role">申請身份 *</label><select id="applyRole" onchange="syncApplyRole()"><option value="member" data-i18n="apply_member">童軍成員</option><option value="branch_leader" data-i18n="apply_leader">領袖（童軍團長）</option></select><div style="font-size:10px;color:var(--text-light);margin-top:3px" data-i18n="apply_role_hint">成員、領袖都可自行申請；團長／管理員須由現任團長在「用戶管理」直接開立。</div></div><div class="form-group" id="applyYmisGroup"><label><span data-i18n="apply_ymis">YMIS（10位數字）*</span></label><input id="applyYmis" maxlength="10" inputmode="numeric"></div><div class="form-group"><label data-i18n="apply_name">姓名 *</label><input id="applyName"></div><div class="form-group" id="applySquadGroup"><label data-i18n="apply_squad">小隊（可留空）</label><input id="applySquad"></div><div class="form-group"><label><span data-i18n="apply_email">聯絡電郵</span> <span id="applyEmailReq" style="color:var(--red);display:none" data-i18n="apply_email_req">* 領袖必填</span></label><input id="applyEmail" type="email"></div><div style="font-size:11px;color:var(--text-light);background:var(--bg);padding:8px 10px;border-radius:6px;margin-bottom:12px" data-i18n="apply_pw_notice">💡 申請經批核後，初始密碼預設為 1234；首次登入時系統會強制要求設定新密碼。</div><div id="applyMsg" class="login-msg"></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal('accountApplyModal')" data-i18n="cancel">取消</button><button class="btn btn-primary" id="btnAccountApply" onclick="submitAccountApply()" data-i18n="submit">提交申請</button></div></div></div>
 
 <div id="savingOverlay" class="saving-overlay">
   <div class="spinner"></div>
@@ -681,7 +681,7 @@ zh:{
   progress_items:'進度項目',
   /* login */
   login_fill_all:'請填寫帳號和密碼', login_working:'登入中...', login_ok_sync:'登入成功！載入資料...', login_btn:'登入', login_failed:'登入失敗', login_failed_retry:'登入失敗，請稍後重試',
-  login_newpw_prompt:'首次登入／密碼已重設，請設定新密碼（至少6位）', login_newpw_required:'必須先設定至少6位的新密碼', login_pw_changed:'密碼已更新', login_pw_fail:'更改密碼失敗',
+  login_newpw_prompt:'首次登入／密碼已重設，請設定新密碼（至少4位）', login_newpw_required:'必須先設定至少4位的新密碼', apply_pw_notice:'💡 申請經批核後，初始密碼預設為 1234；首次登入時系統會強制要求設定新密碼。', login_pw_changed:'密碼已更新', login_pw_fail:'更改密碼失敗',
   troop_builtin:'(內置)', troop_syncing:'正在同步最新旅團列表...',
   troop_sync_fail:'⚠️ 同步失敗，已顯示內置旅團 0082。<br>若 /api/troops 404 屬正常（靜態部署），請直接點 0082 進入。',
   troop_pick_fail:'無法選擇旅團', portal_badge:'Portal', portal_preselected:'(ID: {0}) - Portal預選',
@@ -782,7 +782,7 @@ zh:{
   audit_search:'輸入搜尋字詞（可留空）', audit_fail:'讀取操作紀錄失敗：', approval_search:'搜尋 YMIS／姓名／項目／狀態', approval_fail:'讀取審批歷史失敗：', no_records:'沒有紀錄',
   bulk_json_bad:'JSON 格式錯誤', bulk_no_valid:'沒有有效資料（成員 YMIS 須為10位數字；領袖須填姓名＋電郵）', bulk_err_title:'以下開戶失敗（原因）：', bulk_done:'批量開戶完成：成功 {0} 筆，略過 {1} 筆', fail_word:'失敗',
   deactivate_confirm:'確定停用此帳號？停用後將無法登入，資料會保留。', deactivated:'已停用 ', deactivate_fail:'停用失敗：',
-  gsl_only_one:'團長只能有一位，全團已有現任團長。如需更換，請先將現任團長轉為其他角色。', gsl_demote_warn:'此人是全團唯一的團長，轉走後全團將暫時沒有團長。確定繼續嗎？', gsl_deactivate_warn:'此人是全團唯一的團長，停用後全團將暫時沒有團長。確定繼續嗎？',
+  gsl_only_one:'團長只能有一位，全團已有現任團長。如需更換，請先將現任團長轉為其他角色。', gsl_opt_taken:'團長（已有現任：{0}）', login_email_pw:'登入方式：電郵 ＋ 密碼', gsl_demote_warn:'此人是全團唯一的團長，轉走後全團將暫時沒有團長。確定繼續嗎？', gsl_deactivate_warn:'此人是全團唯一的團長，停用後全團將暫時沒有團長。確定繼續嗎？',
   addm_pw:'成員 YMIS（10位數字）', addm_name:'成員姓名', addm_squad:'小隊（可留空）', addm_done:'成員已新增', addm_fail:'新增失敗：',
   squad_prompt:'小隊名稱（留空代表未分配）', squad_role_prompt:'小隊職務：隊長／副隊長／member', squad_updated:'小隊及職務已更新', update_fail:'更新失敗：',
   role_updated:'角色已更新', tick_granted:'已授權勾選', tick_revoked:'已收回權限',
@@ -1033,7 +1033,7 @@ en:{
   member_mode_toast:'Member mode: you can only view your own progress, other badges and applications',
   progress_items:'Progress Items',
   login_fill_all:'Please enter your ID and password', login_working:'Signing in...', login_ok_sync:'Signed in! Loading data...', login_btn:'Sign In', login_failed:'Sign-in failed', login_failed_retry:'Sign-in failed, please retry later',
-  login_newpw_prompt:'First sign-in / password reset — please set a new password (min 6 characters)', login_newpw_required:'You must set a new password of at least 6 characters', login_pw_changed:'Password updated', login_pw_fail:'Password change failed',
+  login_newpw_prompt:'First sign-in / password reset — please set a new password (min 4 characters)', login_newpw_required:'You must set a new password of at least 4 characters', apply_pw_notice:'💡 Upon approval, initial password defaults to 1234. Password change is required on first sign-in.', login_pw_changed:'Password updated', login_pw_fail:'Password change failed',
   troop_builtin:'(built-in)', troop_syncing:'Syncing latest troop list...',
   troop_sync_fail:'⚠️ Sync failed; showing built-in Troop 0082.<br>A 404 for /api/troops is normal on static hosting — just tap 0082 to continue.',
   troop_pick_fail:'Unable to select troop', portal_badge:'Portal', portal_preselected:'(ID: {0}) - Portal pre-selected',
@@ -1124,7 +1124,7 @@ en:{
   audit_search:'Enter search text (may be empty)', audit_fail:'Failed to load audit log: ', approval_search:'Search YMIS / name / item / status', approval_fail:'Failed to load approval history: ', no_records:'No records',
   bulk_json_bad:'Invalid JSON format', bulk_no_valid:'No valid rows (members need 10-digit YMIS; leaders need name + email)', bulk_err_title:'These rows failed (reason):', bulk_done:'Bulk onboarding done: {0} succeeded, {1} skipped', fail_word:'failed',
   deactivate_confirm:'Deactivate this account? The user can no longer sign in; data is kept.', deactivated:'Deactivated ', deactivate_fail:'Deactivation failed: ',
-  gsl_only_one:'There can only be one GSL in the troop. To replace them, change the current GSL to another role first.', gsl_demote_warn:'This person is the only GSL. The troop will temporarily have no GSL. Continue?', gsl_deactivate_warn:'This person is the only GSL. Deactivating them leaves the troop with no GSL. Continue?', 
+  gsl_only_one:'There can only be one GSL in the troop. To replace them, change the current GSL to another role first.', gsl_opt_taken:'GSL (already held by {0})', login_email_pw:'Sign-in: email + password', gsl_demote_warn:'This person is the only GSL. The troop will temporarily have no GSL. Continue?', gsl_deactivate_warn:'This person is the only GSL. Deactivating them leaves the troop with no GSL. Continue?', 
   addm_pw:'Member YMIS (10 digits)', addm_name:'Member name', addm_squad:'Patrol (optional)', addm_done:'Member added', addm_fail:'Add failed: ',
   squad_prompt:'Patrol name (blank = unassigned)', squad_role_prompt:'Patrol duty: 隊長 (PL) / 副隊長 (APL) / member', squad_updated:'Patrol & duty updated', update_fail:'Update failed: ',
   role_updated:'Role updated', tick_granted:'Ticking granted', tick_revoked:'Permission revoked',
@@ -1834,7 +1834,7 @@ async function doLogin(){
       currentUser=d.user; currentToken=d.token;
       if(d.force_change_password){
         const np=prompt(t('login_newpw_prompt'));
-        if(!np || np.length<6){ msg.textContent=t('login_newpw_required'); msg.className='login-msg error'; return; }
+        if(!np || np.length<4){ msg.textContent=t('login_newpw_required'); msg.className='login-msg error'; return; }
         const cd = await apiRequest('changePassword', { token: currentToken, old_password: pw, new_password: np });
         if(!cd.success){ msg.textContent=cd.error||t('login_pw_fail'); msg.className='login-msg error'; return; }
         showToast(t('login_pw_changed'),'success');
@@ -1948,7 +1948,7 @@ function syncApplyRole(){
   const sq=document.getElementById('applySquadGroup');
   if(sq) sq.style.display=isLeader?'none':'block';
 }
-function generateTempPassword(){ return 'Scout'+Math.floor(100000+Math.random()*900000); }
+function generateTempPassword(){ return '1234'; }
 async function submitAccountApply(){
   const role=(document.getElementById('applyRole')&&document.getElementById('applyRole').value)||'member';
   const ymis=document.getElementById('applyYmis').value.trim();
@@ -3687,7 +3687,7 @@ async function loadUsers(){
       const gslHolder=(d.users||[]).find(u=>u.role==='group_leader')||null;
       const gslCount=(d.users||[]).filter(u=>u.role==='group_leader').length;
       h+=d.users.map(u=>`<div class="user-item" data-search="${(u.name+u.ymis+u.email).toLowerCase()}"><div class="user-item-info"><b>${u.name}</b> ${u.ymis&&String(u.ymis).charAt(0)!=='L'?`(${u.ymis})`:''} ${u.email?` - ${u.email}`:''}<span class="role-badge role-${u.role}">${getRoleName(u.role)}</span> ${u.can_tick?`<span style="background:var(--green-light);color:var(--green);padding:1px 6px;border-radius:999px;font-size:9px">${t('can_tick_chip')}</span>`:''}<br><small style="font-size:10px;color:var(--text-light)">${t('perm_prefix')}${u.allowed_badges|| (u.role==='member'?t('perm_none_word'):t('perm_all_word'))}</small></div><div class="user-item-actions">`+
-        (['admin','group_leader','branch_leader','super_admin'].includes(currentUser.role)&&u.ymis!==currentUser.ymis?`<select onchange="updateUserRole('${u.ymis}',this.value,'${u.role}',${!!(gslHolder&&gslHolder.ymis!==u.ymis)},${u.role==='group_leader'&&gslCount<2})"><option value="member" ${u.role==='member'?'selected':''}>${t('role_opt_member')}</option><!-- 童軍無執委 --><option value="branch_leader" ${u.role==='branch_leader'?'selected':''}>${t('role_opt_branch')}</option><option value="group_leader" ${u.role==='group_leader'?'selected':''}>${t('role_opt_group')}</option><option value="admin" ${u.role==='admin'?'selected':''}>${t('role_opt_admin')}</option></select><button class="btn btn-sm ${u.can_tick?'btn-danger':'btn-success'}" onclick="toggleCanTick('${u.ymis}',${!u.can_tick})">${u.can_tick?t('tick_revoke'):t('tick_grant')}</button><button class="btn btn-sm btn-warning" onclick="openPermissionModal('${u.ymis}','${u.name.replace(/'/g,"\'") }','${u.role}','${(u.allowed_badges||'').replace(/'/g,"")}')">${t('perm_btn')}</button><button class="btn btn-sm btn-warning" onclick="resetMemberPassword('${u.ymis}')">${t('pw_reset_btn')}</button><button class="btn btn-sm btn-outline" onclick="editSquad('${u.ymis}','${(u.squad||'').replace(/'/g,"\'")}','${(u.squad_role||'member').replace(/'/g,"\'")}')">${t('squad_btn')}</button><button class="btn btn-sm btn-danger" onclick="deactivateUser('${u.ymis}',${u.role==='group_leader'&&gslCount<2})">${t('deactivate_btn')}</button>`:'' )+
+        (['admin','group_leader','branch_leader','super_admin'].includes(currentUser.role)&&u.ymis!==currentUser.ymis?`<select onchange="updateUserRole('${u.ymis}',this.value,'${u.role}',${!!(gslHolder&&gslHolder.ymis!==u.ymis)},${u.role==='group_leader'&&gslCount<2})"><option value="member" ${u.role==='member'?'selected':''}>${t('role_opt_member')}</option><!-- 童軍無執委 --><option value="branch_leader" ${u.role==='branch_leader'?'selected':''}>${t('role_opt_branch')}</option><option value="group_leader" ${u.role==='group_leader'?'selected':''} ${gslHolder&&u.role!=='group_leader'?'disabled':''}>${gslHolder&&u.role!=='group_leader'?tf('gsl_opt_taken',gslHolder.name):t('role_opt_group')}</option><option value="admin" ${u.role==='admin'?'selected':''}>${t('role_opt_admin')}</option></select><button class="btn btn-sm ${u.can_tick?'btn-danger':'btn-success'}" onclick="toggleCanTick('${u.ymis}',${!u.can_tick})">${u.can_tick?t('tick_revoke'):t('tick_grant')}</button><button class="btn btn-sm btn-warning" onclick="openPermissionModal('${u.ymis}','${u.name.replace(/'/g,"\'") }','${u.role}','${(u.allowed_badges||'').replace(/'/g,"")}')">${t('perm_btn')}</button><button class="btn btn-sm btn-warning" onclick="resetMemberPassword('${u.ymis}')">${t('pw_reset_btn')}</button><button class="btn btn-sm btn-outline" onclick="editSquad('${u.ymis}','${(u.squad||'').replace(/'/g,"\'")}','${(u.squad_role||'member').replace(/'/g,"\'")}')">${t('squad_btn')}</button><button class="btn btn-sm btn-danger" onclick="deactivateUser('${u.ymis}',${u.role==='group_leader'&&gslCount<2})">${t('deactivate_btn')}</button>`:'' )+
         `</div></div>`).join('');
       h+='</div>';
       c.innerHTML=h;
@@ -3706,7 +3706,7 @@ async function loadAuditHistory(){
 }
 /* ================== Bulk Onboarding ================== */
 function downloadMembersTemplate(){
-  const csv='ymis,name,email,squad,squad_role,role,can_tick,password,note\n1234560001,王小明,wong@example.org,紅隊,member,member,false,,新團員\n1234560002,李小華,lee@example.org,藍隊,member,member,false,,轉隊\n,陳領袖,chan@example.org,,,branch_leader,true,Scout654321,領袖免填YMIS\n';
+  const csv='ymis,name,email,squad,squad_role,role,can_tick,password,note\n1234560001,王小明,wong@example.org,紅隊,member,member,false,,新團員\n1234560002,李小華,lee@example.org,藍隊,member,member,false,,轉隊\n,陳領袖,chan@example.org,,,branch_leader,true,1234,領袖免填YMIS用電郵登入\n';
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='members_template.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   showToast(t('template_dl'),'success');
 }
@@ -4666,6 +4666,11 @@ async function toggleAllowMemberRequests(checked){
       <button class="btn btn-sm btn-success" style="flex:1" onclick="bulkAddFromJSON()" data-i18n="bulk_go">🚀 由 JSON 批量開戶</button>
       <button class="btn btn-sm btn-secondary" style="flex:1" onclick="closeModal('bulkOnboardModal')" data-i18n="close">關閉</button>
     </div>
+  </div>
+</div>
+
+</body>
+</html>
   </div>
 </div>
 
