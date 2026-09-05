@@ -28,6 +28,7 @@
 //   - reviewApplication 按申請角色開戶（審批者權限不足時退回 member），回應加 final_role + temp_password
 //   - 無新工作表、無新欄位（force_change_password 欄若缺會自動補）：覆蓋 Code.gs 並重新部署即可，毋須 initializeSheets()
 // v5.3.1：YMIS／Email 全團唯一（含已停用、成員名單、待審批），禁止用同一個再開另一個帳號；用戶管理合併成員名單，匯入未開登入的團員可見、可刪除／修改
+// v5.3.2：用戶管理可由領袖直接設定成員新密碼（無電郵也可面對面告知；毋須 initializeSheets()）
 // ============================================================
 
 const ADMIN_YMIS = '1111111111';
@@ -756,7 +757,7 @@ function doPost(e){
 
     // 以下為高權限
     if(action==='changePassword') return handleChangePassword(ymis,body.old_password,body.new_password);
-    if(action==='resetPassword'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'}); return handleResetPassword(body.target_ymis,ymis); }
+    if(action==='resetPassword'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'}); return handleResetPassword(body.target_ymis,ymis,body.new_password); }
     if(action==='addServiceRecord'){
   if(!canUserTick(user.role)) return jsonResponse({success:false,error:'權限不足'});
   return handleAddServiceRecord(body.record,ymis);
@@ -869,28 +870,43 @@ function handleLogin(loginId,password){
   }
   return jsonResponse({success:false,error:'密碼錯誤'});
 }
-function handleResetPassword(targetYmis,managerYmis){
+function handleResetPassword(targetYmis,managerYmis,newPassword){
   // v5.2：超管 sheep 不在 Users 表，不能被重設密碼 / sheep is backend-only: password reset blocked.
   if(isSuperAdminId(targetYmis)) return jsonResponse({success:false,error:'此為系統保留帳號，不能重設密碼'});
   targetYmis=normalizeYmis(targetYmis);
+  if(!targetYmis) return jsonResponse({success:false,error:'請提供 YMIS'});
+  const manager=getUser(managerYmis);
+  if(!manager) return jsonResponse({success:false,error:'未授權'});
+  const target=getUser(targetYmis) || findUsersAccountByYmis(targetYmis) || findRosterAccountByYmis(targetYmis);
+  if(!target) return jsonResponse({success:false,error:'找不到成員'});
+  const targetRole=target.role||'member';
+  if(manager.role!=='super_admin' && !canManageRole(manager.role, targetRole)) return jsonResponse({success:false,error:'權限不足，不能修改該角色密碼'});
+  const temp=String(newPassword||'').trim() || DEFAULT_TEMP_PASSWORD;
+  if(temp.length<MIN_PASSWORD_LEN) return jsonResponse({success:false,error:'新密碼至少 '+MIN_PASSWORD_LEN+' 位'});
+  if(temp.length>32) return jsonResponse({success:false,error:'新密碼不可超過32位'});
   const sh=getSheet().getSheetByName('Users');
   if(sh){
     const data=sh.getDataRange().getValues();
     for(let i=1;i<data.length;i++){
       if(normalizeYmis(data[i][0])===targetYmis){
-        const temp=DEFAULT_TEMP_PASSWORD;
         sh.getRange(i+1,5).setValue(hashPassword(temp));
         if(sh.getLastColumn()>=16) sh.getRange(i+1,16).setValue(true);
         if(sh.getLastColumn()>=12) sh.getRange(i+1,12).setValue('active');
-        writeAudit(managerYmis,'reset_password',targetYmis,'重設為一次性密碼');
-        return jsonResponse({success:true,temp_password:temp});
+        try{
+          const tSheet=getSheet().getSheetByName('Tokens');
+          if(tSheet){
+            const td=tSheet.getDataRange().getValues();
+            for(let j=td.length-1;j>=1;j--){ if(td[j][1] && normalizeYmis(td[j][1])===targetYmis) tSheet.deleteRow(j+1); }
+          }
+        }catch(e){}
+        writeAudit(managerYmis,'reset_password',targetYmis,'領袖設定新密碼');
+        return jsonResponse({success:true,temp_password:temp,message:'密碼已更新，請親自告知該成員'});
       }
     }
   }
-  // 只有成員名單、尚未開登入帳號：補建 Users 後發臨時密碼
+  // 只有成員名單、尚未開登入帳號：補建 Users 後設定密碼
   const roster=findRosterAccountByYmis(targetYmis);
   if(!roster) return jsonResponse({success:false,error:'找不到成員'});
-  const temp=DEFAULT_TEMP_PASSWORD;
   const nowStr=now();
   appendUserRow({
     ymis:targetYmis, name:roster.name, email:roster.email||'', role:'member',
@@ -899,8 +915,8 @@ function handleResetPassword(targetYmis,managerYmis){
     status:'active', allowed_badges:'', squad:roster.squad||'', squad_role:'member',
     force_change_password:true
   });
-  writeAudit(managerYmis,'reset_password',targetYmis,'為成員名單補開登入並重設一次性密碼');
-  return jsonResponse({success:true,temp_password:temp});
+  writeAudit(managerYmis,'reset_password',targetYmis,'為成員名單補開登入並設定密碼');
+  return jsonResponse({success:true,temp_password:temp,message:'已開登入並設定密碼，請親自告知該成員'});
 }
 function writeAudit(actor,action,target,detail){ const sh=getSheet().getSheetByName('操作紀錄'); if(sh) sh.appendRow([now(),actor,action,target,detail||'']); }
 function handleAddServiceRecord(r,actor){ const sh=getSheet().getSheetByName('服務紀錄'); if(!sh)return jsonResponse({success:false,error:'Sheet not found'}); const id='SRV_'+Date.now(); sh.appendRow([id,r.ymis,r.name||'',r.activity||'',r.date||'',Number(r.hours||0),r.place||'',r.detail||'',actor,'approved',r.note||'']); writeAudit(actor,'add_service',r.ymis,r.activity||''); return jsonResponse({success:true,record_id:id}); }

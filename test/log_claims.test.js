@@ -343,5 +343,31 @@ sheets['Users'].appendRow(['1234565555','已有人','taken5555@example.org','mem
 const reviewClash = out(api.handleReviewApplication(appId, 'approved', '', {ymis: leaderD.user.ymis, role: 'group_leader'}, '1234'));
 check('批准申請時若 YMIS 已被佔用則拒絕', reviewClash.success === false && /YMIS/.test(reviewClash.error || ''), reviewClash.error);
 
+console.log('\n【E】領袖可在用戶管理直接設定成員密碼（無電郵也可找回）');
+seed();
+const leaderE = login('1234567890', 'LeaderA!234');
+const setPw = call('resetPassword', { token: leaderE.token, target_ymis: '1234560001', new_password: 'Camp2026' });
+check('領袖可為成員設定自訂密碼', setPw.success === true && setPw.temp_password === 'Camp2026', JSON.stringify(setPw));
+const memNew = login('1234560001', 'Camp2026');
+check('成員可用領袖設定的新密碼登入', memNew.user.role === 'member');
+const oldPw = (function(){ try { return login('1234560001', 'MemberA!234'); } catch(e){ return { error: e.message }; } })();
+check('舊密碼已失效', /密碼錯誤|failed/.test(oldPw.error || '') || !oldPw.user);
+const tooShort = call('resetPassword', { token: leaderE.token, target_ymis: '1234560001', new_password: '12' });
+check('密碼少於 4 位被拒', tooShort.success === false && /至少/.test(tooShort.error || ''), tooShort.error);
+const tooLong = call('resetPassword', { token: leaderE.token, target_ymis: '1234560001', new_password: 'x'.repeat(33) });
+check('密碼超過 32 位被拒', tooLong.success === false && /超過/.test(tooLong.error || ''), tooLong.error);
+const blank = call('resetPassword', { token: leaderE.token, target_ymis: '1234560001', new_password: '' });
+check('留空則設為 1234', blank.success === true && blank.temp_password === '1234', JSON.stringify(blank));
+const mem1234 = login('1234560001', '1234');
+check('留空後可用 1234 登入', mem1234.user.role === 'member');
+const memTry = login('1234560002', 'MemberB!234');
+const memReset = call('resetPassword', { token: memTry.token, target_ymis: '1234560001', new_password: 'hacked' });
+check('普通成員不能改他人密碼', memReset.success === false && /權限/.test(memReset.error || ''), memReset.error);
+sheets['成員名單'].appendRow(['1234562020','無電郵團員','2026-01-01','b4','','白隊']);
+const rosterPw = call('resetPassword', { token: leaderE.token, target_ymis: '1234562020', new_password: 'Hello4' });
+check('名單-only 無電郵也可由領袖開登入並設密碼', rosterPw.success === true && rosterPw.temp_password === 'Hello4', JSON.stringify(rosterPw));
+const rosterLogin = login('1234562020', 'Hello4');
+check('名單-only 設密後可登入', rosterLogin.user.role === 'member' && rosterLogin.user.ymis === '1234562020');
+
 console.log(`\n=== 結果：${passed} 通過，${failed} 失敗 ===`);
 process.exit(failed ? 1 : 0);

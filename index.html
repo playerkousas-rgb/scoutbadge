@@ -779,8 +779,11 @@ zh:{
   users_roster_chip:'未開登入',
   can_tick_chip:'可勾選', perms_label:'權限: ', perms_none:'無', perms_all:'全部(*)',
   role_opt_member:'團員', role_opt_branch:'支部領袖', role_opt_group:'團長', role_opt_admin:'管理員',
-  tick_revoke:'收回勾選', tick_grant:'授權勾選', perm_btn:'⚙️ 權限', reset_pw_btn:'🔑 重設密碼', squad_btn:'🧭 小隊', deactivate_btn:'🗑️ 停用',
-  reset_pw_confirm:'確定重設此成員密碼？', reset_pw_result:'一次性密碼：', reset_pw_fail:'重設失敗：',
+  tick_revoke:'收回勾選', tick_grant:'授權勾選', perm_btn:'⚙️ 權限', reset_pw_btn:'🔑 改密碼', squad_btn:'🧭 小隊', deactivate_btn:'🗑️ 停用',
+  reset_pw_confirm:'確定把此成員的登入密碼改成你剛輸入的新密碼？請親自告知該成員（沒有電郵無法自行找回）。', reset_pw_result:'一次性密碼：', reset_pw_fail:'重設失敗：',
+  reset_pw_prompt:'請輸入新密碼（至少4位）。留空則設為 1234。請把密碼親自告知該成員。',
+  reset_pw_too_short:'密碼至少 4 位',
+  reset_pw_too_long:'密碼不可超過 32 位',
   import_done:'已匯入 {0} 名成員，略過 {1} 筆',
   audit_search:'輸入搜尋字詞（可留空）', audit_fail:'讀取操作紀錄失敗：', approval_search:'搜尋 YMIS／姓名／項目／狀態', approval_fail:'讀取審批歷史失敗：', no_records:'沒有紀錄',
   bulk_json_bad:'JSON 格式錯誤', bulk_no_valid:'沒有有效資料（成員 YMIS 須為10位數字；領袖須填姓名＋電郵）', bulk_err_title:'以下開戶失敗（原因）：', bulk_done:'批量開戶完成：成功 {0} 筆，略過 {1} 筆', fail_word:'失敗',
@@ -953,7 +956,7 @@ zh:{
   privacy_scope_note:'說明：「只限隊長／副隊長」模式須在 Users 填寫 squad_role；隊員仍只能看自己。關閉時成員「我的進度」不能選其他人，全團總覽隱藏；開啟時成員可看全團但不能編輯。',
   scope_private:'只看自己', scope_team:'全隊（同小隊）', scope_leaders:'只限隊長／副隊長查看小隊', scope_troop:'全團',
   pt18_title:'PT/18 總領袖獎章申請表', pt120a_title:'PT/120A 專科徽章申請表', pt_official:'官方空白表格（亦可於「表格列印」自動填寫）',
-  pw_reset_btn:'🔑 重設密碼', reset_pw_prefix:'一次性密碼：', reset_pw_fail:'重設失敗：',
+  pw_reset_btn:'🔑 改密碼', reset_pw_prefix:'新密碼：', reset_pw_fail:'改密碼失敗：',
   req_allow_done_fmt:'已{0}成員提交完成申請功能', req_allow_on:'已開啟 - 成員可按「📝申請完成」提交進度', req_allow_off:'已關閉 - 成員不能提交申請，需領袖直接剔',
   req_cleared_fmt:'⚠️ 已清空 {0} 筆本地待提交申請，請聯絡領袖協助',
   role_body_begin:'<b>USER (系統使用者)</b> = 所有在 Users 表的人，包括：<br>',
@@ -1125,7 +1128,10 @@ en:{
   can_tick_chip:'Can tick', perms_label:'Scope: ', perms_none:'None', perms_all:'All (*)',
   role_opt_member:'Member', role_opt_branch:'Section Leader', role_opt_group:'GSL', role_opt_admin:'Admin',
   tick_revoke:'Revoke ticking', tick_grant:'Grant ticking', perm_btn:'⚙️ Scope', reset_pw_btn:'🔑 Reset PW', squad_btn:'🧭 Patrol', deactivate_btn:'🗑️ Deactivate',
-  reset_pw_confirm:'Reset this member\'s password?', reset_pw_result:'One-time password: ', reset_pw_fail:'Reset failed: ',
+  reset_pw_confirm:'Set this member\'s login password to the one you just entered? Tell them in person (no email recovery).', reset_pw_result:'One-time password: ', reset_pw_fail:'Reset failed: ',
+  reset_pw_prompt:'Enter a new password (min 4 characters). Leave blank to use 1234. Tell the member in person.',
+  reset_pw_too_short:'Password must be at least 4 characters',
+  reset_pw_too_long:'Password cannot exceed 32 characters',
   import_done:'Imported {0} member(s), skipped {1}',
   audit_search:'Enter search text (may be empty)', audit_fail:'Failed to load audit log: ', approval_search:'Search YMIS / name / item / status', approval_fail:'Failed to load approval history: ', no_records:'No records',
   bulk_json_bad:'Invalid JSON format', bulk_no_valid:'No valid rows (members need 10-digit YMIS; leaders need name + email)', bulk_err_title:'These rows failed (reason):', bulk_done:'Bulk onboarding done: {0} succeeded, {1} skipped', fail_word:'failed',
@@ -1294,7 +1300,7 @@ en:{
   privacy_scope_note:'Note: the "Patrol leaders only" mode requires squad_role to be filled in Users; ordinary members still see only themselves. When off, members cannot pick others in "My Progress" and Troop Overview is hidden; when on, members may view but not edit.',
   scope_private:'Own only', scope_team:'Whole patrol', scope_leaders:'Patrol leaders/seconds only', scope_troop:'Whole troop',
   pt18_title:"PT/18 Chief Scout's Award application", pt120a_title:'PT/120A proficiency badge application', pt_official:'Official blank forms (also auto-fillable via "Forms")',
-  pw_reset_btn:'🔑 Reset password', reset_pw_prefix:'One-time password: ', reset_pw_fail:'Reset failed: ',
+  pw_reset_btn:'🔑 Set password', reset_pw_prefix:'New password: ', reset_pw_fail:'Set password failed: ',
   req_allow_done_fmt:'Member request-submission {0}', req_allow_on:'On — members may submit completion requests', req_allow_off:'Off — members cannot submit; leaders tick directly',
   req_cleared_fmt:'⚠️ Cleared {0} local pending request(s); please contact a leader',
   role_body_begin:'<b>USER (system users)</b> = everyone in the Users sheet, including:<br>',
@@ -3717,7 +3723,19 @@ async function loadUsers(){
     }else c.innerHTML=`<p style="color:var(--red)">${t('load_fail')}：${d.error}</p>`;
   }catch(e){ c.innerHTML=`<p style="color:var(--red)">${t('error_colon')}${e.message}</p>`; }
 }
-async function resetMemberPassword(ymis){ if(!confirm(t('reset_pw_confirm')))return; try{const d=await apiRequest('resetPassword', { target_ymis: ymis }); if(!d.success)throw Error(d.error); alert(t('reset_pw_prefix')+d.temp_password); }catch(e){showToast(t('reset_pw_fail')+e.message,'error');}}
+async function resetMemberPassword(ymis){
+  const entered=prompt(t('reset_pw_prompt'),'');
+  if(entered===null) return;
+  const newPw=String(entered).trim();
+  if(newPw && newPw.length<4){ showToast(t('reset_pw_too_short'),'error'); return; }
+  if(newPw.length>32){ showToast(t('reset_pw_too_long'),'error'); return; }
+  if(!confirm(t('reset_pw_confirm'))) return;
+  try{
+    const d=await apiRequest('resetPassword', { target_ymis: ymis, new_password: newPw });
+    if(!d.success) throw Error(d.error);
+    alert(t('reset_pw_prefix')+(d.temp_password||newPw||'1234'));
+  }catch(e){ showToast(t('reset_pw_fail')+e.message,'error'); }
+}
 async function importMembersCSV(file){ if(!file)return; const text=await file.text(); const lines=text.split(/\r?\n/).filter(Boolean); let ok=0,skip=0; const existing=new Set(members.map(m=>m.ymis)); for(const line of lines.slice(1)){const [ymis,name,squad]=line.split(',').map(x=>(x||'').trim()); if(/^\d{10}$/.test(ymis)&&name&&!existing.has(ymis)){try{const d=await apiRequest('addMember', { ymis, name, squad, squad_role:'member' });if(d.success){ok++;existing.add(ymis);}else skip++;}catch(e){skip++;}}else if(existing.has(ymis))skip++;} showToast(tf('import_done',ok,skip),'success');loadUsers();}
 function downloadSquadReport(){
  const rows=[...document.querySelectorAll('#overviewTableContainer table tr')]; if(!rows.length){showToast(t('report_first'),'warning');return;}
