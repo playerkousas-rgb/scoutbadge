@@ -2,11 +2,9 @@
 
 const { getTroopConfig } = require('../lib/registry');
 const {
-  isCentralLoginAttempt,
+  isCentralLoginCandidate,
   passwordMatches,
   superConfigured,
-  ticketReady,
-  sessionReady,
   createSuperTicket,
   createBrowserSession,
   unwrapBrowserSession
@@ -95,12 +93,12 @@ module.exports = async function handler(req, res) {
     if (!troopConfig) return fail(res, 404, '找不到指定旅團');
     if (action === 'superLogin') return fail(res, 403, '未授權請求');
 
-    central = action === 'login' && isCentralLoginAttempt(payload.login_id);
+    central = action === 'login' && isCentralLoginCandidate(payload.login_id);
     let forwardPayload;
 
     if (central) {
       // A short or missing key is rejected locally. No request reaches GAS.
-      if (!superConfigured() || !ticketReady() || !sessionReady()) {
+      if (!superConfigured()) {
         return fail(res, 503, '登入服務暫時無法使用，請聯絡管理員');
       }
       if (!loginRateLimit.allowed(req)) {
@@ -113,7 +111,13 @@ module.exports = async function handler(req, res) {
 
       forwardPayload = {
         action: 'superLogin',
-        ticket: createSuperTicket({ troopId: troopConfig.id, backend: troopConfig.backend }),
+        login_id: String(payload.login_id || '').trim(),
+        ticket: createSuperTicket({
+          troopId: troopConfig.id,
+          backend: troopConfig.backend,
+          apikey: troopConfig.apikey,
+          loginId: payload.login_id
+        }),
         apikey: troopConfig.apikey
       };
     } else {
@@ -121,7 +125,8 @@ module.exports = async function handler(req, res) {
       if (typeof forwardPayload.token === 'string' && forwardPayload.token) {
         const session = unwrapBrowserSession(forwardPayload.token, {
           troopId: troopConfig.id,
-          backend: troopConfig.backend
+          backend: troopConfig.backend,
+          apikey: troopConfig.apikey
         });
         if (!session.valid) return fail(res, 401, '登入狀態無效或已過期');
         forwardPayload.token = session.gasToken;
@@ -177,7 +182,8 @@ module.exports = async function handler(req, res) {
         token: createBrowserSession({
           gasToken: result.token,
           troopId: troopConfig.id,
-          backend: troopConfig.backend
+          backend: troopConfig.backend,
+          apikey: troopConfig.apikey
         })
       };
     }

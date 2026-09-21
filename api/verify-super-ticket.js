@@ -1,5 +1,6 @@
 'use strict';
 
+const { getTroopConfig } = require('../lib/registry');
 const { verifySuperTicket } = require('../lib/super-auth');
 
 function json(res, status, body) {
@@ -27,6 +28,13 @@ module.exports = function handler(req, res) {
   }
 
   const body = parseBody(req.body);
-  const valid = verifySuperTicket(body.ticket, body.troopId, body.backendHash);
+  const troop = getTroopConfig(String(body.troopId || '').trim().toUpperCase());
+  const valid = Boolean(troop) && verifySuperTicket(
+    body.ticket,
+    body.troopId,
+    body.backendHash,
+    body.loginId,
+    troop.apikey
+  );
   return json(res, 200, { valid });
 };

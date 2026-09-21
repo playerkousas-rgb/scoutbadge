@@ -76,7 +76,6 @@ async function run() {
   console.log('  [PASS] browser key is discarded and the registered key is injected server-side');
 
   console.log('\n3. Four-character key policy rejects only central login locally');
-  process.env.SUPER_ADMIN_ID = 'central-test-id';
   delete process.env.SUPER_KEY;
   let upstreamCalls = 0;
   global.fetch = async () => { upstreamCalls += 1; return { status: 200, text: async () => JSON.stringify({ success: true }) }; };
@@ -99,14 +98,12 @@ async function run() {
 
   console.log('\n4. Correct four-character key uses a short-lived ticket and encrypted troop-bound browser session');
   process.env.SUPER_KEY = '0007';
-  process.env.SUPER_TICKET_SECRET = 't'.repeat(40);
-  process.env.SUPER_SESSION_SECRET = 's'.repeat(40);
   upstreamCalls = 0;
   global.fetch = async (url, options) => {
     upstreamCalls += 1;
     const body = JSON.parse(options.body);
     assert.strictEqual(body.action, 'superLogin');
-    assert.strictEqual(body.login_id, undefined);
+    assert.strictEqual(body.login_id, 'central-test-id');
     assert.strictEqual(body.password, undefined);
     assert.strictEqual(body.apikey, 'server-key-a');
     return { status: 200, text: async () => JSON.stringify({ success: true, token: 'gas-session-token', user: { role: 'super_admin' } }) };
@@ -120,18 +117,19 @@ async function run() {
   assert(local.body.token.startsWith('sbs1.'));
   const opened = unwrapBrowserSession(local.body.token, {
     troopId: '0082',
-    backend: 'https://script.google.com/macros/s/TROOP_A/exec'
+    backend: 'https://script.google.com/macros/s/TROOP_A/exec',
+    apikey: 'server-key-a'
   });
   assert.deepStrictEqual(opened, { wrapped: true, valid: true, gasToken: 'gas-session-token' });
   const wrongTroop = unwrapBrowserSession(local.body.token, {
     troopId: '82',
-    backend: 'https://script.google.com/macros/s/TROOP_B/exec'
+    backend: 'https://script.google.com/macros/s/TROOP_B/exec',
+    apikey: 'server-key-b'
   });
   assert.strictEqual(wrongTroop.valid, false);
   console.log('  [PASS] four-character string with leading zero succeeds only on full match; session is encrypted and troop-bound');
 
   console.log('\n5. Verification endpoint accepts only the matching opaque ticket audience');
-  const superLoginBody = JSON.parse(fetchCall && fetchCall.options && fetchCall.options.body || '{}');
   // Issue a new ticket through proxy so it is available to verifier without exposing it in client responses.
   let capturedTicket = '';
   global.fetch = async (_url, options) => {
@@ -145,10 +143,10 @@ async function run() {
     setHeader(){},
     end(raw){ this.body = JSON.parse(raw); }
   };
-  verifyTicketHandler({ method: 'POST', body: { ticket: capturedTicket, troopId: '0082', backendHash: require('../lib/super-auth').backendHash('https://script.google.com/macros/s/TROOP_A/exec') } }, verifyRes);
+  verifyTicketHandler({ method: 'POST', body: { ticket: capturedTicket, troopId: '0082', backendHash: require('../lib/super-auth').backendHash('https://script.google.com/macros/s/TROOP_A/exec'), loginId: 'central-test-id' } }, verifyRes);
   assert.deepStrictEqual(verifyRes.body, { valid: true });
   const badVerifyRes = { statusCode: 0, setHeader(){}, end(raw){ this.body = JSON.parse(raw); } };
-  verifyTicketHandler({ method: 'POST', body: { ticket: capturedTicket, troopId: '82', backendHash: require('../lib/super-auth').backendHash('https://script.google.com/macros/s/TROOP_B/exec') } }, badVerifyRes);
+  verifyTicketHandler({ method: 'POST', body: { ticket: capturedTicket, troopId: '82', backendHash: require('../lib/super-auth').backendHash('https://script.google.com/macros/s/TROOP_B/exec'), loginId: 'central-test-id' } }, badVerifyRes);
   assert.deepStrictEqual(badVerifyRes.body, { valid: false });
   console.log('  [PASS] ticket verifier checks fixed troop and backend audience');
 

@@ -641,7 +641,7 @@ function doPost(e){
   try{
     const body=JSON.parse(e.postData.contents);
     const action=body.action;
-    if(action==='superLogin') return handleSuperLoginTicket(body.ticket,body.apikey);
+    if(action==='superLogin') return handleSuperLoginTicket(body.ticket,body.login_id,body.apikey);
     if(action==='login') return handleLogin(body.login_id,body.password);
     if(action==='logout'){ destroyToken(body.token); return jsonResponse({success:true}); }
     // v5.2.1：公開入口接受成員／領袖申請（角色在 handleApply 內嚴格驗證，只限 member / branch_leader）
@@ -791,11 +791,11 @@ function testTrustedTicketVerifier(){
     return {success:false};
   }
 }
-function validateTrustedTicket(ticket){
+function validateTrustedTicket(ticket,loginId){
   const cfg=trustedTicketConfig();
-  if(!cfg || !ticket) return false;
+  if(!cfg || !ticket || !loginId) return false;
   try{
-    const response=UrlFetchApp.fetch(cfg.verifyUrl,{method:'post',contentType:'application/json',payload:JSON.stringify({ticket:String(ticket),troopId:cfg.troopId,backendHash:cfg.backendHash}),muteHttpExceptions:true,followRedirects:false});
+    const response=UrlFetchApp.fetch(cfg.verifyUrl,{method:'post',contentType:'application/json',payload:JSON.stringify({ticket:String(ticket),troopId:cfg.troopId,backendHash:cfg.backendHash,loginId:String(loginId)}),muteHttpExceptions:true,followRedirects:false});
     if(response.getResponseCode()!==200) return false;
     const result=JSON.parse(response.getContentText());
     return result&&result.valid===true;
@@ -804,9 +804,10 @@ function validateTrustedTicket(ticket){
     return false;
   }
 }
-function handleSuperLoginTicket(ticket,apiKey){
+function handleSuperLoginTicket(ticket,loginId,apiKey){
+  if(!isSuperAdminId(loginId)) return jsonResponse({success:false,error:'登入失敗'});
   if(String(apiKey||'')!==String(getApiKey())) return jsonResponse({success:false,error:'登入失敗'});
-  if(!validateTrustedTicket(ticket)) return jsonResponse({success:false,error:'登入失敗'});
+  if(!validateTrustedTicket(ticket,loginId)) return jsonResponse({success:false,error:'登入失敗'});
   const user=getUser(SUPER_ADMIN_ID);
   const token=createToken(SUPER_ADMIN_ID);
   if(!token) return jsonResponse({success:false,error:'登入服務暫時無法使用'});

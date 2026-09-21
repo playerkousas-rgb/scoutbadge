@@ -243,7 +243,7 @@ global.__scriptProperties.CENTRAL_AUTH_VERIFY_URL='https://verifier.example.test
 global.__scriptProperties.CENTRAL_AUTH_TROOP_ID='0082';
 global.__scriptProperties.CENTRAL_AUTH_BACKEND_HASH='a'.repeat(64);
 global.UrlFetchApp={fetch(){ return {getResponseCode(){return 200;},getContentText(){return JSON.stringify({valid:true});}}; }};
-const ticketLogin=out(api.handleSuperLoginTicket('opaque-ticket',api.getApiKey()));
+const ticketLogin=out(api.handleSuperLoginTicket('opaque-ticket',centralId,api.getApiKey()));
 check('驗票成功才建立中央 session', ticketLogin.success===true && ticketLogin.user.role==='super_admin' && !!ticketLogin.token, JSON.stringify(ticketLogin));
 check('新中央 session 使用受限 token 格式', String(ticketLogin.token||'').startsWith('sa_') && api.validateToken(ticketLogin.token)===centralId, JSON.stringify(ticketLogin));
 sheets['Tokens'].appendRow(['legacy-central-token',centralId,'','2999-01-01']);

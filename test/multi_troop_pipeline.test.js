@@ -31,7 +31,7 @@ async function run() {
   env('82', 'TROOP_B_GAS', 'key-b');
   env('0084', 'HTML_ERROR_GAS', 'key-html');
   env('0085', 'TIMEOUT_GAS', 'key-timeout');
-  process.env.SUPER_SESSION_SECRET = 's'.repeat(40);
+  process.env.SUPER_KEY = '0007';
 
   const originalFetch = global.fetch;
   const captured = [];
@@ -65,7 +65,8 @@ async function run() {
   const crossTroopSession = createBrowserSession({
     gasToken: 'gas-token-for-0082',
     troopId: '0082',
-    backend: 'https://script.google.com/macros/s/TROOP_A_GAS/exec'
+    backend: 'https://script.google.com/macros/s/TROOP_A_GAS/exec',
+    apikey: 'key-a'
   });
   const callsBefore = captured.length;
   const cross = await invoke({ troopId: '82', action: 'load', token: crossTroopSession });
@@ -73,7 +74,7 @@ async function run() {
   assert.strictEqual(captured.length, callsBefore, 'invalid wrapped session must not reach GAS');
   console.log('  [PASS] central browser sessions cannot cross troop/backend boundaries');
 
-  const html = await invoke({ troopId: '0084', action: 'login', login_id: 'user', password: 'pass' });
+  const html = await invoke({ troopId: '0084', action: 'login', login_id: '1234560001', password: 'pass' });
   assert.strictEqual(html.statusCode, 502);
   assert.strictEqual(html.body.success, false);
   assert(!html.body.error.includes('upstream failure'));
