@@ -22,7 +22,9 @@ const ROOT = __dirname;
 const OUT_DIR = path.join(ROOT, 'public');
 
 // Single files published at the web root.
-const STATIC_FILES = ['index.html'];
+// `apps-script/Code.gs` is the troop backend source that leaders download from
+// the setup steps ("⬇️ 下載 Code.gs (最新)"), so it is published on purpose.
+const STATIC_FILES = ['index.html', 'apps-script/Code.gs'];
 
 // Whole directories, so files added later are picked up automatically.
 const STATIC_DIRS = ['assets', 'data', 'docs'];
@@ -30,11 +32,8 @@ const STATIC_DIRS = ['assets', 'data', 'docs'];
 // Local paths referenced by index.html that are intentionally NOT deployed.
 // Removing an entry here makes the build fail until the path is really served,
 // which is the prompt to delete the reason together with the exception.
-const KNOWN_UNDEPLOYED = {
-  'apps-script/Code.gs': 'excluded by .vercelignore (Apps Script source is not deployed as a static asset)',
-  'docs/MEMBER_GUIDE.md': 'file does not exist in the repository yet',
-  'docs/LEADER_GUIDE.md': 'file does not exist in the repository yet'
-};
+// Currently empty: every path referenced by index.html is published.
+const KNOWN_UNDEPLOYED = {};
 
 function copyTree(source, destination) {
   fs.cpSync(source, destination, { recursive: true, dereference: true, errorOnExist: false });
