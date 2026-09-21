@@ -42,7 +42,7 @@ TROOP_0082_APIKEY
 |---|---|---|
 | 中央登入尚未設定（Vercel 環境變數 `SUPER_KEY` 未設定或太短） | Vercel 未設 `SUPER_KEY`（至少 4 字元） | 設定 `SUPER_KEY` 後重新部署 |
 | 中央登入尚未設定：請先由領袖登入 →「成員管理 → 中央登入設定」 | 該旅團 Apps Script 未設定驗證端點，**而自動開通又失敗**（多數係後端仲係舊版） | 覆寫 `apps-script/Code.gs`，喺原有 Web App 部署新版本；正常情況 Proxy 會自動開通，唔使預先有領袖 session |
-| 中央登入尚未設定，自動開通又失敗：請去「部署 → 管理部署作業」建立新版本 | 後端識得中央登入合約，但仲未部署到支援自動開通嗰個版本 | 部署 → 管理部署作業 → 為既有 Web App「建立新版本」（見下面） |
+| 中央登入尚未設定，自動開通又失敗：請去「部署 → 管理部署作業」建立新版本 | 後端識得中央登入合約，但仲未部署到支援自動開通嗰個版本；**或者部署咗 #23 修復前嘅版本**（`hmacHex` 簽名參數次序錯，自動開通嘅簽名兩邊永遠對唔上，同樣必敗） | 部署 → 管理部署作業 → 為既有 Web App「建立新版本」（見下面）；若 Code.gs 係 #23 之前嘅版本，要再覆寫一次最新 `apps-script/Code.gs` 然後建立新版本 |
 | Vercel 登記嘅後端網址同本 Sheet 嘅 Web App 網址唔一致 | `TROOP_{ID}_BACKEND` 同 Sheet 嘅 `/exec` 網址唔同（多咗斜線／空格，或係舊部署 ID） | 修正 `TROOP_{ID}_BACKEND` → 重新部署 → 再撳一次「儲存設定」重新計雜湊 |
 | Vercel 未登記旅團編號 | `TROOP_{ID}_NAME／_BACKEND／_APIKEY` 唔齊，或編號同變數名唔一致 | 補齊三個變數（`0082` 同 `82` 唔互通） |
 | 中央登入驗證端點連唔到／回應異常 | 端點唔係公開 https、被重新導向，或 Vercel 未重新部署 | 端點填 `https://<本部署域名>/api/verify-super-ticket`；改動後重新部署 |
@@ -58,6 +58,11 @@ TROOP_0082_APIKEY
 - **唔使再預先做一次性領袖設定**：只要 `SUPER_KEY` 啱，Proxy 會喺登入時自動幫嗰個旅團
   開通驗證端點（用本團 apikey 簽嘅 5 分鐘短效許可；瀏覽器冇 apikey，偽造唔到），
   所以新旅團都唔會再出現「要有領袖先開到中央登入」嘅雞生蛋。
+- **#23 修復**：之前 GAS 端 `hmacHex` 誤用 `computeHmacSha256('SHA_256', msg, key)`
+  （真實 API 係 `computeHmacSha256Signature(value, key)`），真正嘅 key 被當第三參數丟棄，
+  Vercel 簽嘅開通許可永遠驗唔到，自動開通 100% 失敗。已改為正確呼叫，
+  並喺 `test/central_login.test.js` 加咗「兩邊簽名互通」回歸測試；
+  測試用嘅 GAS 模擬器亦改用真實 API 名稱同參數次序，唔可以再靜靜雞夾啱。
 - 「成員管理 → 中央登入設定」仍然保留：用嚟手動設定、或檢查後端網址一唔一致。
 - 如果部署網址推斷唔到（例如自訂網域、前面仲有 proxy），可以設
   `SCOUTBADGE_VERIFY_URL=https://你的域名/api/verify-super-ticket`。

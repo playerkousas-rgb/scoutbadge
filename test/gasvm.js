@@ -9,7 +9,7 @@
  * Gas APIs implemented (the set scoutbadge Code.gs uses):
  *   SpreadsheetApp (getActiveSpreadsheet, insertSheet, getSheetByName, flush)
  *   PropertiesService.getScriptProperties
- *   Utilities (getUuid, formatDate, computeDigest, computeHmacSha256, sleep)
+ *   Utilities (getUuid, formatDate, computeDigest, computeHmacSha256Signature, sleep)
  *   DigestAlgorithm / Charset, Logger, LockService, ScriptApp.getService
  *   UrlFetchApp.fetch (delegates to global fetch)
  *   ContentService.createTextOutput / MimeType
@@ -117,8 +117,11 @@ function makeGas({ apiKey = null, execUrl = 'http://127.0.0.1:0/exec' } = {}) {
         const h = crypto.createHash('sha256').update(String(input), 'utf8').digest();
         return Array.from(h);
       },
-      computeHmacSha256: (algo, msg, key) => {
-        const h = crypto.createHmac('sha256', String(key)).update(String(msg), 'utf8').digest();
+      // 真實 Apps Script API 係 computeHmacSha256Signature(value, key[, charset])。
+      // shim 只提供呢個真名＋真參數次序；Code.gs 若果叫錯名／傳錯次序，
+      // 測試要即刻衰，唔可以再靜靜雞「夾啱」（之前自動開通因此必敗）。
+      computeHmacSha256Signature: (value, key) => {
+        const h = crypto.createHmac('sha256', String(key)).update(String(value), 'utf8').digest();
         return Array.from(h);
       },
       sleep: () => {},
