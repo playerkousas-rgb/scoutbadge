@@ -214,6 +214,14 @@ module.exports = async function handler(req, res) {
         const target = new URL(troopConfig.backend);
         target.searchParams.set('action', 'load');
         if (forwardPayload.token) target.searchParams.set('token', forwardPayload.token);
+        // ecportal v4.1.0：家長 sig bearer 可經 GET load 讀自己子女範圍
+        // （exp 係 number，一併 stringify；簽名訊息由 GAS 端還原）
+        for (const field of ['childId', 'sub', 'scope', 'exp', 'sig']) {
+          const v = forwardPayload[field];
+          if (v !== undefined && v !== null && v !== '') {
+            target.searchParams.set(field, String(v));
+          }
+        }
         target.searchParams.set('apikey', troopConfig.apikey);
         upstream = await fetch(target, {
           method: 'GET',
@@ -247,7 +255,11 @@ module.exports = async function handler(req, res) {
       if (!result || result.success !== true || typeof result.token !== 'string' || !result.token) {
         loginRateLimit.failed(req);
         logResult({ troopId, action, status: upstream.status, startedAt, success: false, central });
-        return fail(res, 401, '登入失敗');
+        // 保留後端語意（例：409＝已接入主系統，請經主系統登入）
+        const errorText = (result && typeof result.error === 'string' && result.error) || '登入失敗';
+        const out = { success: false, error: errorText };
+        if (result && typeof result.code === 'number') out.code = result.code;
+        return res.status(401).json(out);
       }
       loginRateLimit.succeeded(req);
       result = {

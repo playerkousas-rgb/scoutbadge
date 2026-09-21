@@ -619,16 +619,152 @@ function destroyToken(token){
 }
 
 // ===== API =====
+// ===== ecportal v4.1.0 整合（leaf 端合約）=====
+// 本系統（支部進度追蹤）係最底層 leaf；上層「童軍支部管理系統／旅管理系統」
+// 容器會「食」呢度：容器 registry 持有本部署 apikey，用佢簽信任鏈，本端自己驗。
+//
+// 簽名格式（容器 → leaf，scope 必須係 JSON 字串，唔好解析後再 stringify）：
+//   msg = `${childId}|${sub}|${scopeJSON}|${exp}`
+//   sig = hex( HMAC-SHA256( 本部署 apikey, msg ) )
+//   sub = EMAIL（領袖／家長）或 10 位 YMIS（成員）
+//   scope = {"role":..., "children_ids":[...], "targetYmis":...}（家長 role 必須 'parent'）
+//   exp = Unix 秒（上限 3600s，含 60s 時鐘容差）
+//   childId = 全域 ID（例 PROG_0082S）；若 Script Property PORTAL_GLOBAL_ID 有設，
+//             兩邊經 normId 後必須相等（82S 與 0082S 唔撞號）。
+// 家長超然：scope.children_ids 內必須有本團成員先放行；只可睇自己子女（聯集）。
+// 三點進入並存（設計決定，對 01_AUTH_FINAL「被吃後停用 password」clause 的有意偏離）：
+//   1. 本端密碼登入 —— 永遠可用，唔會因上層「食」咗而停用
+//   2. 上層 sig（成員／領袖）—— 免檢：有有效信任鏈 sig 即收
+//   3. 家長 sig —— 子女聯集視角
+// 上層接入只係多一條入口，唔係取代本端入口。
+
+const PORTAL_SIG_MAX_TTL = 3600;
+function normId(s){
+  const v=String(s||'').trim().toUpperCase();
+  const m=v.match(/^(\d+)([A-Z]?)$/);
+  return m ? (m[1].padStart(4,'0')+m[2]) : v;
+}
+function bytesToHex(bytes){
+  let h='';
+  for(let i=0;i<bytes.length;i++){ h+=('0'+(bytes[i]&255).toString(16)).slice(-2); }
+  return h;
+}
+function hmacHex(key,msg){
+  return bytesToHex(Utilities.computeHmacSha256('SHA_256', msg, key));
+}
+function childIdToYmis(raw){
+  const v=String(raw||'').trim();
+  if(/^\d{10}$/.test(v)) return v;
+  const m=v.match(/_(\d{10})$/); // SCOUT_童_1234567890 / TROOP_0082_1234567890 / ...
+  return m ? m[1] : null;
+}
+function resolveChildrenToYmis(ids){
+  const roster={};
+  getMembers().forEach(function(m){ roster[m.ymis]=true; });
+  const out=[];
+  (ids||[]).forEach(function(raw){
+    const y=childIdToYmis(raw);
+    if(y && roster[y] && out.indexOf(y)<0) out.push(y);
+  });
+  return out;
+}
+function verifyPortalSig(p){
+  p=p||{};
+  const childId=String(p.childId||'').trim();
+  const sub=String(p.sub||'').trim();
+  const scope=typeof p.scope==='string'?p.scope:'';
+  const exp=Number(p.exp);
+  const sig=String(p.sig||'').trim().toLowerCase();
+  if(!childId || !sub || !scope || !Number.isFinite(exp) || !sig || sig.length>512) return {ok:false};
+  const nowS=Math.floor(Date.now()/1000);
+  if(exp < nowS-60 || exp > nowS+PORTAL_SIG_MAX_TTL) return {ok:false}; // 過期或遙遠未來
+  let parsed=null;
+  try{ parsed=JSON.parse(scope); }catch(e){ return {ok:false}; }
+  if(!parsed || typeof parsed!=='object' || Array.isArray(parsed)) return {ok:false};
+  const expectedGlobal=normId(String(PropertiesService.getScriptProperties().getProperty('PORTAL_GLOBAL_ID')||'').trim());
+  if(expectedGlobal && normId(childId)!==expectedGlobal) return {ok:false};
+  const expect=hmacHex(getApiKey(), childId+'|'+sub+'|'+scope+'|'+exp);
+  if(expect.length!==sig.length) return {ok:false};
+  let diff=0;
+  for(let i=0;i<sig.length;i++){ diff |= (expect.charCodeAt(i)^sig.charCodeAt(i)); }
+  if(diff!==0) return {ok:false};
+  // ---- 身份解析 ----
+  if(isSuperAdminId(sub) || /^L\d+$/i.test(sub)) return {ok:false}; // SUPER 行主系統層
+  const role=String(parsed.role||'');
+  const children=resolveChildrenToYmis(Array.isArray(parsed.children_ids)?parsed.children_ids:[]);
+  const targetYmis=String(parsed.targetYmis||'').trim();
+  if(/^\d{10}$/.test(sub)){
+    const user=getUser(sub);
+    if(!user) return {ok:false};
+    return {ok:true, identity:{kind:'member', ymis:user.ymis, email:user.email, role:user.role, can_tick:user.can_tick, children:children, targetYmis:targetYmis, sub:sub}};
+  }
+  const leader=getUserByEmail(sub);
+  if(leader){
+    return {ok:true, identity:{kind:'leader', ymis:leader.ymis, email:leader.email, role:leader.role, can_tick:leader.can_tick, children:children, targetYmis:targetYmis, sub:sub}};
+  }
+  // 家長：本團無帳號；「有旅才有超然」—— children_ids 要有本團成員先放行
+  if(role && role!=='parent') return {ok:false};
+  if(!children.length) return {ok:false};
+  return {ok:true, identity:{kind:'parent', ymis:'', email:sub, role:'parent', can_tick:false, children:children, targetYmis:targetYmis, sub:sub}};
+}
+// 全體 requireAuth（修 #5）：apikey（同源 proxy／容器 registry 注入）或有效 sig，
+// 兩者都無 → 拒絕。/exec 直接打（無 key 無 sig）無效。
+// 放行條件（任一）：本團 apikey ／ 有效 sig ／ 有效本地 token（向下兼容舊 token-only 客戶）
+function requireAuthBody(body){
+  body=body||{};
+  let ok=body.apikey && String(body.apikey)===getApiKey();
+  const s=verifyPortalSig(body);
+  if(s.ok) ok=true;
+  if(!ok && body.token && validateToken(String(body.token))) ok=true;
+  if(!ok) return {ok:false};
+  return {ok:true, identity:s.ok?s.identity:null};
+}
+function requireAuthParams(params){
+  const p={};
+  for(const k in (params||{})) p[k]=String(params[k]);
+  let ok=p.apikey && p.apikey===getApiKey();
+  const s=verifyPortalSig(p);
+  if(s.ok) ok=true;
+  if(!ok && p.token && validateToken(p.token)) ok=true;
+  if(!ok) return {ok:false};
+  return {ok:true, identity:s.ok?s.identity:null};
+}
+// 家長（sig bearer）可用操作：只限自己子女（聯集），無寫入／審批。
+function handleParentAction(action, body, ident){
+  const canSee=function(ymis){ return ident.children.indexOf(String(ymis))>=0; };
+  if(action==='load'){
+    return handleLoad({ymis:null, role:'parent', can_tick:false, children:ident.children});
+  }
+  if(action==='getOtherBadges'){
+    const t=String(body.target_ymis||'');
+    if(!canSee(t)) return jsonResponse({success:false,error:'家長帳號只能查看自己子女',code:403});
+    return handleGetOtherBadges(t);
+  }
+  if(action==='getServiceRecords'){
+    const t=String(body.target_ymis||'');
+    if(!canSee(t)) return jsonResponse({success:false,error:'家長帳號只能查看自己子女',code:403});
+    return handleGetServiceRecords(t);
+  }
+  if(action==='getMembers'){ return jsonResponse({success:true,members:getMembers()}); }
+  if(action==='logout'){ return jsonResponse({success:true}); }
+  return jsonResponse({success:false,error:'家長帳號不支援此操作',code:403});
+}
 function doGet(e){
+  const auth=requireAuthParams(e.parameter);
+  if(!auth.ok) return jsonResponse({success:false,error:'未授權：缺少 API Key 或有效簽名',code:403});
   const action=e.parameter.action;
   if(action==='load'){
     const reqKey=e.parameter.apikey;
     const reqToken=e.parameter.token;
-    if(reqKey && reqKey!==getApiKey()) return jsonResponse({success:false,error:'Invalid API Key'});
-    if(reqToken && !validateToken(reqToken)) return jsonResponse({success:false,error:'Token 無效或過期'});
+    if(reqKey && reqKey!==getApiKey()) return jsonResponse({success:false,error:'Invalid API Key',code:403});
+    if(reqToken && !validateToken(reqToken)) return jsonResponse({success:false,error:'Token 無效或過期',code:401});
     // v5.2：有 token 時，待批履歷只回傳該登入者可見範圍（領袖全部；團員只見自己的申報）
+    // v6.0：家長可用 sig（query）直接讀自己子女範圍
     let loadUser=null;
     if(reqToken){ const ly=validateToken(reqToken); if(ly) loadUser=getUser(ly); }
+    if(!loadUser && auth.identity && auth.identity.kind==='parent'){
+      loadUser={ymis:null, role:'parent', can_tick:false, children:auth.identity.children};
+    }
     return handleLoad(loadUser);
   }
   if(action==='health' || action==='diagnose' || action==='checkSheets'){
@@ -641,11 +777,41 @@ function doPost(e){
   try{
     const body=JSON.parse(e.postData.contents);
     const action=body.action;
+    // 全體 requireAuth（ecportal v4.1.0 修 #5）：apikey 或有效 sig，否則無效
+    const auth=requireAuthBody(body);
+    if(!auth.ok) return jsonResponse({success:false,error:'未授權：缺少 API Key 或有效簽名',code:403});
     if(action==='superLogin') return handleSuperLoginTicket(body.ticket,body.login_id,body.apikey);
     if(action==='login') return handleLogin(body.login_id,body.password);
     if(action==='logout'){ destroyToken(body.token); return jsonResponse({success:true}); }
     // v5.2.1：公開入口接受成員／領袖申請（角色在 handleApply 內嚴格驗證，只限 member / branch_leader）
     if(action==='apply') return handleApply(body.ymis,body.name,body.email,body.requested_role||'member',body.branch);
+
+    // ===== ecportal v4.1.0 整合 actions（leaf 端）=====
+    // 信任鏈 sig → 本地 session（成員／領袖發 token；家長為 sig bearer，唔發本地 token）
+    if(action==='portalLogin'){
+      const s=verifyPortalSig(body);
+      if(!s.ok) return jsonResponse({success:false,error:'簽名驗證失敗',code:403});
+      const id=s.identity;
+      if(id.kind==='parent'){
+        return jsonResponse({success:true,auth_mode:'sig',user:{ymis:'',name:id.email,role:'parent',email:id.email},visible_children:id.children});
+      }
+      const u=id.kind==='member'?getUser(id.ymis):getUserByEmail(id.email);
+      if(!u) return jsonResponse({success:false,error:'找不到此帳號',code:404});
+      const token=createToken(u.ymis);
+      if(!token) return jsonResponse({success:false,error:'登入服務暫時無法使用'});
+      return jsonResponse({success:true,auth_mode:'token',token:token,user:u});
+    }
+    // 上層容器 registry「吃」：server-side 拉名冊（無密碼／無 token／無私隱欄）
+    if(action==='getRegistrySafe'){
+      if(!body.apikey || String(body.apikey)!==getApiKey()) return jsonResponse({success:false,error:'未授權：getRegistrySafe 只接受 API Key',code:403});
+      return jsonResponse({success:true,members:getMembers()});
+    }
+
+    // 家長 sig bearer：在 save／addMember 等寬鬆 apikey 檢查之前先分派，
+    // 家長只可行 handleParentAction 列出的只讀操作（防繞過）。
+    if(auth.identity && auth.identity.kind==='parent'){
+      return handleParentAction(action, body, auth.identity);
+    }
 
     // 中央登入一次性的 verifier 設定／測試（領袖權限）。
     // apikey 由同源 Proxy 伺服器端注入（瀏覽器不持有），另需有效領袖 token。
@@ -674,20 +840,25 @@ function doPost(e){
       if(action==='bulkAddUsers'){ let my=body.token?validateToken(body.token):null; let mgr=my?getUser(my):null; if(!mgr && body.apikey && body.apikey===getApiKey()) mgr={role:'admin'}; if(!mgr || getRoleLevel(mgr.role)<40) return jsonResponse({success:false,error:'只有領袖可以批量開戶'}); return handleBulkAddUsers(body.users||[],mgr); }
       if(action==='saveOtherBadge') return handleSaveOtherBadge(body.records, body.apikey);
     }
-    // member request - needs token but also allow apikey for member self
+    // member request - needs token; sig 身份（ecportal v4.1.0）次之；apikey 直連為 v4 向下兼容
     if(action==='requestComplete'){
-      // allow token or apikey
-      let ymis=null; if(body.token){ ymis=validateToken(body.token); } 
+      let ymis=null; if(body.token){ ymis=validateToken(body.token); }
+      if(!ymis && auth.identity && auth.identity.kind!=='parent'){
+        if(auth.identity.kind==='member') ymis=auth.identity.ymis;
+      }
       if(!ymis && body.apikey && body.apikey===getApiKey()){ ymis=body.ymis; } // standalone mode
-      if(!ymis) return jsonResponse({success:false,error:'未授權'});
+      if(!ymis) return jsonResponse({success:false,error:'未授權',code:401});
       return handleRequestComplete(body, ymis);
     }
 
-    // 以下需要 token 驗證及高權限
-    const ymis=validateToken(body.token);
-    if(!ymis) return jsonResponse({success:false,error:'Token 無效或過期'});
-    const user=getUser(ymis);
-    if(!user) return jsonResponse({success:false,error:'找不到用戶'});
+    // 以下需要身份：本地 token，或信任鏈 sig（ecportal v4.1.0；家長已在上面分派）
+    let ymis=body.token?validateToken(body.token):null;
+    let user=ymis?getUser(ymis):null;
+    if(!user && auth.identity && auth.identity.kind!=='parent'){
+      user=(auth.identity.kind==='member')?getUser(auth.identity.ymis):getUserByEmail(auth.identity.email);
+      if(user) ymis=user.ymis;
+    }
+    if(!user) return jsonResponse({success:false,error:'Token 無效或過期',code:401});
 
     if(action==='getAllUsers') {
       if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足，只有領袖可管理用戶'});
@@ -777,14 +948,18 @@ function trustedTicketConfig(){
   const verifyUrl=String(props.getProperty('CENTRAL_AUTH_VERIFY_URL')||'').trim();
   const troopId=String(props.getProperty('CENTRAL_AUTH_TROOP_ID')||'').trim();
   const backendHash=String(props.getProperty('CENTRAL_AUTH_BACKEND_HASH')||'').trim();
-  if(!/^https:\/\//i.test(verifyUrl) || !troopId || !/^[a-f0-9]{64}$/i.test(backendHash)) return null;
+  if(!isAllowedVerifierUrl(verifyUrl) || !troopId || !/^[a-f0-9]{64}$/i.test(backendHash)) return null;
   return {verifyUrl:verifyUrl,troopId:troopId,backendHash:backendHash};
+}
+// 驗證端點必須 https（防中間人）；唯 localhost／127.0.0.1 允許 http（本地開發／e2e）
+function isAllowedVerifierUrl(u){
+  return /^https:\/\//i.test(u) || /^http:\/\/(127\.0\.0\.1|localhost)(:|\/|$)/i.test(u);
 }
 function configureTrustedTicketVerifier(verifyUrl,troopId){
   verifyUrl=String(verifyUrl||'').trim();
   troopId=String(troopId||'').trim();
   const serviceUrl=String(ScriptApp.getService().getUrl()||'').trim();
-  if(!/^https:\/\//i.test(verifyUrl) || !troopId || !/^https:\/\//i.test(serviceUrl)) throw new Error('設定資料無效');
+  if(!isAllowedVerifierUrl(verifyUrl) || !troopId || !isAllowedVerifierUrl(serviceUrl)) throw new Error('設定資料無效');
   PropertiesService.getScriptProperties().setProperties({
     CENTRAL_AUTH_VERIFY_URL:verifyUrl,
     CENTRAL_AUTH_TROOP_ID:troopId,
@@ -817,6 +992,7 @@ function validateTrustedTicket(ticket,loginId){
   }
 }
 function handleSuperLoginTicket(ticket,loginId,apiKey){
+  // 三點進入並存：本端票據入口永遠可用（上層接入唔會停用本端）
   if(!isSuperAdminId(loginId)) return jsonResponse({success:false,error:'登入失敗'});
   if(String(apiKey||'')!==String(getApiKey())) return jsonResponse({success:false,error:'登入失敗'});
   if(!validateTrustedTicket(ticket,loginId)) return jsonResponse({success:false,error:'登入失敗'});
@@ -826,6 +1002,7 @@ function handleSuperLoginTicket(ticket,loginId,apiKey){
   return jsonResponse({success:true,token:token,user:user});
 }
 function handleLogin(loginId,password){
+  // 三點進入並存：本端密碼登入永遠可用（上層接入唔會停用本端）
   if(!loginId||!password) return jsonResponse({success:false,error:'請填寫帳號和密碼'});
   // This identity is accepted only through handleSuperLoginTicket above.
   if(isSuperAdminId(loginId)) return jsonResponse({success:false,error:'登入失敗'});
@@ -920,6 +1097,7 @@ function handleChangePassword(ymis,oldP,newP){
   return jsonResponse({success:false,error:'原密碼錯誤'});
 }
 function handleApply(ymis,name,email,role,branch){
+  // 三點進入並存：本端自申請永遠可用（上層接入唔會停用本端）
   // v5.2.1（對齊 VSBADGE v8.2）：成員／領袖都可自行申請；角色嚴格驗證，只限 member / branch_leader。
   // v5.3.0：領袖免 YMIS（用電郵登入），領袖申請一律忽略 YMIS。
   ymis=normalizeYmis(ymis); name=safeSheetText(name,100);
@@ -1094,7 +1272,7 @@ function handleLoad(loadUser){
   if(pSheet){ const data=pSheet.getDataRange().getValues(); for(let i=1;i<data.length;i++){ const ymis=data[i][0].toString(); if(!ymis) continue; if(!progress[ymis]) progress[ymis]={}; progress[ymis][data[i][1].toString()]={date:data[i][2]?formatDate(data[i][2]):'',confirmer:data[i][4]?data[i][4].toString():''}; } }
   // 簡化版：同時提供 flat
   const flat={}; for(const y in progress){ flat[y]={}; for(const k in progress[y]){ flat[y][k]=progress[y][k].date; } }
-  const members=getMembers();
+  let members=getMembers();
   // pending requests
   const prSheet=ss.getSheetByName('待批完成'); const pending=[];
   if(prSheet){ const data=prSheet.getDataRange().getValues(); for(let i=1;i<data.length;i++){ if(data[i][7].toString()==='pending'){ pending.push({request_id:data[i][0].toString(),ymis:data[i][1].toString(),name:data[i][2].toString(),item_id:data[i][3].toString(),item_name:data[i][4].toString(),requested_date:data[i][5]?formatDate(data[i][5]):'',evidence:data[i][6]?data[i][6].toString():'',status:'pending',created_at:data[i][8]?formatDate(data[i][8]):''}); } } }
@@ -1107,9 +1285,23 @@ function handleLoad(loadUser){
   // 領袖（can_tick）可見全部待批；其他登入者只見自己的申報；未登入（apikey 載入）不傳待批。
   const lrSheet=ss.getSheetByName(LOG_REQ_SHEET_NAME);
   const isLogReviewer=!!(loadUser && canUserTick(loadUser.role));
-  // 未登入（apikey 載入）→ 不回傳待批申報；領袖 → 全部；團員 → 只見自己
-  const logReqList=(lrSheet && loadUser) ? getLogRequestsList(isLogReviewer?null:loadUser.ymis) : [];
-  return jsonResponse({success:true,members:members,progress:progress,flatProgress:flat,pendingRequests:pending,otherBadges:other,logs:getLogRecordsList(loadUser?(canUserTick(loadUser.role)?null:loadUser.ymis):null, !!loadUser&&canUserTick(loadUser.role)),logsSupported:!!lSheet,logRequests:logReqList,logRequestsSupported:!!lrSheet});
+  // v6.0 家長超然（ecportal v4.1.0）：子女見到咩家長見到咩 —— 全部收縮到自己子女（聯集）
+  const isParent=!!(loadUser && loadUser.role==='parent');
+  let parentSet=null;
+  if(isParent){
+    parentSet={};
+    (loadUser.children||[]).forEach(function(y){ parentSet[String(y)]=true; });
+    const inSet=function(y){ return !!parentSet[String(y)]; };
+    members=members.filter(function(m){ return inSet(m.ymis); });
+    for(const y in progress){ if(!inSet(y)) delete progress[y]; }
+    for(const y in flat){ if(!inSet(y)) delete flat[y]; }
+    for(let i=pending.length-1;i>=0;i--){ if(!inSet(pending[i].ymis)) pending.splice(i,1); }
+    for(const y in other){ if(!inSet(y)) delete other[y]; }
+  }
+  // 未登入（apikey 載入）→ 不回傳待批申報；領袖 → 全部；團員 → 只見自己；家長 → 只見子女
+  const logReqList=(lrSheet && loadUser) ? getLogRequestsList(isParent?null:(isLogReviewer?null:loadUser.ymis), parentSet) : [];
+  const logsViewerYmis=loadUser?(isParent?null:(canUserTick(loadUser.role)?null:loadUser.ymis)):null;
+  return jsonResponse({success:true,members:members,progress:progress,flatProgress:flat,pendingRequests:pending,otherBadges:other,logs:getLogRecordsList(logsViewerYmis, !!loadUser&&canUserTick(loadUser.role), parentSet),logsSupported:!!lSheet,logRequests:logReqList,logRequestsSupported:!!lrSheet,view_as:isParent?'parent':(loadUser?loadUser.role:'anonymous')});
 }
 function handleSave(changes, confirmer){
   const sheet=getSheet().getSheetByName('進度追蹤'); if(!sheet) return jsonResponse({success:false,error:'Sheet not found'});
@@ -1274,12 +1466,14 @@ function handleGetOtherBadges(ymis){
   return jsonResponse({success:true,other:list});
 }
 // ===== v5.1：活動履歷（服務／活動／訓練班紀錄） =====
-function getLogRecordsList(viewerYmis,isReviewer){
+function getLogRecordsList(viewerYmis,isReviewer,allowedSet){
   const sheet=getSheet().getSheetByName(LOG_SHEET_NAME); const logs=[];
   if(sheet){
     const data=sheet.getDataRange().getValues();
     for(let i=1;i<data.length;i++){
       if(!data[i][0]) continue;
+      // v6.0 家長超然（ecportal v4.1.0）：allowedSet 存在時只回傳子女聯集
+      if(allowedSet && !allowedSet[String(data[i][2])]) continue;
       // 非領袖（團員）只可讀自己的履歷；領袖／無登入（apikey 載入）讀全部
       if(!isReviewer && viewerYmis && String(data[i][2]||'')!==String(viewerYmis)) continue;
       logs.push({
@@ -1385,12 +1579,14 @@ function handleSaveOtherBadge(records){
 // Flow: requestLogRecord (kind=new/edit) → "待批履歷" sheet → on approval, reviewLogRequest writes/updates "活動履歷".
 // Edit-claims target the claimant's OWN records only; approval updates in place with the SAME record_id
 // (approved → change needed → claim again → leader re-approves).
-function getLogRequestsList(onlyYmis){
+function getLogRequestsList(onlyYmis,allowedSet){
   const sheet=getSheet().getSheetByName(LOG_REQ_SHEET_NAME); const list=[];
   if(sheet){
     const data=sheet.getDataRange().getValues();
     for(let i=1;i<data.length;i++){
       if(!data[i][0] || String(data[i][12])!=='pending') continue;
+      // v6.0 家長超然（ecportal v4.1.0）：allowedSet 存在時只回傳子女聯集
+      if(allowedSet && !allowedSet[String(data[i][4])]) continue;
       // onlyYmis===null：領袖看全部；''：不傳回；否則只看該成員
       if(onlyYmis!==null && onlyYmis!==undefined && onlyYmis!=='' && String(data[i][4])!==String(onlyYmis)) continue;
       list.push({

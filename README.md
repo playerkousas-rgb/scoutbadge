@@ -26,6 +26,13 @@ TROOP_0082_APIKEY=...
 
 新旅團與既有旅團接入請見 [TROOP_ONBOARDING.md](TROOP_ONBOARDING.md)；Vercel 與 Portal 設定見 [VERCEL_ENV_SETUP.md](VERCEL_ENV_SETUP.md)。
 
+## 主系統整合（ecportal v4.1.0）
+
+ScoutBadge 係底層**支部進度追蹤系統（leaf）**，可被上層容器（童軍支部管理系統／旅管理系統）接入。整合採**信任鏈 sig**（HMAC-SHA256，用本團 API Key 簽名，leaf 逐次驗簽）；**三個入口並存**：本團密碼登入永遠可用，上層 sig（成員／領袖）與家長 sig（子女聯集、只讀）是額外免檢入口，上層接入唔會停用本團登入。
+
+- 合約細節、sig 格式、endpoint 列表：[docs/INTEGRATION_ECPORTAL_V4.md](docs/INTEGRATION_ECPORTAL_V4.md)
+- 合約 e2e 對真 `apps-script/Code.gs` 執行（`test/e2e_realgas.test.js`），已納入 `npm test`
+
 ## 升級既有旅團
 
 更新既有 Apps Script 時，覆蓋 `apps-script/Code.gs` 並部署**新版本**到既有 Web App deployment，以保留原有 `/exec` URL。本次設定改動不需要、也不應以初始化函式來變更現有工作表名稱、欄位或資料。
