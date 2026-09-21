@@ -30,6 +30,8 @@
 
 ## 部署與驗證
 
+`vercel.json` 已把 Output Directory 固定為 `public`（由 `npm run build` 產生），並覆蓋 Dashboard 的 Build 設定，因此 Project Settings 不需要另行覆寫 Build Command 或 Output Directory。
+
 1. 在 Vercel Production、Preview 所需環境設定完成變數。
 2. 重新部署。
 3. 開啟 `/api/troops`，確認只出現旅團編號與名稱，沒有後端 URL 或 API Key。

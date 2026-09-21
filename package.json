@@ -4,9 +4,9 @@
     "node": ">=18"
   },
   "scripts": {
-    "check": "node --check server.js && node --check api/proxy.js && node --check api/troops.js && node --check api/verify-super-ticket.js && node --check lib/registry.js && node --check lib/super-auth.js && node --check lib/login-rate-limit.js && node scripts/check-static.js",
+    "check": "node --check build.js && node --check server.js && node --check api/proxy.js && node --check api/troops.js && node --check api/verify-super-ticket.js && node --check lib/registry.js && node --check lib/super-auth.js && node --check lib/login-rate-limit.js && node scripts/check-static.js",
     "lint": "npm run check",
-    "build": "node -e \"console.log('No compilation step: Vercel deploys the static app and API functions directly.')\"",
+    "build": "node build.js",
     "test": "node test/proxy.test.js && node test/multi_troop_pipeline.test.js && node test/frontend_routing.test.js && node test/log_claims.test.js && node test/ymis_parse.test.js"
   }
 }
