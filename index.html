@@ -404,7 +404,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
         <div class="steps">
           <div class="step"><div class="step-number">1</div><div class="step-content"><h4 data-i18n="s1h">共通：下載後端程式碼 (單一檔案版)</h4><p data-i18n="s1p">包含待批、其他獎章、批量、資料修復、PNG、私隱開關</p><a href="apps-script/Code.gs" download="Code.gs" class="btn btn-primary btn-sm" style="margin-top:6px" data-i18n="s1btn">⬇️ 下載 Code.gs (最新)</a></div></div>
           <div class="step"><div class="step-number">2</div><div class="step-content"><h4 data-i18n="s2h">共通：建立 Google Sheet 並部署</h4><p data-i18n-html="s2p"><b>2.1</b> 建新試算表<br><b>2.2</b> 擴充功能→Apps Script，貼上 Code.gs<br><b>2.3</b> 儲存→執行 initializeSheets，授權，複製 API Key<br><b>2.4</b> 部署為網頁應用程式 (執行身分我，存取權任何人)，複製 URL (/exec)</p></div></div>
-          <div class="step"><div class="step-number">3</div><div class="step-content"><h4 data-i18n="s3h">軌道A：無主系統 - 提交給 scoutbadge 管理員</h4><p data-i18n="s3p">將旅團編號、名稱、URL、API Key 交 scoutbadge 管理員加入 troops.json，Vercel自動部署後獨立可用</p></div></div>
+          <div class="step"><div class="step-number">3</div><div class="step-content"><h4 data-i18n="s3h">軌道A：無主系統 - 提交給 scoutbadge 管理員</h4><p data-i18n="s3p">將旅團編號、名稱、URL、API Key 交 scoutbadge 管理員，透過受保護的部署設定登記後即可獨立使用</p></div></div>
           <div class="step"><div class="step-number">4</div><div class="step-content"><h4 data-i18n="s4h">軌道B：有主系統並想接上 - 額外提交給主系統管理員</h4><p data-i18n="s4p">將同一組 URL+Key 交主系統管理員，填入旅團設定→元件設定 scoutbadge 卡片 backend+apikey。之後成員點 Dashboard 卡片自動帶入 ?u=0082&role=&ymis=&from=portal&embed=1，無需密碼</p></div></div>
           <div class="step"><div class="step-number">5</div><div class="step-content"><h4 data-i18n="s5h">私隱選擇</h4><p data-i18n="s5p">有主系統不等於一定要接，可自由選擇獨立用。若旅團重私隱，成員預設只看自己；若想互相鼓勵，團長可在用戶管理→系統設定開啟「允許成員互相查看進度」</p></div></div>
         </div>
@@ -675,7 +675,7 @@ zh:{
   retry:'重試', cancel:'取消', close:'關閉', save:'💾 儲存', submit:'提交申請', refresh:'🔄 刷新', all:'全部',
   api_no_troop:'未選擇旅團 (No troop selected)', api_bad_response:'伺服器回應格式錯誤', api_failed:'操作失敗', api_timeout:'請求逾時，請檢查網絡後重試',
   offline_cache:'⚠️ 離線模式：顯示快取資料',
-  role_super_admin:'超管', role_admin:'管理員', role_group_leader:'團長', role_branch_leader:'童軍團長', role_member:'童軍成員', role_member_short:'成員', role_leader_short:'領袖',
+  role_super_admin:'系統管理員', role_admin:'管理員', role_group_leader:'團長', role_branch_leader:'童軍團長', role_member:'童軍成員', role_member_short:'成員', role_leader_short:'領袖',
   demo_word:'示範', demo_member_name:'示範成員', demo_leader_name:'示範團長', demo_troop_name:'第82旅 DEMO (示範)',
   member_mode_toast:'成員模式：只能查看自己進度，其他獎章及申請',
   progress_items:'進度項目',
@@ -764,7 +764,7 @@ zh:{
   /* users */
   users_role_title:'👥 角色說明：USER vs 成員',
   users_role_body:'<b>USER (系統使用者)</b> = 所有在 Users 表的人，包括：<br>• <span class="role-badge role-member">團員 member</span> = 純成員，不包括領袖<br>• <span class="role-badge role-branch_leader">童軍團領袖 branch_leader</span> = 領袖<br>• <span class="role-badge role-group_leader">團長 group_leader</span> = 領袖<br>• <span class="role-badge role-admin">管理員 admin</span> = 領袖<br>{0}<b>成員</b> = role=member 的人，不包括領袖。<br><b>領袖</b> = 團長/支部領袖/管理員{1}，可勾選及管理。<br><b>USER 總數</b> = 成員 + 領袖 全部。',
-  users_super_line:'• <span class="role-badge role-super_admin">超管 super_admin (SHEEP)</span> = 系統管理員<br><br>', users_super_suffix:'/超管',
+  users_super_line:'• <span class="role-badge role-super_admin">系統管理員 super_admin</span> = 系統管理員<br><br>', users_super_suffix:'/系統管理員',
   mock_title:'🧪 測試工具 (僅系統管理角色可見)', mock_desc:'一鍵載入 10個 MOCK 成員到前端快取，方便測試全團批量剔、會員章一眼睇等。示範資料只存瀏覽器快取，不會寫入正式 Google Sheet，除非你按確認寫入。',
   mock_load_btn:'🧪 載入示範成員到全團', mock_clear_btn:'🗑️ 清除示範資料快取', mock_view_json:'📄 查看示範資料 JSON', mock_dl_csv:'📄 下載 CSV 匯入 Sheet',
   privacy_title:'🔒 私隱設定 (僅團長/管理員可見)', privacy_desc:'普通成員預設只看自己，能否看其他成員由團長開放。有些旅團重私隱，有些想互相鼓勵，領袖及小隊長要按進度策劃活動。',
@@ -846,10 +846,10 @@ zh:{
   home_tip:'💡 提示：若您的旅團不在列表，請到「新旅團部署」查看10分鐘自助部署教學。<br>🎬 <b>未登入試用：</b>可選擇「示範：領袖功能」或「示範：成員功能」，免登入體驗兩種角色的介面差異。<br>🌐 <b>中英切換：</b>右上角按「🌐 English」可全站轉英文（內容相通，後端紀錄相同，適合英語旅團）。',
   setup_h2:'📋 新旅團部署指南 - 有主系統 / 無主系統 兩條路 (10分鐘)',
   setup_portal_card:'<h3 style="color:var(--blue)">🌟 先了解一下：主系統平台是什麼？</h3><p style="font-size:12px">你而家用緊嘅 <b>童軍進度追蹤</b> 係一個 Tier 3 元件，可以獨立用，但其實屬於更龐大的 <b>scoutsystem-2.0 主系統平台</b>：</p><ul style="font-size:11px;margin:6px 0 0 16px"><li>📊 Dashboard 儀表板：全旅團人數、活動、財政一目了然</li><li>👥 成員管理、✅集會考勤 QR Code、💰財務、📅活動報名</li><li>🧩 插件市場：本系統是其中一個插件，可一鍵加入卡片</li><li>🔐 單一登入：點卡片自動帶入身份，唔使再輸 YMIS/密碼</li></ul><p style="font-size:11px;margin-top:8px;background:#fff;padding:6px;border-radius:6px"><b>重點：有主系統 ≠ 一定要接上本系統</b>，可自由選擇獨立用或接上，兩條路並存不衝突。藉此告訴用家有更大平台可用。</p>',
-  setup_map_card:'<h3>🗺️ 部署地圖 - 兩條路</h3><p style="font-size:11px">共通：下載 Code.gs → 建 Sheet → 執行 initializeSheets → 部署 → 複製 URL+API Key<br><b>軌道A 無主系統/有但想獨立用：</b> 將 URL+Key 交 scoutbadge 管理員 → 加入 troops.json → 完成 → 用法：scoutbadge.vercel.app 選旅團登入<br><b>軌道B 有主系統並想接上：</b> 同樣交 scoutbadge 管理員 + 額外交主系統管理員填入旅團設定→元件設定 backend+apikey → 用法：主系統 Dashboard 點卡片 → 自動帶入 from=portal&embed=1 → 直接用</p>',
+  setup_map_card:'<h3>🗺️ 部署地圖 - 兩條路</h3><p style="font-size:11px">共通：下載 Code.gs → 建 Sheet → 執行初始化 → 部署 → 交付 URL+API Key<br><b>軌道A 無主系統/有但想獨立用：</b> 將資料交 scoutbadge 管理員，以受保護部署設定登記 → 完成 → 用法：選擇旅團登入<br><b>軌道B 有主系統並想接上：</b> 同樣交資料給主系統管理員設定卡片 → 用法：主系統 Dashboard 點卡片 → 自動帶入旅團及嵌入模式</p>',
   s1h:'共通：下載後端程式碼 (單一檔案版)', s1p:'包含待批、其他獎章、批量、資料修復、PNG、私隱開關', s1btn:'⬇️ 下載 Code.gs (最新)',
   s2h:'共通：建立 Google Sheet 並部署', s2p:'<b>2.1</b> 建新試算表<br><b>2.2</b> 擴充功能→Apps Script，貼上 Code.gs<br><b>2.3</b> 儲存→執行 initializeSheets，授權，複製 API Key<br><b>2.4</b> 部署為網頁應用程式 (執行身分我，存取權任何人)，複製 URL (/exec)',
-  s3h:'軌道A：無主系統 - 提交給 scoutbadge 管理員', s3p:'將旅團編號、名稱、URL、API Key 交 scoutbadge 管理員加入 troops.json，Vercel自動部署後獨立可用',
+  s3h:'軌道A：無主系統 - 提交給 scoutbadge 管理員', s3p:'將旅團編號、名稱、URL、API Key 交 scoutbadge 管理員，透過受保護的部署設定登記後即可獨立使用',
   s4h:'軌道B：有主系統並想接上 - 額外提交給主系統管理員', s4p:'將同一組 URL+Key 交主系統管理員，填入旅團設定→元件設定 scoutbadge 卡片 backend+apikey。之後成員點 Dashboard 卡片自動帶入 ?u=0082&role=&ymis=&from=portal&embed=1，無需密碼',
   s5h:'私隱選擇', s5p:'有主系統不等於一定要接，可自由選擇獨立用。若旅團重私隱，成員預設只看自己；若想互相鼓勵，團長可在用戶管理→系統設定開啟「允許成員互相查看進度」',
   setup_submit_card:'<h3 style="color:var(--blue)">📧 完成後提交</h3><p style="font-size:11px">獨立用：交 scoutbadge 管理員<br>接入主系統：同時交主系統管理員（填 backend+apikey）<br>兩條路可同時用，領袖從主系統入，成員 bookmark 獨立連結</p>',
@@ -961,9 +961,9 @@ zh:{
   req_cleared_fmt:'⚠️ 已清空 {0} 筆本地待提交申請，請聯絡領袖協助',
   role_body_begin:'<b>USER (系統使用者)</b> = 所有在 Users 表的人，包括：<br>',
   role_line_member:'團員 member = 純成員，不包括領袖', role_line_branch:'童軍團領袖 branch_leader = 領袖',
-  role_line_group:'團長 group_leader = 領袖', role_line_admin:'管理員 admin = 領袖', role_line_super:'超管 super_admin (SHEEP) = 系統管理員',
+  role_line_group:'團長 group_leader = 領袖', role_line_admin:'管理員 admin = 領袖', role_line_super:'系統管理員 super_admin = 系統管理員',
   role_body_end:'<b>成員</b> = role=member 的人，不包括領袖。<br><b>領袖</b> = 團長/支部領袖/管理員{0}，可勾選及管理。<br><b>USER 總數</b> = 成員 + 領袖 全部。',
-  role_super_word:'/超管',
+  role_super_word:'/系統管理員',
   role_opt_member:'團員', role_opt_branch:'支部領袖', role_opt_group:'團長', role_opt_admin:'管理員',
   sfh_courses:'必修課程：', sfh_prevention:'預防方法：', sfh_handling:'處理方法：', sfh_hotlines:'求助熱線：',
   srv_fill:'請填寫活動名稱及時數', srv_added:'服務紀錄已加入', srv_add_fail_colon:'新增失敗：', srv_load_fail:'服務紀錄暫時無法載入',
@@ -1112,7 +1112,7 @@ en:{
   info_wearing_points:'<b>Wearing essentials (2024 guide):</b><br>• Messengers of Peace badge: centre of left chest pocket, replacing the Membership Badge<br>• First Aid badge: top of left sleeve, below AYP<br>• Lifesaver cloth badge: top centre of left sleeve<br>• At most 4 World Scout badges in a row on the right sleeve<br>• Scout Section badges must follow the current uniform and wearing guide',
   users_role_title:'👥 Roles explained: USER vs Member',
   users_role_body:'<b>USER (system user)</b> = everyone in the Users sheet, including:<br>• <span class="role-badge role-member">member</span> = plain members, excluding leaders<br>• <span class="role-badge role-branch_leader">Scout Leader branch_leader</span> = leader<br>• <span class="role-badge role-group_leader">GSL group_leader</span> = leader<br>• <span class="role-badge role-admin">admin</span> = leader<br>{0}<b>Member</b> = users with role=member, excluding leaders.<br><b>Leader</b> = GSL / section leader / admin{1} — can tick and manage.<br><b>Total USERs</b> = members + leaders.',
-  users_super_line:'• <span class="role-badge role-super_admin">super_admin (SHEEP)</span> = system administrator<br><br>', users_super_suffix:'/super admin',
+  users_super_line:'• <span class="role-badge role-super_admin">super_admin</span> = system administrator<br><br>', users_super_suffix:'/super admin',
   mock_title:'🧪 Test Tools (system admin only)', mock_desc:'One-click loads 10 MOCK members into the browser cache to test troop-wide batch ticking, Membership at a glance, etc. Demo data stays in the browser cache and never touches the real Google Sheet unless you confirm the write.',
   mock_load_btn:'🧪 Load demo members to troop', mock_clear_btn:'🗑️ Clear demo cache', mock_view_json:'📄 View demo JSON', mock_dl_csv:'📄 Download CSV for Sheet import',
   privacy_title:'🔒 Privacy Settings (GSL/admin only)', privacy_desc:'Members see only themselves by default; the GSL may open viewing to others. Some troops value privacy, others mutual encouragement; leaders and patrol leaders plan activities from progress.',
@@ -1191,10 +1191,10 @@ en:{
   home_tip:'💡 Tip: if your troop is not listed, see "New Troop Setup" for the 10-minute self-service deployment guide.<br>🎬 <b>Try without login:</b> pick "Demo: Leader" or "Demo: Member" to experience both roles.<br>🌐 <b>中/EN:</b> tap "🌐 中文" at the top-right to switch the whole interface (same content, same backend records — ideal for English-speaking troops).',
   setup_h2:'📋 New Troop Deployment Guide — with / without the main platform (10 min)',
   setup_portal_card:'<h3 style="color:var(--blue)">🌟 First: what is the main platform?</h3><p style="font-size:12px">This <b>Scout Progress Tracker</b> is a Tier-3 component. It works standalone, but it belongs to the larger <b>scoutsystem-2.0 platform</b>:</p><ul style="font-size:11px;margin:6px 0 0 16px"><li>📊 Dashboard: troop members, activities and finance at a glance</li><li>👥 Member management, ✅ meeting attendance QR codes, 💰 finance, 📅 activity sign-up</li><li>🧩 Plugin marketplace: this system is one of the plugins, added as a card in one click</li><li>🔐 Single sign-on: tap the card and your identity is carried over — no YMIS/password re-entry</li></ul><p style="font-size:11px;margin-top:8px;background:#fff;padding:6px;border-radius:6px"><b>Key point: having the main platform ≠ must integrate with this system</b> — standalone or integrated use both work side by side.</p>',
-  setup_map_card:'<h3>🗺️ Deployment Map — two tracks</h3><p style="font-size:11px">Shared: download Code.gs → create a Sheet → run initializeSheets → deploy → copy URL + API Key<br><b>Track A — no main platform / standalone:</b> send URL+Key to the scoutbadge admin → added to troops.json → done → use: pick your troop at scoutbadge.vercel.app and sign in<br><b>Track B — with main platform:</b> also send the same URL+Key to the main-platform admin → fill troop settings → component settings backend+apikey → use: tap the card on the main Dashboard → auto-carries from=portal&embed=1</p>',
+  setup_map_card:'<h3>🗺️ Deployment Map — two tracks</h3><p style="font-size:11px">Shared: download Code.gs → create a Sheet → initialise → deploy → provide URL + API key<br><b>Track A — standalone:</b> provide the details to the app administrator for protected deployment registration, then choose the troop and sign in.<br><b>Track B — with the main platform:</b> provide the same details to the main-platform administrator; the Dashboard card opens the selected troop in embedded mode.</p>',
   s1h:'Shared: download the backend code (single file)', s1p:'Includes pending approvals, other badges, batch tools, data repair, PNG, privacy switches', s1btn:'⬇️ Download Code.gs (latest)',
   s2h:'Shared: create a Google Sheet and deploy', s2p:'<b>2.1</b> Create a new spreadsheet<br><b>2.2</b> Extensions → Apps Script, paste Code.gs<br><b>2.3</b> Save → run initializeSheets, authorise, copy the API Key<br><b>2.4</b> Deploy as a web app (execute as me, access: anyone), copy the URL (/exec)',
-  s3h:'Track A: no main platform — submit to the scoutbadge admin', s3p:'Give the troop ID, name, URL and API Key to the scoutbadge admin to add into troops.json; once Vercel redeploys it works standalone',
+  s3h:'Track A: no main platform — submit to the scoutbadge admin', s3p:'Give the troop ID, name, URL and API Key to the scoutbadge administrator for protected deployment registration; it works standalone after redeployment',
   s4h:'Track B: with main platform — also submit to the platform admin', s4p:'Give the same URL+Key to the main-platform admin and fill troop settings → component settings with the scoutbadge card backend+apikey. Members then tap the Dashboard card and are auto-carried in with ?u=0082&role=&ymis=&from=portal&embed=1 — no password needed',
   s5h:'Privacy choice', s5p:'Having the main platform does not force integration — standalone use is fine. Privacy-first troops keep members seeing only themselves; for mutual encouragement, the GSL can enable "members may view each other\'s progress" in User Management → System Settings',
   setup_submit_card:'<h3 style="color:var(--blue)">📧 Submit when done</h3><p style="font-size:11px">Standalone: send to the scoutbadge admin<br>Integrating: also send to the main-platform admin (backend+apikey)<br>Both tracks work together — leaders enter via the platform, members can bookmark the standalone link</p>',
@@ -1305,7 +1305,7 @@ en:{
   req_cleared_fmt:'⚠️ Cleared {0} local pending request(s); please contact a leader',
   role_body_begin:'<b>USER (system users)</b> = everyone in the Users sheet, including:<br>',
   role_line_member:'member = plain member, not a leader', role_line_branch:'branch_leader = leader',
-  role_line_group:'group_leader = leader', role_line_admin:'admin = leader', role_line_super:'super_admin (SHEEP) = system admin',
+  role_line_group:'group_leader = leader', role_line_admin:'admin = leader', role_line_super:'super_admin = system admin',
   role_body_end:'<b>Members</b> = users with role=member (leaders excluded).<br><b>Leaders</b> = group/branch leaders/admins{0}; they can tick and manage.<br><b>USER total</b> = members + leaders.',
   role_super_word:'/super_admin', role_member_short:'member', role_leader_short:'leader',
   role_opt_member:'Member', role_opt_branch:'Branch Leader', role_opt_group:'Group Leader', role_opt_admin:'Admin',
@@ -1488,14 +1488,12 @@ function setLang(l){
 }
 
 /* ================== 全局狀態 ================== */
-let currentTroopId='',currentTroopName='',currentBackend='',currentApikey='';
+let currentTroopId='',currentTroopName='',portalLaunch=false;
 
 /* ================== Unified API Proxy Wrapper ================== */
 async function apiRequest(action, payload = {}, options = {}) {
-  let rawTroopId = payload.troopId || currentTroopId || '0082';
-  // Normalize: 82 -> 0082 to prevent "找不到82的SHEET"
-  let troopId = String(rawTroopId).trim();
-  if(/^\d+$/.test(troopId)) troopId = troopId.padStart(4,'0');
+  const rawTroopId = payload.troopId || currentTroopId;
+  const troopId = String(rawTroopId || '').trim().toUpperCase();
   if (!troopId) {
     throw new Error(t('api_no_troop'));
   }
@@ -1505,7 +1503,7 @@ async function apiRequest(action, payload = {}, options = {}) {
     action: action,
     ...payload
   };
-  // Ensure payload troopId also normalized
+  // Preserve the registered identifier exactly, including leading zeroes.
   reqBody.troopId = troopId;
 
   if (!reqBody.token && typeof currentToken !== 'undefined' && currentToken) {
@@ -1612,98 +1610,21 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 async function handlePortalParams(){
   const params=getUrlParams();
-  const u=params.get('u');
-  const role=params.get('role');
-  const ymis=params.get('ymis');
-  const nameParam=params.get('name') || params.get('displayName') || ymis || 'Portal User';
-  const backendParam=params.get('backend');
-  const apikeyParam=params.get('apikey');
-  const troopNameParam=params.get('troopName') || (u?(inEn()?`Troop ${u}`:`第${u}旅`):'Portal Troop');
-  const from=params.get('from');
+  const troopId=(params.get('u')||'').trim().toUpperCase();
+  const requestedLoginId=(params.get('ymis')||'').trim();
+  const requestedRole=(params.get('role')||'').trim();
 
-  console.log('Portal params detected', {u, role, ymis, from, hasBackend: !!backendParam});
-
-  // 若有 u，嘗試載入旅團設定
-  if(u){
-    currentTroopId=u;
-    currentTroopName=troopNameParam;
-    if(backendParam){
-      currentBackend=backendParam;
-      currentApikey=apikeyParam||'';
-    }else{
-      // 從 troops.json 查找
-      try{
-        const r=await fetch('data/troops.json?_='+Date.now());
-        if(r.ok){
-          const d=await r.json();
-          const t=d.troops[u];
-          if(t){
-            currentBackend=t.backend;
-            currentApikey=t.apikey||'';
-            currentTroopName=t.name||troopNameParam;
-          }
-        }
-      }catch(e){ console.warn('portal troops.json lookup failed',e); }
-      // 再試 api/troops
-      if(!currentBackend){
-        try{
-          const r2=await fetch('/api/troops?_='+Date.now());
-          if(r2.ok){
-            const d2=await r2.json();
-            const t2=d2.troops[u];
-            if(t2){ currentBackend=t2.backend; currentApikey=t2.apikey||''; currentTroopName=t2.name||troopNameParam; }
-          }
-        }catch(e){}
-      }
-    }
-  }
-
-  // 若由 Portal 帶入身份，直接免登入進入
-  if(from==='portal' && ymis && role){
-    currentUser={
-      ymis: ymis,
-      name: nameParam,
-      role: role,
-      can_tick: ['admin','group_leader','branch_leader','super_admin'].includes(role),
-      allowed_badges: '*',
-      email: params.get('email')||'',
-      isPortal: true
-    };
-    currentToken='portal-'+Date.now(); // 虛擬 token，主系統信任模式
-    // 顯示主App，跳過登入
-    document.getElementById('homePage').style.display='none';
-    document.getElementById('loginPage').style.display='none';
-    document.getElementById('mainApp').style.display='block';
-    refreshAppTitle();
-    refreshUserInfoChip();
-    setupTabsByRole();
-    // 載入進度 (經同源 Proxy)
-    loadItemsAndProgress();
+  // Portal links select a registered troop and may prefill the ordinary login
+  // form. URL parameters never create a session or grant a role.
+  if(troopId){
+    await selectTroop(troopId, {
+      loginId: requestedLoginId,
+      loginType: requestedRole && requestedRole!=='member'?'leader':'member',
+      portal: params.get('from')==='portal'
+    });
+    checkSavedSession(troopId);
     return;
   }
-
-  // 若只有 u 參數，無完整 Portal 身份，則自動選旅團並顯示登入頁（獨立使用軌道 A）
-  if(u){
-    // 嘗試自動選旅團
-    try{
-      // 若 backend 已有，直接顯示登入
-      if(currentBackend){
-        document.getElementById('loginTroopInfo').textContent=`📍 ${currentTroopName} ${tf('portal_preselected',currentTroopId)}`;
-        document.getElementById('homePage').style.display='none';
-        document.getElementById('loginPage').style.display='block';
-        if(ymis) document.getElementById('loginId').value=ymis;
-        if(role) switchLoginType(role==='member'?'member':'leader');
-      }else{
-        // 無 backend，仍顯示旅團列表，但高亮該旅團
-        loadTroops();
-        setTimeout(()=>{ try{ selectTroop(u); }catch(e){} }, 500);
-      }
-    }catch(e){ loadTroops(); }
-    checkSavedSession();
-    return;
-  }
-
-  // 預設獨立使用
   loadTroops();
   checkSavedSession();
 }
@@ -1722,108 +1643,67 @@ function backToHome(){
   document.getElementById('loginId').value='';
   document.getElementById('loginPassword').value='';
 }
+function escapeHtml(value){
+  return String(value||'').replace(/[&<>'"]/g,ch=>({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[ch]));
+}
+async function fetchTroops(){
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),5000);
+  try{
+    const response=await fetch('/api/troops',{headers:{Accept:'application/json'},signal:controller.signal});
+    if(!response.ok) throw new Error('troop catalogue unavailable');
+    const data=await response.json();
+    return data&&data.troops&&typeof data.troops==='object'?data.troops:{};
+  }finally{ clearTimeout(timer); }
+}
+function renderTroops(troops){
+  const grid=document.getElementById('troopGrid');
+  const entries=Object.entries(troops||{});
+  if(!entries.length){
+    grid.innerHTML='<p style="grid-column:1/-1;text-align:center;color:var(--text-light);padding:16px">'+escapeHtml(t('troop_sync_fail'))+'</p>';
+    return;
+  }
+  grid.innerHTML=entries.map(([id,troop])=>{
+    const name=(troop&&troop.name)||(inEn()?`Troop ${id}`:`第${id}旅`);
+    return `<div class="troop-card" onclick="selectTroop('${escapeHtml(id)}')"><div class="troop-id">${escapeHtml(id)}</div><div class="troop-name">${escapeHtml(name)}</div></div>`;
+  }).join('');
+}
 async function loadTroops(){
   const grid=document.getElementById('troopGrid');
-  const fallbackTroops={
-    "0082": { name:"第 82 旅" }
-  };
-  // 立即顯示 fallback，確保首頁一定看到 0082（修復「看不到0082選項」）
-  function renderTroops(troopsObj, isFallback){
-    const entries = Object.entries(troopsObj);
-    if(entries.length===0){
-      grid.innerHTML = '<div class="troop-card" onclick="selectTroop(\'0082\')"><div class="troop-id">0082</div><div class="troop-name">'+(inEn()?'Troop 82':'第 82 旅')+'</div><div style="font-size:9px;color:var(--green)">'+t('troop_builtin')+'</div></div>';
-      return;
-    }
-    grid.innerHTML=entries.map(([id,tp])=>`<div class="troop-card" onclick="selectTroop('${id}')"><div class="troop-id">${id}</div><div class="troop-name">${(tp&&tp.name)||(inEn()?'Troop '+id:'第'+id+'旅')}</div>${tp&&tp._fallback?'<div style="font-size:9px;color:var(--orange)">(fallback)</div>':''}</div>`).join('');
-  }
-  function normalizeId(id){
-    const s=String(id).trim();
-    if(/^\d+$/.test(s)) return s.padStart(4,'0');
-    const m=s.match(/^(\d+)([A-Z]*)$/i);
-    if(m) return m[1].padStart(4,'0') + (m[2]||'').toUpperCase();
-    return s;
-  }
-  // 1. 立即渲染 fallback，解決載入中卡死
-  renderTroops(fallbackTroops, true);
-  grid.innerHTML += '<div id="troopLoadStatus" style="grid-column:1/-1;font-size:10px;color:var(--text-light);padding:4px;text-align:center">'+t('troop_syncing')+'</div>';
-
+  grid.innerHTML='<p style="grid-column:1/-1;text-align:center;color:var(--text-light);padding:16px">'+escapeHtml(t('troop_syncing'))+'</p>';
   try{
-    // 帶超時的 fetch，避免 /api/troops 卡死導致一直「載入中...」
-    const fetchWithTimeout = (url, ms=3000) => {
-      return Promise.race([
-        fetch(url).then(r=>r),
-        new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')), ms))
-      ]);
-    };
-    let data={troops:{}};
-    try{
-      const r=await fetchWithTimeout('data/troops.json?_='+Date.now(), 2500);
-      if(r && r.ok){
-        const d=await r.json();
-        data.troops={...data.troops, ...(d.troops||{})};
-      }
-    }catch(e){ console.warn('data/troops.json fetch failed', e.message); }
-    try{
-      const r2=await fetchWithTimeout('/api/troops?_='+Date.now(), 3500);
-      if(r2 && r2.ok){
-        const d2=await r2.json();
-        if(d2.troops && Object.keys(d2.troops).length>0){
-          data.troops={...data.troops,...d2.troops};
-        }
-      }
-    }catch(e){ console.warn('api/troops fetch failed', e.message); }
-
-    let rawTroops={...fallbackTroops, ...(data.troops||{})};
-    // Deduplicate: 82 and 0082 are same troop, keep canonical 0082
-    const deduped={};
-    const seen=new Set();
-    Object.entries(rawTroops).forEach(([id,t])=>{
-      if(t && t._aliasOf) return;
-      const canonical=normalizeId(id);
-      if(seen.has(canonical)) return;
-      seen.add(canonical);
-      deduped[canonical]=t;
-    });
-    if(Object.keys(deduped).length===0) Object.assign(deduped, fallbackTroops);
-    renderTroops(deduped, false);
-    const statusEl=document.getElementById('troopLoadStatus');
-    if(statusEl) statusEl.remove();
+    renderTroops(await fetchTroops());
   }catch(e){
-    console.error('loadTroops error', e);
-    // 確保即使出錯，0082 仍然可選
-    renderTroops(fallbackTroops, true);
-    const statusEl=document.getElementById('troopLoadStatus');
-    if(statusEl) statusEl.innerHTML=t('troop_sync_fail');
+    console.warn('troop catalogue unavailable');
+    renderTroops({});
   }
 }
-async function selectTroop(id){
+async function selectTroop(id, options={}){
   try{
-    // Normalize 82 -> 0082 for consistency, fix "找不到82的SHEET" caused by ID mismatch
-    const normId = (/^\d+$/.test(String(id).trim())) ? String(id).trim().padStart(4,'0') : String(id).trim();
-    if(currentTroopId && currentTroopId !== normId){
-      currentUser = null;
-      currentToken = '';
+    const troopId=String(id||'').trim().toUpperCase();
+    const troops=await fetchTroops();
+    const troop=troops[troopId];
+    if(!troop) throw new Error('unknown troop');
+    if(currentTroopId && currentTroopId!==troopId){
+      currentUser=null;
+      currentToken='';
       localStorage.removeItem(LS.session);
     }
-    currentTroopId=normId;
-    // Also treat incoming short id as same, so UI displays canonical
-    id = normId;
-    let name = inEn()?('Troop ' + id):('第' + id + '旅');
-    try {
-      const r = await fetch('/api/troops');
-      if (r.ok) {
-        const d = await r.json();
-        if (d.troops && d.troops[id]) name = d.troops[id].name || name;
-      }
-    } catch(e) {}
-    currentTroopName = name;
-    document.getElementById('loginTroopInfo').textContent=`📍 ${currentTroopName} (ID: ${currentTroopId})`;
+    currentTroopId=troopId;
+    portalLaunch=!!options.portal;
+    currentTroopName=troop.name||(inEn()?`Troop ${troopId}`:`第${troopId}旅`);
+    document.getElementById('loginTroopInfo').textContent=`📍 ${currentTroopName} (ID: ${currentTroopId})${options.portal?' - Portal':''}`;
     document.getElementById('homePage').style.display='none';
     document.getElementById('loginPage').style.display='block';
     document.getElementById('loginMsg').className='login-msg';
-    document.getElementById('loginId').value=''; document.getElementById('loginPassword').value='';
-    switchLoginType('member');
-  }catch(e){ console.error(e); showToast(t('troop_pick_fail'),'error'); }
+    document.getElementById('loginId').value=options.loginId||'';
+    document.getElementById('loginPassword').value='';
+    switchLoginType(options.loginType||'member');
+  }catch(e){
+    console.warn('troop selection failed');
+    showToast(t('troop_pick_fail'),'error');
+    if(options&&options.portal) loadTroops();
+  }
 }
 function switchLoginType(tp){
   loginType=tp;
@@ -1843,7 +1723,7 @@ async function doLogin(){
   try{
     const d = await apiRequest('login', { login_id: lid, password: pw }, { troopId: currentTroopId });
     if(d.success){
-      currentUser=d.user; currentToken=d.token;
+      currentUser={...d.user,isPortal:portalLaunch}; currentToken=d.token;
       if(d.force_change_password){
         const np=prompt(t('login_newpw_prompt'));
         if(!np || np.length<4){ msg.textContent=t('login_newpw_required'); msg.className='login-msg error'; return; }
@@ -1867,19 +1747,20 @@ async function doLogin(){
 }
 function doLogout(){
   localStorage.removeItem(LS.session);
-  currentUser=null; currentToken=''; currentTroopId=''; currentTroopName='';
+  currentUser=null; currentToken=''; currentTroopId=''; currentTroopName=''; portalLaunch=false;
   document.getElementById('mainApp').style.display='none';
   document.getElementById('homePage').style.display='block';
   document.getElementById('saveBar').classList.remove('visible');
   pendingChanges=[];
 }
-function checkSavedSession(){
+function checkSavedSession(requiredTroopId){
   const s=localStorage.getItem(LS.session);
   if(!s) return;
   try{
     const ss=JSON.parse(s);
     if(Date.now()-ss.savedAt>30*24*3600000) return;
-    currentTroopId=ss.troopId; currentTroopName=ss.troopName; currentBackend=ss.backend; currentApikey=ss.apikey; currentToken=ss.token; currentUser=ss.user;
+    if(requiredTroopId && ss.troopId!==requiredTroopId) return;
+    currentTroopId=ss.troopId; currentTroopName=ss.troopName; currentToken=ss.token; currentUser=ss.user; portalLaunch=!!(ss.user&&ss.user.isPortal);
     document.getElementById('homePage').style.display='none';
     document.getElementById('mainApp').style.display='block';
     refreshAppTitle();
@@ -1917,7 +1798,7 @@ function getRoleName(r){ const k={'super_admin':'role_super_admin','admin':'role
 function canUserTickRole(role){ return ['admin','group_leader','branch_leader','super_admin'].includes(role); } // 童軍無執委，全部領袖
 
 function canCurrentUserTickItem(itemId){
-  // 超管全部可勾
+  // 系統管理員全部可勾
   if(!currentUser) return false;
   if(currentUser.role==='super_admin') return true;
   // 若沒有 allowed_badges 欄位或為 * 或空且為領袖，默認全部
@@ -3647,11 +3528,11 @@ async function loadUsers(){
     const d = await apiRequest('getAllUsers', { token: currentToken });
     if(d.success){
       d.users=mergeRosterIntoUsers(d.users);
-      // 超管帳號僅超管可見：若非超管，過濾掉 super_admin
+      // 系統管理員帳號僅系統管理員可見：若非系統管理員，過濾掉 super_admin
       if(currentUser.role!=='super_admin'){
-        d.users=d.users.filter(u=>u.role!=='super_admin' && u.ymis!=='sheep');
+        d.users=d.users.filter(u=>u.role!=='super_admin');
       }
-      // 角色說明 + SHEEP 測試工具 - 超管相關僅超管可見
+      // 角色說明 + 系統管理測試工具 - 系統管理員相關僅系統管理員可見
       const isSuper = currentUser && currentUser.role==='super_admin';
       let roleExplain=`<div class="info-section" style="background:var(--blue-light);border-left-color:var(--blue)">
         <h3 style="color:var(--blue)">${t('users_role_title')}</h3>
@@ -4137,7 +4018,6 @@ async function enterDemoMode(demoRole='leader'){
     }
     currentTroopId='DEMO';
     currentTroopName=t('demo_troop_name');
-    currentBackend='';
     const demoMember=mockMembers[0]||{ymis:'1234560001',name:t('demo_member_name')};
     currentUser=demoRole==='member'?{ymis:demoMember.ymis,name:demoMember.name,role:'member',can_tick:false,allowed_badges:'',squad:t('mock_squad'),squad_role:'member'}:{ymis:'DEMO_LEADER', name:t('demo_leader_name'), role:'group_leader', can_tick:true, allowed_badges:'*'};
     currentToken='demo-token';

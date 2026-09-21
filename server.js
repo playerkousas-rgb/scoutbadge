@@ -1,3 +1,5 @@
+'use strict';
+
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -5,7 +7,7 @@ const url = require('url');
 
 const proxyHandler = require('./api/proxy');
 const troopsHandler = require('./api/troops');
-const healthHandler = require('./api/health');
+const verifySuperTicketHandler = require('./api/verify-super-ticket');
 
 const PORT = process.env.PORT || 3000;
 const HOST = '0.0.0.0';
@@ -17,70 +19,54 @@ const MIME_TYPES = {
   '.json': 'application/json; charset=utf-8',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.avif': 'image/avif',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon'
 };
 
+function collectBody(req, done) {
+  let body = '';
+  req.on('data', (chunk) => { body += chunk; });
+  req.on('end', () => {
+    req.body = body;
+    done();
+  });
+}
+
 const server = http.createServer((req, res) => {
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
+  req.query = parsedUrl.query;
 
-  // Route: /api/proxy
   if (pathname === '/api/proxy') {
-    let body = '';
-    req.on('data', chunk => body += chunk);
-    req.on('end', () => {
-      req.body = body;
-      req.query = parsedUrl.query;
-      proxyHandler(req, res);
-    });
-    return;
+    return collectBody(req, () => proxyHandler(req, res));
+  }
+  if (pathname === '/api/troops') return troopsHandler(req, res);
+  if (pathname === '/api/verify-super-ticket') {
+    return collectBody(req, () => verifySuperTicketHandler(req, res));
   }
 
-  // Route: /api/troops
-  if (pathname === '/api/troops') {
-    req.query = parsedUrl.query;
-    troopsHandler(req, res);
-    return;
-  }
-
-  // Route: /api/health - 新增用於排查「找不到82的SHEET」
-  if (pathname === '/api/health') {
-    req.query = parsedUrl.query;
-    healthHandler(req, res);
-    return;
-  }
-
-  // Static files
-  let filePath = path.join(__dirname, pathname === '/' ? 'index.html' : pathname);
-
-  // Security check to prevent path traversal
-  if (!filePath.startsWith(__dirname)) {
+  const filePath = path.resolve(__dirname, pathname === '/' ? 'index.html' : `.${pathname}`);
+  if (!filePath.startsWith(`${__dirname}${path.sep}`) && filePath !== path.join(__dirname, 'index.html')) {
     res.writeHead(403);
-    res.end('Forbidden');
-    return;
+    return res.end('Forbidden');
   }
 
   fs.stat(filePath, (err, stats) => {
     if (err || !stats.isFile()) {
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end('404 Not Found - 若你看到找不到82的SHEET，請檢查 /api/troops 與 /api/health?troopId=0082');
-      return;
+      return res.end('404 Not Found');
     }
-
     const ext = path.extname(filePath).toLowerCase();
-    const contentType = MIME_TYPES[ext] || 'application/octet-stream';
-
     res.writeHead(200, {
-      'Content-Type': contentType,
+      'Content-Type': MIME_TYPES[ext] || 'application/octet-stream',
       'Cache-Control': 'no-cache'
     });
-
     fs.createReadStream(filePath).pipe(res);
   });
 });
 
 server.listen(PORT, HOST, () => {
   console.log(`Development preview server running at http://${HOST}:${PORT}`);
-  console.log(`Health check: http://${HOST}:${PORT}/api/health?troopId=0082`);
 });

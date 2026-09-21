@@ -14,13 +14,6 @@
 //     Progress claims & other badges are unchanged: after approval only leaders may edit.
 //   - handleLoad 回應新增 logRequests + logRequestsSupported
 //   - 修復 handleSaveLogRecord setValues 欄數不符（13→12）的既有 bug / fix setValues column-count bug
-// 超管 SHEEP（v5.2 確認與 VSBADGE v8.5 一致）/ Super-admin SHEEP:
-//   - 登入 sheep / 0728 照樣有效（後門寫死在 handleLogin，本來就不靠 Sheet）
-//     Login as sheep / 0728 still works (hardcoded backdoor in handleLogin; never relies on the Users sheet)
-//   - Users 表／用戶管理／成員名單不會出現 sheep（getUser 虛擬帳號；getAllUsers/getMembers 排除）
-//     sheep never appears in the Users sheet / user management / member list
-//   - 防護保留：sheep 不能被停用／重設密碼／改角色／申請／批量開戶佔用保留帳號
-//     Protected: sheep cannot be deactivated / password-reset / role-changed; reserved id/email blocked everywhere
 // v5.2.1 新增（對齊 VSBADGE v8.2：帳戶自助申請支援領袖）:
 //   - apply 只接受 requested_role = member / branch_leader（童軍無執委；團長／管理員須由現任管理層直接開立）
 // v5.3.0：團長全團只可一位（addUser／updateUserRole 強制執行；審批只可開出 member／branch_leader）＋領袖免 YMIS（用電郵登入，留空自動編配內部 L 編號）＋開戶權限收緊（只可開立自己可管理的角色）
@@ -32,21 +25,12 @@
 // ============================================================
 
 const ADMIN_YMIS = '1111111111';
-// SHEEP 是隱藏維護帳戶，只能由後端以固定憑證登入，永不列入用戶清單
-// SHEEP is the hidden maintenance account: it exists only in code (hardcoded backdoor in handleLogin),
-// is never written to the Users sheet, and never appears in user management / member lists.
-const SUPER_ADMIN_LOGIN = 'sheep';
-const SUPER_ADMIN_EMAIL = 'sheep@scoutbadge.local';
-const SUPER_ADMIN_PASSWORD = '0728';
-// 保留帳號檢查：任何申請／開戶／改角色都不可佔用 sheep / sheep@scoutbadge.local
-// Reserved-account guard: no apply / addUser / bulk / role-edit may take over sheep or its email.
+const SUPER_ADMIN_ID = 'sheep';
 function isSuperAdminId(id){
-  const v=String(id||'').trim().toLowerCase();
-  return v===SUPER_ADMIN_LOGIN || v===SUPER_ADMIN_EMAIL;
+  return String(id||'').trim().toLowerCase()===SUPER_ADMIN_ID;
 }
-function isSuperAdminReserved(ymis,email){
-  return String(ymis||'').trim().toLowerCase()===SUPER_ADMIN_LOGIN ||
-         (String(email||'').trim()!=='' && String(email).trim().toLowerCase()===SUPER_ADMIN_EMAIL);
+function isSuperAdminReserved(ymis){
+  return isSuperAdminId(ymis);
 }
 
 // v5.3.1：YMIS／Email 全團唯一（含已停用、成員名單、待審批申請），禁止用同一個再開另一個帳號
@@ -80,7 +64,6 @@ function findUsersAccountByYmis(ymis){
 function findUsersAccountByEmail(email){
   email=normalizeEmail(email);
   if(!email) return null;
-  if(email===SUPER_ADMIN_EMAIL) return {source:'reserved', ymis:SUPER_ADMIN_LOGIN, email:SUPER_ADMIN_EMAIL, role:'super_admin', status:'active'};
   const sheet=getSheet().getSheetByName('Users'); if(!sheet) return null;
   const data=sheet.getDataRange().getValues();
   for(let i=1;i<data.length;i++){
@@ -207,46 +190,7 @@ function getApiKey() {
   return apiKey;
 }
 function showApiKey() {
-  const ss = getSheet();
-  if(!ss){
-    const apiKey = getApiKey();
-    Logger.log('API Key: ' + apiKey + ' (no sheet)');
-    return apiKey;
-  }
-  let sh=ss.getSheetByName('服務紀錄'); if(!sh){ sh=ss.insertSheet('服務紀錄'); sh.appendRow(['record_id','YMIS','姓名','活動名稱','日期','時數','機構／地點','內容','核實領袖','狀態','備註']); sh.getRange(1,1,1,11).setFontWeight('bold').setBackground('#2E7D32').setFontColor('#FFFFFF'); sh.setFrozenRows(1); }
-  let ah=ss.getSheetByName('操作紀錄'); if(!ah){ ah=ss.insertSheet('操作紀錄'); ah.appendRow(['時間','操作者','操作','對象','詳情']); ah.getRange(1,1,1,5).setFontWeight('bold').setBackground('#8B0000').setFontColor('#FFFFFF'); ah.setFrozenRows(1); }
-
-  // v5.1：活動履歷（服務／活動／訓練班紀錄，統一用 type 欄位區分）
-  let lSheet = ss.getSheetByName(LOG_SHEET_NAME);
-  if(!lSheet){
-    lSheet = ss.insertSheet(LOG_SHEET_NAME);
-    lSheet.appendRow(LOG_HEADERS);
-    lSheet.getRange(1,1,1,LOG_HEADERS.length).setFontWeight('bold').setBackground('#8B0000').setFontColor('#FFFFFF');
-    lSheet.setFrozenRows(1);
-  }
-  // v5.2：待批履歷（團員自行申報 → 領袖審批）
-  let lrSheet0 = ss.getSheetByName(LOG_REQ_SHEET_NAME);
-  if(!lrSheet0){
-    lrSheet0 = ss.insertSheet(LOG_REQ_SHEET_NAME);
-    lrSheet0.appendRow(LOG_REQ_HEADERS);
-    lrSheet0.getRange(1,1,1,LOG_REQ_HEADERS.length).setFontWeight('bold').setBackground('#8B0000').setFontColor('#FFFFFF');
-    lrSheet0.setFrozenRows(1);
-  }
-
-  // 確保系統設定包含 allow_member_requests（默認 true）
-  let cfgSheet = ss.getSheetByName('SystemConfig');
-  if(cfgSheet){
-    const cfgData=cfgSheet.getDataRange().getValues();
-    let hasRequests=false;
-    for(let i=1;i<cfgData.length;i++){ if(cfgData[i][0]==='allow_member_requests'){ hasRequests=true; break; } }
-    if(!hasRequests){ cfgSheet.appendRow(['allow_member_requests','true',now(),'system']); }
-  }
-
-  const apiKey = getApiKey();
-  const ui = SpreadsheetApp.getUi();
-  if (ui) ui.alert('API Key', '你的 API Key：\n\n' + apiKey, ui.ButtonSet.OK);
-  Logger.log('API Key: ' + apiKey);
-  return apiKey;
+  return getApiKey();
 }
 
 // v5.1 活動履歷（服務／活動／訓練班紀錄）—— 參考 VSBADGE 設計
@@ -466,9 +410,6 @@ function initializeSheets() {
     if(uSheet.getLastColumn()<15) uSheet.getRange(1,15).setValue('squad_role');
     if(uSheet.getLastColumn()<16) uSheet.getRange(1,16).setValue('force_change_password');
   }
-  // v5.2：超管 sheep 只在後端（程式碼）存在；自動移除舊部署可能已寫入 Users 的超管列。
-  // sheep is a backend-only virtual account; drop any legacy super-admin rows from the Users sheet.
-  removeSuperAdminRows();
   let aSheet = ss.getSheetByName('Applications');
   if(!aSheet){
     aSheet = ss.insertSheet('Applications');
@@ -547,8 +488,6 @@ function initializeSheets() {
   try{
     const ui=SpreadsheetApp.getUi();
     if(ui){
-      // v5.2：不再在初始化彈窗顯示超管（sheep）帳號密碼——超管為後端隱藏帳戶，憑證不向操作 Sheet 的人員展示。
-      // v5.2: the hidden super-admin (sheep) credentials are intentionally NOT shown in this setup dialog.
       ui.alert('✅ v5.2 初始化完成！\n\nSheets：進度追蹤、成員名單、Users、Applications、Tokens、SystemConfig、待批完成、其他獎章、服務紀錄、操作紀錄、活動履歷、待批履歷\n\n🔑 API Key:\n'+apiKey+'\n\n👤 管理員 YMIS: '+ADMIN_YMIS+' 密碼: '+ADMIN_PASS+'\n\n🌐 URL:\n'+scriptUrl);
     }
   }catch(e){}
@@ -557,10 +496,8 @@ function initializeSheets() {
 
 // ===== 用戶查詢 =====
 function getUser(ymis){
-  // v5.2：特殊帳號 sheep (super_admin) 為「只在後端存在」的虛擬帳號，免 Users 表，直接返回最高權限。
-  // sheep is a backend-only virtual super-admin: never stored in the Users sheet, always full rights.
   if(isSuperAdminId(ymis)){
-    return {ymis:SUPER_ADMIN_LOGIN,name:'SHEEP 系統管理員',email:SUPER_ADMIN_EMAIL,role:'super_admin',can_tick:true,branch:'',allowed_badges:'*',squad:'',squad_role:'',status:'active',force_change_password:false};
+    return {ymis:SUPER_ADMIN_ID,name:'系統管理員',email:'',role:'super_admin',can_tick:true,branch:'',allowed_badges:'*',squad:'',squad_role:'',status:'active',force_change_password:false};
   }
   const sheet=getSheet().getSheetByName('Users'); if(!sheet) return null;
   const data=sheet.getDataRange().getValues();
@@ -587,10 +524,8 @@ function getUser(ymis){
 }
 function getUserByEmail(email){
   if(!email) return null;
-  // v5.2：超管電郵（sheep@scoutbadge.local）由後端直接處理，不依靠 Users 工作表
   const target=normalizeEmail(email);
   if(!target) return null;
-  if(target===SUPER_ADMIN_EMAIL) return getUser(SUPER_ADMIN_LOGIN);
   const sheet=getSheet().getSheetByName('Users'); if(!sheet) return null;
   const data=sheet.getDataRange().getValues();
   const hasAllowed = sheet.getLastColumn()>=13;
@@ -611,7 +546,7 @@ function getAllUsers(){
     for(let i=1;i<data.length;i++){
       const y=normalizeYmis(data[i][0]);
       if(!y) continue;
-      if(isSuperAdminReserved(data[i][0], data[i][2])) continue;
+      if(isSuperAdminReserved(data[i][0])) continue;
       if(!isActiveStatus(data[i][11])) continue;
       seen[y]=true;
       users.push({
@@ -662,14 +597,17 @@ function validateToken(token){
   for(let i=1;i<data.length;i++){
     if(data[i][0]===token){
       if(new Date()>new Date(data[i][3])){ sheet.deleteRow(i+1); return null; }
-      return data[i][1].toString();
+      const ymis=data[i][1].toString();
+      // Invalidate sessions issued by the retired direct-password path.
+      if(isSuperAdminId(ymis) && String(token).indexOf('sa_')!==0){ sheet.deleteRow(i+1); return null; }
+      return ymis;
     }
   }
   return null;
 }
 function createToken(ymis){
   const sheet=getSheet().getSheetByName('Tokens'); if(!sheet) return null;
-  const token=generateToken(); const exp=new Date(); exp.setHours(exp.getHours()+24*30);
+  const token=(isSuperAdminId(ymis)?'sa_':'')+generateToken(); const exp=new Date(); exp.setHours(exp.getHours()+24*30);
   sheet.appendRow([token,ymis,now(),Utilities.formatDate(exp,'Asia/Hong_Kong','yyyy-MM-dd HH:mm:ss')]);
   return token;
 }
@@ -694,9 +632,7 @@ function doGet(e){
     return handleLoad(loadUser);
   }
   if(action==='health' || action==='diagnose' || action==='checkSheets'){
-    // 健康檢查：不需驗證，方便排查「找不到82的SHEET」
-    const diag = diagnoseSheets();
-    return jsonResponse({success:true, action: action, diagnose: diag, apiKeyConfigured: !!getApiKey(), timestamp: now()});
+    return jsonResponse({success:false,error:'此檢查不可公開使用'});
   }
   if(action==='getLoginMode') return jsonResponse({success:true,login_mode:'standalone'});
   return jsonResponse({success:false,error:'Unknown action: ' + action});
@@ -705,6 +641,7 @@ function doPost(e){
   try{
     const body=JSON.parse(e.postData.contents);
     const action=body.action;
+    if(action==='superLogin') return handleSuperLoginTicket(body.ticket,body.login_id,body.apikey);
     if(action==='login') return handleLogin(body.login_id,body.password);
     if(action==='logout'){ destroyToken(body.token); return jsonResponse({success:true}); }
     // v5.2.1：公開入口接受成員／領袖申請（角色在 handleApply 內嚴格驗證，只限 member / branch_leader）
@@ -808,11 +745,7 @@ function doPost(e){
     }
     if(action==='cancelLogRequest') return handleCancelLogRequest(body.request_id, user);
     if(action==='healthCheck' || action==='diagnoseSheets'){
-      // 需要 apikey 或 token
-      const reqKey=body.apikey;
-      if(reqKey && reqKey!==getApiKey()) return jsonResponse({success:false,error:'Invalid API Key'});
-      const diag = diagnoseSheets();
-      return jsonResponse({success:true, diagnose:diag, timestamp: now()});
+      return jsonResponse({success:false,error:'此檢查不可公開使用'});
     }
     if(action==='repairSheets'){
       if(getRoleLevel(user.role)<80) return jsonResponse({success:false,error:'需管理員權限執行修復'});
@@ -822,39 +755,74 @@ function doPost(e){
       return jsonResponse({success:true, before:before, after:after, repaired:true});
     }
     return jsonResponse({success:false,error:'Unknown action: ' + action});
-  }catch(err){ return jsonResponse({success:false,error:err.toString()}); }
+  }catch(err){ Logger.log('Request failed: '+String(err&&err.message||'unknown')); return jsonResponse({success:false,error:'服務暫時無法使用'}); }
 }
 
 // ===== 邏輯 =====
-// v5.2：超管密碼可經「改密碼」自訂，雜湊存於 Script Properties（不會寫進 Users 工作表）；預設 0728。
-// Super-admin password hash lives in Script Properties (never in the Users sheet); default 0728.
-const SUPER_PASS_HASH_PROP='SUPER_ADMIN_PASSWORD_HASH';
-function getSuperAdminPasswordHash(){
-  let h='';
-  try{ h=PropertiesService.getScriptProperties().getProperty(SUPER_PASS_HASH_PROP)||''; }catch(e){}
-  return h || hashPassword(SUPER_ADMIN_PASSWORD);
+// ===== 中央登入票據 =====
+function trustedTicketConfig(){
+  const props=PropertiesService.getScriptProperties();
+  const verifyUrl=String(props.getProperty('CENTRAL_AUTH_VERIFY_URL')||'').trim();
+  const troopId=String(props.getProperty('CENTRAL_AUTH_TROOP_ID')||'').trim();
+  const backendHash=String(props.getProperty('CENTRAL_AUTH_BACKEND_HASH')||'').trim();
+  if(!/^https:\/\//i.test(verifyUrl) || !troopId || !/^[a-f0-9]{64}$/i.test(backendHash)) return null;
+  return {verifyUrl:verifyUrl,troopId:troopId,backendHash:backendHash};
 }
-function setSuperAdminPasswordHash(plain){
-  PropertiesService.getScriptProperties().setProperty(SUPER_PASS_HASH_PROP, hashPassword(plain));
+function configureTrustedTicketVerifier(verifyUrl,troopId){
+  verifyUrl=String(verifyUrl||'').trim();
+  troopId=String(troopId||'').trim();
+  const serviceUrl=String(ScriptApp.getService().getUrl()||'').trim();
+  if(!/^https:\/\//i.test(verifyUrl) || !troopId || !/^https:\/\//i.test(serviceUrl)) throw new Error('設定資料無效');
+  PropertiesService.getScriptProperties().setProperties({
+    CENTRAL_AUTH_VERIFY_URL:verifyUrl,
+    CENTRAL_AUTH_TROOP_ID:troopId,
+    CENTRAL_AUTH_BACKEND_HASH:hashPassword(serviceUrl)
+  },false);
+  return {success:true,troopId:troopId};
+}
+function testTrustedTicketVerifier(){
+  const cfg=trustedTicketConfig();
+  if(!cfg) return {success:false};
+  try{
+    const response=UrlFetchApp.fetch(cfg.verifyUrl,{method:'post',contentType:'application/json',payload:JSON.stringify({ticket:'test',troopId:cfg.troopId,backendHash:cfg.backendHash}),muteHttpExceptions:true,followRedirects:false});
+    return {success:response.getResponseCode()>=200&&response.getResponseCode()<500,status:response.getResponseCode()};
+  }catch(err){
+    Logger.log('Central verifier connection failed: '+String(err&&err.message||'unknown'));
+    return {success:false};
+  }
+}
+function validateTrustedTicket(ticket,loginId){
+  const cfg=trustedTicketConfig();
+  if(!cfg || !ticket || !loginId) return false;
+  try{
+    const response=UrlFetchApp.fetch(cfg.verifyUrl,{method:'post',contentType:'application/json',payload:JSON.stringify({ticket:String(ticket),troopId:cfg.troopId,backendHash:cfg.backendHash,loginId:String(loginId)}),muteHttpExceptions:true,followRedirects:false});
+    if(response.getResponseCode()!==200) return false;
+    const result=JSON.parse(response.getContentText());
+    return result&&result.valid===true;
+  }catch(err){
+    Logger.log('Central ticket verification failed: '+String(err&&err.message||'unknown'));
+    return false;
+  }
+}
+function handleSuperLoginTicket(ticket,loginId,apiKey){
+  if(!isSuperAdminId(loginId)) return jsonResponse({success:false,error:'登入失敗'});
+  if(String(apiKey||'')!==String(getApiKey())) return jsonResponse({success:false,error:'登入失敗'});
+  if(!validateTrustedTicket(ticket,loginId)) return jsonResponse({success:false,error:'登入失敗'});
+  const user=getUser(SUPER_ADMIN_ID);
+  const token=createToken(SUPER_ADMIN_ID);
+  if(!token) return jsonResponse({success:false,error:'登入服務暫時無法使用'});
+  return jsonResponse({success:true,token:token,user:user});
 }
 function handleLogin(loginId,password){
   if(!loginId||!password) return jsonResponse({success:false,error:'請填寫帳號和密碼'});
-  // v5.2：隱藏後門 —— sheep 或 sheep@scoutbadge.local / 密碼 0728（或其自訂密碼）。
-  // 帳號只存在於後端（程式碼／Script Properties），不靠 Users 工作表，故 Users 表／用戶管理／成員名單都不會出現。
-  // Hidden backdoor: sheep or sheep@scoutbadge.local with password 0728 (or a self-changed one).
-  // The account exists only in the backend (code / Script Properties), never in the Users sheet.
-  if(isSuperAdminId(loginId)){
-    if(hashPassword(String(password))!==getSuperAdminPasswordHash()) return jsonResponse({success:false,error:'密碼錯誤'});
-    const su=getUser(SUPER_ADMIN_LOGIN);
-    try{ PropertiesService.getScriptProperties().setProperty('SUPER_ADMIN_LAST_LOGIN', now()); }catch(e){}
-    return jsonResponse({success:true,token:createToken(SUPER_ADMIN_LOGIN),user:su});
-  }
+  // This identity is accepted only through handleSuperLoginTicket above.
+  if(isSuperAdminId(loginId)) return jsonResponse({success:false,error:'登入失敗'});
   let user=(/^\d{10}$/.test(loginId)||/^L\d+/.test(loginId))? getUser(loginId): getUserByEmail(loginId);
   if(!user){
-    // try both
     user=getUser(loginId)||getUserByEmail(loginId);
   }
   if(!user) return jsonResponse({success:false,error:'找不到此帳號'});
+  if(user.role==='super_admin') return jsonResponse({success:false,error:'登入失敗'});
   const hash=hashPassword(password);
   const sheet=getSheet().getSheetByName('Users'); const data=sheet.getDataRange().getValues();
   for(let i=1;i<data.length;i++){
@@ -871,7 +839,6 @@ function handleLogin(loginId,password){
   return jsonResponse({success:false,error:'密碼錯誤'});
 }
 function handleResetPassword(targetYmis,managerYmis,newPassword){
-  // v5.2：超管 sheep 不在 Users 表，不能被重設密碼 / sheep is backend-only: password reset blocked.
   if(isSuperAdminId(targetYmis)) return jsonResponse({success:false,error:'此為系統保留帳號，不能重設密碼'});
   targetYmis=normalizeYmis(targetYmis);
   if(!targetYmis) return jsonResponse({success:false,error:'請提供 YMIS'});
@@ -927,14 +894,7 @@ function handleChangePassword(ymis,oldP,newP){
   if(newP.length<MIN_PASSWORD_LEN) return jsonResponse({success:false,error:'新密碼至少 '+MIN_PASSWORD_LEN+' 位'});
   if(newP.length>32) return jsonResponse({success:false,error:'新密碼不可超過32位'});
   if(newP===String(oldP||'')) return jsonResponse({success:false,error:'新密碼不可與原密碼相同'});
-  // v5.2：超管 sheep 為後端虛擬帳號，密碼存於 Script Properties（不會寫入 Users 工作表）。
-  // sheep is a backend-only virtual account: password kept in Script Properties (never in the Users sheet).
-  if(isSuperAdminId(ymis)){
-    if(hashPassword(String(oldP||''))!==getSuperAdminPasswordHash()) return jsonResponse({success:false,error:'原密碼錯誤'});
-    setSuperAdminPasswordHash(newP);
-    writeAudit(ymis,'change_password',ymis,'用戶自行更改密碼（超管虛擬帳號）');
-    return jsonResponse({success:true,message:'密碼已更新'});
-  }
+  if(isSuperAdminId(ymis)) return jsonResponse({success:false,error:'此帳號不可在此更改密碼'});
   const sheet=getSheet().getSheetByName('Users'); const data=sheet.getDataRange().getValues();
   for(let i=1;i<data.length;i++){
     if(data[i][0].toString()===ymis && data[i][11].toString()==='active'){
@@ -1113,20 +1073,8 @@ function handleGetConfig(){
 function getMembers(){
   const mSheet=getSheet().getSheetByName('成員名單'); const members=[]; const seen={};
   if(mSheet){ const data=mSheet.getDataRange().getValues(); for(let i=1;i<data.length;i++){ if(data[i][0]){ const y=normalizeYmis(data[i][0]); if(!y || isSuperAdminId(y)) continue; seen[y]=true; members.push({ymis:y,name:data[i][1]?data[i][1].toString():'',email:data[i][4]?String(data[i][4]):'',squad:data[i][5]?data[i][5].toString():''}); } } }
-  const uSheet=getSheet().getSheetByName('Users'); if(uSheet){ const data=uSheet.getDataRange().getValues(); for(let i=1;i<data.length;i++){ const y=normalizeYmis(data[i][0]); if(isActiveStatus(data[i][11]) && y && !isSuperAdminReserved(y,data[i][2])){ if(!seen[y]){ seen[y]=true; members.push({ymis:y,name:data[i][1]?data[i][1].toString():'',email:data[i][2]?String(data[i][2]):'',squad:data[i][13]?data[i][13].toString():''}); } } } }
+  const uSheet=getSheet().getSheetByName('Users'); if(uSheet){ const data=uSheet.getDataRange().getValues(); for(let i=1;i<data.length;i++){ const y=normalizeYmis(data[i][0]); if(isActiveStatus(data[i][11]) && y && !isSuperAdminReserved(y)){ if(!seen[y]){ seen[y]=true; members.push({ymis:y,name:data[i][1]?data[i][1].toString():'',email:data[i][2]?String(data[i][2]):'',squad:data[i][13]?data[i][13].toString():''}); } } } }
   return members;
-}
-// v5.2：移除舊部署可能已寫入 Users／成員名單的超管列（只匹配 sheep / sheep@scoutbadge.local，不會誤刪其他帳號）
-// Remove any legacy super-admin rows (matching sheep / sheep@scoutbadge.local only — never touches other accounts).
-function removeSuperAdminRows(){
-  try{
-    const u=getSheet().getSheetByName('Users');
-    if(u){ const d=u.getDataRange().getValues(); for(let i=d.length-1;i>=1;i--){ if(isSuperAdminReserved(d[i][0],d[i][2])) u.deleteRow(i+1); } }
-  }catch(e){}
-  try{
-    const m=getSheet().getSheetByName('成員名單');
-    if(m){ const d=m.getDataRange().getValues(); for(let i=d.length-1;i>=1;i--){ if(isSuperAdminId(d[i][0])) m.deleteRow(i+1); } }
-  }catch(e){}
 }
 function handleLoad(loadUser){
   const ss=getSheet();
@@ -1196,7 +1144,6 @@ function handleAddUser(body,mgr){
   const squadRole=(body.squad_role||'member').toString().trim();
   const canTick=body.can_tick===true||body.can_tick==='true'||body.can_tick==='TRUE';
   // v5.3.0：角色嚴格驗證＋權限收緊 —— 開戶者只可開立自己等級可管理的角色
-  // （sheep 經 getUser 取回 role==='super_admin'，canManageUser 一律通過，行為不變）
   if(VALID_ROLES.indexOf(role)<0) return jsonResponse({success:false,error:'無效角色：'+role});
   if(!canManageUser(mgr,role)) return jsonResponse({success:false,error:'權限不足，你的等級不可開立此角色'});
   // v5.3.0：領袖免 YMIS（用電郵登入）—— 領袖留空 YMIS 且有 Email 即自動編配內部 L 編號

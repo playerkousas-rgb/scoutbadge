@@ -1,6 +1,6 @@
 // v5.2 履歷申報工作流後端測試 / Backend test for the v5.2 activity-log claim workflow.
-// 團員自行申報 → 領袖審批；批後修改需重批；sheep 後門保留但不入 Users 表。
-// Members self-declare → leaders approve; post-approval edits need re-approval; sheep backdoor stays hidden.
+// 團員自行申報 → 領袖審批；批後修改需重批。
+// Members self-declare → leaders approve; post-approval edits need re-approval.
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
@@ -42,6 +42,7 @@ const sheets = {};
 global.__testSheets = sheets;
 function installEnv() {
   const props = {};
+  global.__scriptProperties = props;
   global.SpreadsheetApp = {
     getActiveSpreadsheet(){
       return {
@@ -54,7 +55,8 @@ function installEnv() {
   global.PropertiesService = {
     getScriptProperties(){ return {
       getProperty(k){ return props[k] !== undefined ? props[k] : null; },
-      setProperty(k, v){ props[k] = v; }
+      setProperty(k, v){ props[k] = v; },
+      setProperties(values){ Object.assign(props, values); }
     }; }
   };
   global.Utilities = {
@@ -67,6 +69,7 @@ function installEnv() {
   global.__lastOut = null;
   global.ContentService = { createTextOutput: o => { global.__lastOut = JSON.parse(o); return { _content: o, getContent(){ return this._content; }, setMimeType(){ return this; } }; }, MimeType: { JSON: 'JSON' } };
   global.ScriptApp = { getService(){ return { getUrl(){ return 'https://script.example/exec'; } }; } };
+  global.UrlFetchApp = { fetch(){ throw new Error('not configured in this test'); } };
   global.Logger = { log(){} };
   // hashPassword in Code.gs expects Utilities.computeDigest byte array → hex
   global.Utilities.computeDigest = function(algo, str){
@@ -79,7 +82,7 @@ installEnv();
 // ---------- Load Code.gs into global scope ----------
 const code = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'Code.gs'), 'utf8');
 // run inside this context: define functions globally
-const fn = new Function('global', code + '\n;return {handleLogin, handleRequestLogRecord, handleGetLogRequests, handleReviewLogRequest, handleCancelLogRequest, handleGetLogRecords, handleSaveLogRecord, getMembers, getAllUsers, getUser, getUserByEmail, validateToken, canUserTick, initializeSheets, handleChangePassword, handleResetPassword, handleApply, handleAddUser, handleAddMember, handleReviewApplication, handleBulkAddUsers, uniquenessError, normalizeYmis, doPost, doGet, getLogRequestsList: typeof getLogRequestsList!=="undefined"?getLogRequestsList:null};');
+const fn = new Function('global', code + '\n;return {handleLogin, handleRequestLogRecord, handleGetLogRequests, handleReviewLogRequest, handleCancelLogRequest, handleGetLogRecords, handleSaveLogRecord, getMembers, getAllUsers, getUser, getUserByEmail, validateToken, canUserTick, initializeSheets, handleChangePassword, handleResetPassword, handleApply, handleAddUser, handleAddMember, handleReviewApplication, handleBulkAddUsers, uniquenessError, normalizeYmis, doPost, doGet, getLogRequestsList: typeof getLogRequestsList!=="undefined"?getLogRequestsList:null, getApiKey, handleSuperLoginTicket, handleChangePassword};');
 const api = fn(global);
 
 // ---------- Seed sheets ----------
@@ -231,44 +234,22 @@ const loadRes = (function(){
 })();
 check('load 回應含 logRequestsSupported=true + logRequests', loadRes.logRequestsSupported === true && Array.isArray(loadRes.logRequests), JSON.stringify({s:loadRes.logRequestsSupported, n:(loadRes.logRequests||[]).length}));
 
-console.log('\n【B】sheep 超管：後門照樣有效，但不在 Users 表／名單');
-const su = login('sheep', '0728');
-check('sheep / 0728 登入有效', su.user.role === 'super_admin');
-const su2 = login('sheep@scoutbadge.local', '0728');
-check('sheep@scoutbadge.local / 0728 登入有效（電郵別名）', su2.user.role === 'super_admin');
-const suBad = (function(){ try { return login('sheep', 'wrong'); } catch(e){ return { error: e.message }; } })();
-check('sheep 密碼錯誤被拒', /密碼錯誤|failed/.test(suBad.error || ''));
-check('getAllUsers() 不含 sheep', api.getAllUsers().every(u => u.ymis !== 'sheep'));
-check('getMembers() 不含 sheep', api.getMembers().every(m => m.ymis !== 'sheep'));
-// guards
-// handleApply: 'sheep' fails the 10-digit YMIS format first; the reserved-account guard also blocks email alias.
-const gApplyEmail = out(api.handleApply('1234569999', 'Sheep', 'sheep@scoutbadge.local', 'branch_leader', 'b4'));
-check('apply 不可佔用 sheep 電郵保留帳號', gApplyEmail.success === false && /保留/.test(gApplyEmail.error || ''), gApplyEmail.error);
-// addUser with ymis=sheep is blocked by 10-digit rule; email alias guard:
-const gAddUser = call('addUser', { token: leader.token, ymis: '1234560099', name: 'Sheep2', email: 'sheep@scoutbadge.local', role: 'member' });
-check('addUser 不可佔用 sheep 保留電郵', gAddUser.success === false && /保留/.test(gAddUser.error || ''), gAddUser.error);
-const gReset = call('resetPassword', { token: leader.token, target_ymis: 'sheep' });
-check('resetPassword 不能重設 sheep', gReset.success === false && /保留/.test(gReset.error || ''), gReset.error);
-const gDeact = call('deactivateUser', { token: leader.token, target_ymis: 'sheep' });
-check('deactivateUser 不能停用 sheep', gDeact.success === false && /維護|保留/.test(gDeact.error || ''), gDeact.error);
-// sheep can change own password via Script Properties
-const cp = call('changePassword', { token: su.token, old_password: '0728', new_password: 'newpass99' });
-check('sheep 可自助改密碼（Script Properties）', cp.success === true, JSON.stringify(cp));
-const su3 = login('sheep', 'newpass99');
-check('sheep 用新密碼登入有效', su3.user.role === 'super_admin');
-const suOld = (function(){ try { return login('sheep', '0728'); } catch(e){ return null; } })();
-check('舊密碼 0728 已失效', suOld === null);
-// restore password for idempotent re-runs
-call('changePassword', { token: su3.token, old_password: 'newpass99', new_password: '0728' });
-
-console.log('\n【C】initializeSheets() 補建「待批履歷」且清除舊 sheep 列');
-// simulate legacy deployment with a sheep row in Users
-sheets['Users']._data.push(['sheep','SHEEP 系統管理員','sheep@scoutbadge.local','super_admin','x','b4',true,'','','','','active','*','','member',false]);
-check('舊 Users 表含 sheep 列（測試前置）', sheets['Users']._data.some(r => r[0] === 'sheep'));
-api.initializeSheets();
-check('initializeSheets 後 Users 不再含 sheep', !sheets['待批履歷'] ? false : sheets['Users']._data.every(r => r[0] !== 'sheep' && r[2] !== 'sheep@scoutbadge.local'));
-check('initializeSheets 補建「待批履歷」工作表', !!sheets['待批履歷']);
-
+console.log('\n【B】中央票據登入：GAS 不接受舊密碼入口');
+const centralIdMatch=code.match(/const SUPER_ADMIN_ID = '([^']+)'/);
+const centralId=centralIdMatch&&centralIdMatch[1];
+const directCentral=out(api.handleLogin(centralId,'not-used'));
+check('中央身份不能直接以 GAS 密碼入口登入', directCentral.success===false && /登入/.test(directCentral.error||''), JSON.stringify(directCentral));
+global.__scriptProperties.CENTRAL_AUTH_VERIFY_URL='https://verifier.example.test/api/verify-super-ticket';
+global.__scriptProperties.CENTRAL_AUTH_TROOP_ID='0082';
+global.__scriptProperties.CENTRAL_AUTH_BACKEND_HASH='a'.repeat(64);
+global.UrlFetchApp={fetch(){ return {getResponseCode(){return 200;},getContentText(){return JSON.stringify({valid:true});}}; }};
+const ticketLogin=out(api.handleSuperLoginTicket('opaque-ticket',centralId,api.getApiKey()));
+check('驗票成功才建立中央 session', ticketLogin.success===true && ticketLogin.user.role==='super_admin' && !!ticketLogin.token, JSON.stringify(ticketLogin));
+check('新中央 session 使用受限 token 格式', String(ticketLogin.token||'').startsWith('sa_') && api.validateToken(ticketLogin.token)===centralId, JSON.stringify(ticketLogin));
+sheets['Tokens'].appendRow(['legacy-central-token',centralId,'','2999-01-01']);
+check('舊 GAS 直接登入遺留 token 被撤銷', api.validateToken('legacy-central-token')===null);
+const changeCentral=out(api.handleChangePassword(centralId,'old','new1'));
+check('中央身份不能在 GAS 修改密碼', changeCentral.success===false, JSON.stringify(changeCentral));
 
 console.log('\n【D】v5.3.1 YMIS／Email 唯一 + 用戶管理列出成員名單');
 seed();
@@ -310,7 +291,6 @@ sheets['成員名單'].appendRow(['1234563333','名單only','2026-01-01','b4','r
 const allU = api.getAllUsers();
 const rosterOnly = allU.find(u => u.ymis === '1234563333');
 check('getAllUsers 列出成員名單-only 團員', !!rosterOnly && rosterOnly.roster_only === true && rosterOnly.name === '名單only', JSON.stringify(rosterOnly));
-check('getAllUsers 不含 sheep', allU.every(u => u.ymis !== 'sheep'));
 
 const addMemDup = out(api.handleAddMember('1234560001', '重覆加入', '紅隊', 'member'));
 check('addMember 不可重用已有 YMIS', addMemDup.success === false, addMemDup.error);
