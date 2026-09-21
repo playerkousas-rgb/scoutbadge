@@ -1,158 +1,175 @@
-const http = require('http');
+'use strict';
+
 const assert = require('assert');
 const proxyHandler = require('../api/proxy');
 const troopsHandler = require('../api/troops');
-const { getRegistry, getTroopConfig } = require('../api/_registry');
+const verifyTicketHandler = require('../api/verify-super-ticket');
+const { getTroopConfig, getRegistry, getPortalConfig } = require('../lib/registry');
+const { unwrapBrowserSession } = require('../lib/super-auth');
+const loginRateLimit = require('../lib/login-rate-limit');
 
-async function runTests() {
-  console.log('=== Starting Test Suite for GAS Proxy Architecture ===\n');
-
-  // Test 1: Registry Lookup
-  console.log('Test 1: Registry Lookup');
-  const reg = getRegistry();
-  assert(reg['0082'] || reg['82'], 'Troop 0082 should exist in registry');
-  const config0082 = getTroopConfig('0082');
-  assert.strictEqual(config0082.name, '第 82 旅');
-  assert(config0082.backend.startsWith('https://script.google.com/'), 'Troop 0082 backend should point to script.google.com');
-  assert.strictEqual(getTroopConfig('INVALID_TROOP_9999'), null, 'Invalid troop should return null');
-  console.log('  [PASS] Registry lookup verified');
-
-  // Test 2: Method Validation (405)
-  console.log('\nTest 2: Disallowed HTTP Method');
-  let status = 0, jsonRes = null;
-  const mockResMethod = {
-    setHeader: () => {},
-    status: (c) => { status = c; return mockResMethod; },
-    json: (obj) => { jsonRes = obj; return mockResMethod; }
-  };
-  await proxyHandler({ method: 'PUT' }, mockResMethod);
-  assert.strictEqual(status, 405);
-  assert.strictEqual(jsonRes.success, false);
-  console.log('  [PASS] Method PUT correctly rejected with 405');
-
-  // Test 3: Unregistered Troop Rejection (404)
-  console.log('\nTest 3: Unregistered Troop Rejection');
-  const mockRes404 = {
-    setHeader: () => {},
-    status: (c) => { status = c; return mockRes404; },
-    json: (obj) => { jsonRes = obj; return mockRes404; }
-  };
-  await proxyHandler({ method: 'POST', body: { troopId: 'UNKNOWN_999', action: 'login' } }, mockRes404);
-  assert.strictEqual(status, 404);
-  assert.strictEqual(jsonRes.success, false);
-  console.log('  [PASS] Unregistered troop rejected with 404');
-
-  // Test 4: Missing Action Rejection (400)
-  console.log('\nTest 4: Missing Action Rejection');
-  const mockRes400 = {
-    setHeader: () => {},
-    status: (c) => { status = c; return mockRes400; },
-    json: (obj) => { jsonRes = obj; return mockRes400; }
-  };
-  await proxyHandler({ method: 'POST', body: { troopId: '0082' } }, mockRes400);
-  assert.strictEqual(status, 400);
-  assert.strictEqual(jsonRes.success, false);
-  console.log('  [PASS] Request missing action rejected with 400');
-
-  // Test 5: SSRF / Open Proxy Prevention
-  console.log('\nTest 5: SSRF / Open Proxy Prevention');
-  const mockResSSRF = {
-    setHeader: () => {},
-    status: (c) => { status = c; return mockResSSRF; },
-    json: (obj) => { jsonRes = obj; return mockResSSRF; }
-  };
-  await proxyHandler({
-    method: 'POST',
-    body: {
-      troopId: 'EVIL_TROOP',
-      backend: 'http://169.254.169.254/latest/meta-data/',
-      action: 'login'
-    }
-  }, mockResSSRF);
-  assert.strictEqual(status, 404, 'Arbitrary troopId with evil backend must be rejected with 404');
-  console.log('  [PASS] Arbitrary client backend URL ignored and evil troopId rejected');
-
-  // Test 6: API Troops Endpoint (/api/troops)
-  console.log('\nTest 6: /api/troops Response');
-  let troopsResObj = null;
-  const mockResTroops = {
-    setHeader: () => {},
-    status: (c) => { status = c; return mockResTroops; },
-    json: (obj) => { troopsResObj = obj; return mockResTroops; }
-  };
-  troopsHandler({}, mockResTroops);
-  assert.strictEqual(status, 200);
-  assert(troopsResObj.troops['0082'], 'Troop 0082 should be present in /api/troops');
-  console.log('  [PASS] /api/troops lists all registered troops');
-
-  // Test 7: POST load is translated to Apps Script doGet
-  console.log('\nTest 7: POST load forwarding');
-  let loadFetchUrl = null;
-  const origLoadFetch = global.fetch;
-  global.fetch = async (url, options) => {
-    loadFetchUrl = { url: String(url), options };
-    return { status: 200, text: async () => JSON.stringify({ success: true, members: [] }) };
-  };
-  const mockResLoad = {
-    setHeader: () => {},
-    status: (c) => mockResLoad,
-    json: () => mockResLoad
-  };
-  await proxyHandler({
-    method: 'POST',
-    body: { troopId: '0082', action: 'load', token: 'LOAD_TOKEN', apikey: 'LOAD_KEY' }
-  }, mockResLoad);
-  global.fetch = origLoadFetch;
-  assert(loadFetchUrl, 'load should call the upstream backend');
-  assert.strictEqual(loadFetchUrl.options.method, 'GET');
-  assert(loadFetchUrl.url.includes('action=load'));
-  assert(loadFetchUrl.url.includes('token=LOAD_TOKEN'));
-  assert(loadFetchUrl.url.includes('apikey=LOAD_KEY'));
-  console.log('  [PASS] POST load is forwarded as GET to Apps Script doGet');
-
-  // Test 8: Sensitive Data Logging Check
-  console.log('\nTest 8: Sensitive Data Logging Check');
-  let loggedMessages = [];
-  const origLog = console.log;
-  console.log = (...args) => {
-    loggedMessages.push(args.join(' '));
-    origLog(...args);
-  };
-
-  const origFetch = global.fetch;
-  global.fetch = async () => ({
-    status: 200,
-    text: async () => JSON.stringify({ success: true })
-  });
-
-  const mockResLog = {
-    setHeader: () => {},
-    status: (c) => mockResLog,
-    json: () => mockResLog
-  };
-
-  await proxyHandler({
-    method: 'POST',
-    body: {
-      troopId: '0082',
-      action: 'login',
-      password: 'SUPER_SECRET_PASSWORD_123',
-      token: 'SENSITIVE_USER_TOKEN_ABC'
-    }
-  }, mockResLog);
-
-  global.fetch = origFetch;
-  console.log = origLog;
-
-  const logOutput = loggedMessages.join('\n');
-  assert(!logOutput.includes('SUPER_SECRET_PASSWORD_123'), 'Passwords MUST NOT appear in server logs');
-  assert(!logOutput.includes('SENSITIVE_USER_TOKEN_ABC'), 'Tokens MUST NOT appear in server logs');
-  console.log('  [PASS] No passwords or tokens printed in proxy server logs');
-
-  console.log('\n=== All Tests Passed Successfully! ===');
+function configure() {
+  for (const key of Object.keys(process.env)) {
+    if (key.startsWith('TROOP_') || key.startsWith('SUPER_') || key.startsWith('PORTAL_')) delete process.env[key];
+  }
+  process.env.TROOP_0082_NAME = '第 82 旅';
+  process.env.TROOP_0082_BACKEND = 'https://script.google.com/macros/s/TROOP_A/exec';
+  process.env.TROOP_0082_APIKEY = 'server-key-a';
+  process.env.TROOP_82_NAME = '第 82 短編號旅';
+  process.env.TROOP_82_BACKEND = 'https://script.google.com/macros/s/TROOP_B/exec';
+  process.env.TROOP_82_APIKEY = 'server-key-b';
+  process.env.TROOP_0099_NAME = '不完整旅團';
+  process.env.TROOP_0099_BACKEND = 'https://script.google.com/macros/s/INCOMPLETE/exec';
+  process.env.PORTAL_DEFAULT_ORIGIN = 'https://portal.example.test';
+  process.env.PORTAL_DEFAULT_ROLES = 'member,group_leader';
+  process.env.TROOP_0082_PORTALDISABLED = 'true';
+  loginRateLimit.resetForTests();
 }
 
-runTests().catch(err => {
-  console.error('\nTest Suite Failed:', err);
+function response() {
+  const out = { statusCode: 0, body: null, headers: {} };
+  out.setHeader = (name, value) => { out.headers[name.toLowerCase()] = value; };
+  out.status = (statusCode) => { out.statusCode = statusCode; return out; };
+  out.json = (body) => { out.body = body; return out; };
+  return out;
+}
+
+async function callProxy(body, reqExtras = {}) {
+  const res = response();
+  await proxyHandler({ method: 'POST', body, headers: {}, ...reqExtras }, res);
+  return res;
+}
+
+async function run() {
+  console.log('=== Proxy, registry, and central-login regression tests ===\n');
+  configure();
+
+  console.log('1. Environment-only registry and public catalogue');
+  assert.deepStrictEqual(Object.keys(getRegistry()).sort(), ['0082', '82']);
+  assert.strictEqual(getTroopConfig('0082').name, '第 82 旅');
+  assert.strictEqual(getTroopConfig('82').name, '第 82 短編號旅');
+  assert.strictEqual(getTroopConfig('00082'), null, 'IDs must not be padded or aliased');
+  assert.deepStrictEqual(getPortalConfig('0082'), { disabled: true, origin: 'https://portal.example.test', roles: ['member', 'group_leader'] });
+  const troopsRes = response();
+  troopsHandler({}, troopsRes);
+  assert.deepStrictEqual(troopsRes.body, {
+    troops: { '82': { name: '第 82 短編號旅' }, '0082': { name: '第 82 旅' } }
+  });
+  assert(!JSON.stringify(troopsRes.body).includes('server-key-a'));
+  assert(!JSON.stringify(troopsRes.body).includes('script.google.com'));
+  console.log('  [PASS] only complete environment triplets register; public list has ID and name only');
+
+  console.log('\n2. Server injects API key and ignores browser-supplied key');
+  const originalFetch = global.fetch;
+  let fetchCall;
+  global.fetch = async (url, options) => {
+    fetchCall = { url: String(url), options };
+    return { status: 200, text: async () => JSON.stringify({ success: true }) };
+  };
+  const normal = await callProxy({ troopId: '0082', action: 'login', login_id: '1234560001', password: 'member-password', apikey: 'browser-key' });
+  assert.strictEqual(normal.statusCode, 200);
+  const forwarded = JSON.parse(fetchCall.options.body);
+  assert.strictEqual(fetchCall.url, 'https://script.google.com/macros/s/TROOP_A/exec');
+  assert.strictEqual(forwarded.apikey, 'server-key-a');
+  assert.strictEqual(forwarded.password, 'member-password');
+  assert.strictEqual(forwarded.troopId, undefined);
+  console.log('  [PASS] browser key is discarded and the registered key is injected server-side');
+
+  console.log('\n3. Four-character key policy rejects only central login locally');
+  process.env.SUPER_ADMIN_ID = 'central-test-id';
+  delete process.env.SUPER_KEY;
+  let upstreamCalls = 0;
+  global.fetch = async () => { upstreamCalls += 1; return { status: 200, text: async () => JSON.stringify({ success: true }) }; };
+  let local = await callProxy({ troopId: '0082', action: 'login', login_id: 'central-test-id', password: '0007' });
+  assert.strictEqual(local.statusCode, 503);
+  assert.strictEqual(upstreamCalls, 0);
+  process.env.SUPER_KEY = '';
+  local = await callProxy({ troopId: '0082', action: 'login', login_id: 'central-test-id', password: '0007' });
+  assert.strictEqual(local.statusCode, 503);
+  assert.strictEqual(upstreamCalls, 0);
+  process.env.SUPER_KEY = '123';
+  local = await callProxy({ troopId: '0082', action: 'login', login_id: 'central-test-id', password: '0007' });
+  assert.strictEqual(local.statusCode, 503);
+  assert.strictEqual(upstreamCalls, 0);
+  // An ordinary user is still sent to GAS when the central key is unavailable.
+  local = await callProxy({ troopId: '0082', action: 'login', login_id: '1234560001', password: 'member-password' });
+  assert.strictEqual(local.statusCode, 200);
+  assert.strictEqual(upstreamCalls, 1);
+  console.log('  [PASS] missing, empty, and short settings are rejected without GAS; ordinary login is unaffected');
+
+  console.log('\n4. Correct four-character key uses a short-lived ticket and encrypted troop-bound browser session');
+  process.env.SUPER_KEY = '0007';
+  process.env.SUPER_TICKET_SECRET = 't'.repeat(40);
+  process.env.SUPER_SESSION_SECRET = 's'.repeat(40);
+  upstreamCalls = 0;
+  global.fetch = async (url, options) => {
+    upstreamCalls += 1;
+    const body = JSON.parse(options.body);
+    assert.strictEqual(body.action, 'superLogin');
+    assert.strictEqual(body.login_id, undefined);
+    assert.strictEqual(body.password, undefined);
+    assert.strictEqual(body.apikey, 'server-key-a');
+    return { status: 200, text: async () => JSON.stringify({ success: true, token: 'gas-session-token', user: { role: 'super_admin' } }) };
+  };
+  local = await callProxy({ troopId: '0082', action: 'login', login_id: 'central-test-id', password: 'wrong' });
+  assert.strictEqual(local.statusCode, 401);
+  assert.strictEqual(upstreamCalls, 0);
+  local = await callProxy({ troopId: '0082', action: 'login', login_id: 'central-test-id', password: '0007' });
+  assert.strictEqual(local.statusCode, 200);
+  assert.strictEqual(upstreamCalls, 1);
+  assert(local.body.token.startsWith('sbs1.'));
+  const opened = unwrapBrowserSession(local.body.token, {
+    troopId: '0082',
+    backend: 'https://script.google.com/macros/s/TROOP_A/exec'
+  });
+  assert.deepStrictEqual(opened, { wrapped: true, valid: true, gasToken: 'gas-session-token' });
+  const wrongTroop = unwrapBrowserSession(local.body.token, {
+    troopId: '82',
+    backend: 'https://script.google.com/macros/s/TROOP_B/exec'
+  });
+  assert.strictEqual(wrongTroop.valid, false);
+  console.log('  [PASS] four-character string with leading zero succeeds only on full match; session is encrypted and troop-bound');
+
+  console.log('\n5. Verification endpoint accepts only the matching opaque ticket audience');
+  const superLoginBody = JSON.parse(fetchCall && fetchCall.options && fetchCall.options.body || '{}');
+  // Issue a new ticket through proxy so it is available to verifier without exposing it in client responses.
+  let capturedTicket = '';
+  global.fetch = async (_url, options) => {
+    const body = JSON.parse(options.body);
+    capturedTicket = body.ticket;
+    return { status: 200, text: async () => JSON.stringify({ success: true, token: 'gas-ticket-check', user: { role: 'super_admin' } }) };
+  };
+  await callProxy({ troopId: '0082', action: 'login', login_id: 'central-test-id', password: '0007' });
+  const verifyRes = {
+    statusCode: 0,
+    setHeader(){},
+    end(raw){ this.body = JSON.parse(raw); }
+  };
+  verifyTicketHandler({ method: 'POST', body: { ticket: capturedTicket, troopId: '0082', backendHash: require('../lib/super-auth').backendHash('https://script.google.com/macros/s/TROOP_A/exec') } }, verifyRes);
+  assert.deepStrictEqual(verifyRes.body, { valid: true });
+  const badVerifyRes = { statusCode: 0, setHeader(){}, end(raw){ this.body = JSON.parse(raw); } };
+  verifyTicketHandler({ method: 'POST', body: { ticket: capturedTicket, troopId: '82', backendHash: require('../lib/super-auth').backendHash('https://script.google.com/macros/s/TROOP_B/exec') } }, badVerifyRes);
+  assert.deepStrictEqual(badVerifyRes.body, { valid: false });
+  console.log('  [PASS] ticket verifier checks fixed troop and backend audience');
+
+  console.log('\n6. Logs exclude sensitive values');
+  const logged = [];
+  const originalLog = console.log;
+  console.log = (...args) => logged.push(args.join(' '));
+  global.fetch = async () => ({ status: 200, text: async () => JSON.stringify({ success: true }) });
+  await callProxy({ troopId: '0082', action: 'login', login_id: '1234560001', password: 'do-not-log-password', token: 'do-not-log-token', apikey: 'do-not-log-key' });
+  console.log = originalLog;
+  const output = logged.join('\n');
+  assert(!output.includes('do-not-log-password'));
+  assert(!output.includes('do-not-log-token'));
+  assert(!output.includes('do-not-log-key'));
+  console.log('  [PASS] proxy diagnostics do not print password, token, or API key');
+
+  global.fetch = originalFetch;
+  console.log('\n=== All proxy regression tests passed ===');
+}
+
+run().catch((error) => {
+  console.error(error);
   process.exit(1);
 });

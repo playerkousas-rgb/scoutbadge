@@ -1,151 +1,94 @@
+'use strict';
+
 const assert = require('assert');
 const proxyHandler = require('../api/proxy');
-const { getRegistry } = require('../api/_registry');
+const { createBrowserSession } = require('../lib/super-auth');
 
-async function testPipeline() {
-  console.log('=== Starting Multi-Troop Isolation and Upstream Error Test ===\n');
-
-  // Save original fetch
-  const originalFetch = global.fetch;
-
-  let capturedCalls = [];
-
-  // Mock global.fetch to intercept calls from proxyHandler
-  global.fetch = async (url, options) => {
-    capturedCalls.push({ url, options });
-
-    if (url.includes('TROOP_A_GAS')) {
-      return {
-        status: 200,
-        text: async () => JSON.stringify({
-          success: true,
-          troop: 'A',
-          data: { members: [{ ymis: '1000000001', name: 'Troop A Scout' }] }
-        })
-      };
-    }
-
-    if (url.includes('TROOP_B_GAS')) {
-      return {
-        status: 200,
-        text: async () => JSON.stringify({
-          success: true,
-          troop: 'B',
-          data: { members: [{ ymis: '2000000002', name: 'Troop B Scout' }] }
-        })
-      };
-    }
-
-    if (url.includes('HTML_ERROR_GAS')) {
-      return {
-        status: 500,
-        text: async () => '<html><body><h1>500 Internal Server Error</h1></body></html>'
-      };
-    }
-
-    if (url.includes('TIMEOUT_GAS')) {
-      const err = new Error('The operation was aborted');
-      err.name = 'AbortError';
-      throw err;
-    }
-
-    return {
-      status: 200,
-      text: async () => JSON.stringify({ success: true })
-    };
-  };
-
-  // Configure environment variables for Troop A (0082) and Troop B (0083)
-  process.env.TROOP_0082_BACKEND = 'https://script.google.com/macros/s/TROOP_A_GAS/exec';
-  process.env.TROOP_0083_BACKEND = 'https://script.google.com/macros/s/TROOP_B_GAS/exec';
-  process.env.TROOP_0084_BACKEND = 'https://script.google.com/macros/s/HTML_ERROR_GAS/exec';
-  process.env.TROOP_0085_BACKEND = 'https://script.google.com/macros/s/TIMEOUT_GAS/exec';
-
-  // 1. Test Troop A request
-  console.log('Test 1: Troop A Request Routing');
-  let statusA = 0, jsonA = null;
-  const resA = {
-    setHeader: () => {},
-    status: (code) => { statusA = code; return resA; },
-    json: (obj) => { jsonA = obj; return resA; }
-  };
-
-  await proxyHandler({
-    method: 'POST',
-    body: { troopId: '0082', action: 'load', token: 'token_troop_a' }
-  }, resA);
-
-  assert.strictEqual(statusA, 200);
-  assert.strictEqual(jsonA.troop, 'A');
-  assert.strictEqual(jsonA.data.members[0].name, 'Troop A Scout');
-  assert(capturedCalls[capturedCalls.length - 1].url.includes('TROOP_A_GAS'), 'Request for Troop A must hit Troop A GAS URL');
-  console.log('  [PASS] Troop A request correctly routed to Troop A GAS');
-
-  // 2. Test Troop B request
-  console.log('\nTest 2: Troop B Request Routing');
-  let statusB = 0, jsonB = null;
-  const resB = {
-    setHeader: () => {},
-    status: (code) => { statusB = code; return resB; },
-    json: (obj) => { jsonB = obj; return resB; }
-  };
-
-  await proxyHandler({
-    method: 'POST',
-    body: { troopId: '0083', action: 'load', token: 'token_troop_b' }
-  }, resB);
-
-  assert.strictEqual(statusB, 200);
-  assert.strictEqual(jsonB.troop, 'B');
-  assert.strictEqual(jsonB.data.members[0].name, 'Troop B Scout');
-  assert(capturedCalls[capturedCalls.length - 1].url.includes('TROOP_B_GAS'), 'Request for Troop B must hit Troop B GAS URL');
-  console.log('  [PASS] Troop B request correctly routed to Troop B GAS');
-
-  // 3. Test Non-JSON Upstream Error (HTML error page from GAS)
-  console.log('\nTest 3: Non-JSON Upstream Response (502)');
-  let statusErr = 0, jsonErr = null;
-  const resErr = {
-    setHeader: () => {},
-    status: (code) => { statusErr = code; return resErr; },
-    json: (obj) => { jsonErr = obj; return resErr; }
-  };
-
-  await proxyHandler({
-    method: 'POST',
-    body: { troopId: '0084', action: 'login' }
-  }, resErr);
-
-  assert.strictEqual(statusErr, 502);
-  assert.strictEqual(jsonErr.success, false);
-  assert(jsonErr.error.includes('GAS Upstream Error'), 'Upstream HTML response should be converted to clean 502 JSON error');
-  console.log('  [PASS] Non-JSON HTML response handled gracefully with HTTP 502');
-
-  // 4. Test Upstream Timeout (504)
-  console.log('\nTest 4: Upstream Timeout Handling (504)');
-  let statusTime = 0, jsonTime = null;
-  const resTime = {
-    setHeader: () => {},
-    status: (code) => { statusTime = code; return resTime; },
-    json: (obj) => { jsonTime = obj; return resTime; }
-  };
-
-  await proxyHandler({
-    method: 'POST',
-    body: { troopId: '0085', action: 'save' }
-  }, resTime);
-
-  assert.strictEqual(statusTime, 504);
-  assert.strictEqual(jsonTime.success, false);
-  assert(jsonTime.error.includes('Timeout'), 'Timeout should be converted to clean 504 JSON error');
-  console.log('  [PASS] Upstream timeout handled gracefully with HTTP 504');
-
-  // Restore original fetch
-  global.fetch = originalFetch;
-
-  console.log('\n=== Multi-Troop Isolation and Upstream Error Tests Passed! ===');
+function env(id, suffix, key) {
+  process.env[`TROOP_${id}_NAME`] = `Troop ${id}`;
+  process.env[`TROOP_${id}_BACKEND`] = `https://script.google.com/macros/s/${suffix}/exec`;
+  process.env[`TROOP_${id}_APIKEY`] = key;
 }
 
-testPipeline().catch(err => {
-  console.error('Test Pipeline Failed:', err);
+function response() {
+  const res = { statusCode: 0, body: null };
+  res.setHeader = () => {};
+  res.status = (code) => { res.statusCode = code; return res; };
+  res.json = (body) => { res.body = body; return res; };
+  return res;
+}
+
+async function invoke(body) {
+  const res = response();
+  await proxyHandler({ method: 'POST', body, headers: {} }, res);
+  return res;
+}
+
+async function run() {
+  console.log('=== Multi-troop isolation and upstream failure tests ===\n');
+  for (const key of Object.keys(process.env)) if (key.startsWith('TROOP_') || key.startsWith('SUPER_')) delete process.env[key];
+  env('0082', 'TROOP_A_GAS', 'key-a');
+  env('82', 'TROOP_B_GAS', 'key-b');
+  env('0084', 'HTML_ERROR_GAS', 'key-html');
+  env('0085', 'TIMEOUT_GAS', 'key-timeout');
+  process.env.SUPER_SESSION_SECRET = 's'.repeat(40);
+
+  const originalFetch = global.fetch;
+  const captured = [];
+  global.fetch = async (url, options) => {
+    captured.push({ url: String(url), options });
+    if (String(url).includes('TROOP_A_GAS')) return { status: 200, text: async () => JSON.stringify({ success: true, troop: 'A' }) };
+    if (String(url).includes('TROOP_B_GAS')) return { status: 200, text: async () => JSON.stringify({ success: true, troop: 'B' }) };
+    if (String(url).includes('HTML_ERROR_GAS')) return { status: 500, text: async () => '<html>upstream failure</html>' };
+    if (String(url).includes('TIMEOUT_GAS')) {
+      const error = new Error('aborted');
+      error.name = 'AbortError';
+      throw error;
+    }
+    throw new Error('unexpected backend');
+  };
+
+  const a = await invoke({ troopId: '0082', action: 'load', token: 'token-a' });
+  assert.strictEqual(a.statusCode, 200);
+  assert.strictEqual(a.body.troop, 'A');
+  assert(captured.at(-1).url.includes('TROOP_A_GAS'));
+  assert(captured.at(-1).url.includes('apikey=key-a'));
+  console.log('  [PASS] 0082 routes only to its configured backend');
+
+  const b = await invoke({ troopId: '82', action: 'load', token: 'token-b' });
+  assert.strictEqual(b.statusCode, 200);
+  assert.strictEqual(b.body.troop, 'B');
+  assert(captured.at(-1).url.includes('TROOP_B_GAS'));
+  assert(captured.at(-1).url.includes('apikey=key-b'));
+  console.log('  [PASS] 82 remains a separate route and does not alias 0082');
+
+  const crossTroopSession = createBrowserSession({
+    gasToken: 'gas-token-for-0082',
+    troopId: '0082',
+    backend: 'https://script.google.com/macros/s/TROOP_A_GAS/exec'
+  });
+  const callsBefore = captured.length;
+  const cross = await invoke({ troopId: '82', action: 'load', token: crossTroopSession });
+  assert.strictEqual(cross.statusCode, 401);
+  assert.strictEqual(captured.length, callsBefore, 'invalid wrapped session must not reach GAS');
+  console.log('  [PASS] central browser sessions cannot cross troop/backend boundaries');
+
+  const html = await invoke({ troopId: '0084', action: 'login', login_id: 'user', password: 'pass' });
+  assert.strictEqual(html.statusCode, 502);
+  assert.strictEqual(html.body.success, false);
+  assert(!html.body.error.includes('upstream failure'));
+  console.log('  [PASS] upstream HTML is converted to a generic response without internals');
+
+  const timeout = await invoke({ troopId: '0085', action: 'save' });
+  assert.strictEqual(timeout.statusCode, 504);
+  assert.strictEqual(timeout.body.success, false);
+  console.log('  [PASS] upstream timeout is handled cleanly');
+
+  global.fetch = originalFetch;
+  console.log('\n=== Multi-troop tests passed ===');
+}
+
+run().catch((error) => {
+  console.error(error);
   process.exit(1);
 });

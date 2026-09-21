@@ -1,0 +1,39 @@
+# Repository and local tooling
+.git
+.github
+.gitignore
+node_modules
+.vercel
+.cache
+.npm
+.yarn
+.pnpm-store
+
+# Tests, reports and local artifacts
+test
+tests
+coverage
+*.log
+*.tmp
+*.temp
+.tmp
+tmp
+temp
+uploads
+backup
+backups
+
+# Source/documentation not needed by the deployed application
+apps-script
+server.js
+README.md
+APP_ADMIN_WORKFLOW.md
+TROOP_ONBOARDING.md
+VERCEL_ENV_SETUP.md
+DEPLOYMENT_HYGIENE.md
+scripts
+
+# Development-only files
+.env
+.env.*
+!.env.example

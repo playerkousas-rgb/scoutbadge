@@ -1,62 +1,39 @@
-# 童軍支部版部署及功能變數
+# Vercel 部署設定
 
-## 1. Google Sheet / Apps Script
+## 必要旅團變數
 
-1. 建立 Google Sheet。
-2. 開啟「擴充功能 → Apps Script」，貼上本專案的 `apps-script/Code.gs`。
-3. 執行 `initializeSheets()` 一次並授權。
-4. 「部署 → 新增部署 → 網頁應用程式」：執行身分選「我」、誰可存取選「所有人」。
-5. 複製 `/exec` URL，填入 `data/troops.json` 的 `backend`。
-6. 在 `Users` 工作表以 `squad` 欄填寫小隊名稱，例如：紅隊、藍隊；在 `成員名單` 工作表以 `小隊` 欄填寫同樣名稱。
-7. SHEEP 維護登入：帳號 `sheep`、密碼 `0728`。此帳號由後端直接處理，不會出現在 Users 清單。
+每個旅團使用以下三個 Vercel Environment Variables：
 
-## 2. Vercel
+| 名稱 | 用途 |
+| --- | --- |
+| `TROOP_0082_NAME` | 旅團清單顯示名稱 |
+| `TROOP_0082_BACKEND` | 既有 Google Apps Script `/exec` URL |
+| `TROOP_0082_APIKEY` | 既有 Apps Script API Key |
 
-本 APP 是靜態前端，Google Sheet URL 可以公開放在 `data/troops.json`；真正的資料權限由 Apps Script token、角色及審批流程保護。
+把 `0082` 換成實際旅團編號。三項缺少任何一項時，該旅團不會出現在清單，也不會被代理路由。編號不正規化：`0082` 與 `82` 是不同登記。
 
-建議在 Vercel Project Settings → Environment Variables 設定：
+不要使用旅團 JSON、前端環境變數或 URL 參數存放後端 URL／API Key。瀏覽器只讀取 `/api/troops` 的名稱與編號，所有業務請求均透過同源 `/api/proxy`，由伺服器加入 API Key。
 
-| 名稱 | 用途 | 建議值 |
-|---|---|---|
-| `SCOUT_SHEET_URL` | 童軍支部 Apps Script `/exec` URL | 你部署後的 URL |
-| `SCOUT_ADMIN_API` | 旅團接入申請管理 Apps Script URL | 管理員 API URL |
-| `SCOUT_TROOP_ID` | 預設旅團 | `0082` |
-| `SCOUT_APP_NAME` | APP 名稱 | `童軍支部進度及行政平台` |
+## Portal 設定
 
-注意：因為 Vercel 靜態頁面不能在瀏覽器直接讀取 server-side Environment Variables，現有前端仍會使用 `data/troops.json` 作為旅團設定來源。若要完全由環境變數注入，需改用 Vercel Serverless API 代理；不要把系統管理密碼或 Google Sheet 私密金鑰放入前端環境變數。
+可保留全域預設值，並可由單一旅團覆蓋：
 
-部署後測試：
+| 名稱 | 用途 |
+| --- | --- |
+| `PORTAL_DEFAULT_ORIGIN` | 共用主系統來源（https origin） |
+| `PORTAL_DEFAULT_ROLES` | 共用角色白名單（逗號分隔） |
+| `TROOP_0082_PORTALORIGIN` | 該旅團覆蓋來源 |
+| `TROOP_0082_PORTALROLES` | 該旅團覆蓋角色白名單 |
+| `TROOP_0082_PORTALDISABLED` | `true` 時停用該旅團 Portal 整合 |
 
-- `/`：登入頁
-- `/?u=0082`：預選第 82 旅
-- 領袖登入後：全團總覽 → 小隊篩選
-- 成員提交完成紀錄後：審批中心 → 批准
-- 表格列印：可選成員及直出興趣章清單
+這些是整合設定，不是身份驗證憑證。來源與角色參數可以保留 Portal 的選團／嵌入流程，但不能單獨建立使用者 session 或取得管理權限。
 
-## 小隊職務
+## 部署與驗證
 
-在 Users 填寫 `squad` 及 `squad_role`。`squad_role` 可填 `隊長`、`副隊長` 或 `member`。
+1. 在 Vercel Production、Preview 所需環境設定完成變數。
+2. 重新部署。
+3. 開啟 `/api/troops`，確認只出現旅團編號與名稱，沒有後端 URL 或 API Key。
+4. 以正常旅團帳號檢查登入、讀取、寫入和審批。
+5. 用 Portal 卡片連結檢查旅團預選與 `embed=1` 顯示；身份仍應由可驗證流程決定。
 
-## 主系統接入（Portal / iframe）
-
-本 APP 保留主系統接入能力。主系統可用 iframe 或連結帶入以下參數：
-
-```text
-/?u=0082&role=member&ymis=1234567890&name=成員姓名&from=portal&embed=1&backend=APPS_SCRIPT_EXEC_URL&apikey=API_KEY&troopName=第82旅
-```
-
-參數說明：
-
-- `u`：旅團編號
-- `role`：主系統已驗證的角色
-- `ymis`：登入者 YMIS
-- `name`：顯示姓名
-- `from=portal`：啟用主系統免登入模式
-- `embed=1`：隱藏獨立登入及頁尾，適合 iframe
-- `backend`：該旅團 Apps Script `/exec`
-- `apikey`：該旅團後端 API Key
-- `troopName`：旅團名稱
-
-主系統負責身份驗證，童軍支部 APP 負責訓練進度、審批、徽章及表格功能。若不傳入 `backend`，APP 會從 `data/troops.json` 按 `u` 查找旅團設定。
-
-注意：主系統不應把 SHEEP 密碼放入 URL；Portal 只傳入已驗證身份及短期使用連結。正式部署建議由主系統後端產生帶身份的短期 token，並限制 iframe 的來源網域。
+既有 Apps Script 升級時，部署同一 Web App 的新版本，以保留 `/exec` URL；不要因這些設定變更而對既有 Sheet 執行初始化。
