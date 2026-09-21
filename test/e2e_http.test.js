@@ -221,10 +221,14 @@ async function run() {
     assert(Array.isArray(users.data.users) && users.data.users.length >= 3);
     ok('leader login + getAllUsers');
 
-    // --- central login bootstrap (leader configures the GAS verifier) ---
+    // --- central login bootstrap ---
+    // The proxy opens the troop itself once the central password matched, so
+    // the SUPER_KEY holder is never blocked behind a leader session they may
+    // not have (a new troop has none).
     const preBootstrap = await proxy(BASE, { troopId: '0082', action: 'login', login_id: 'S1', password: 'test-super-key-42' });
-    assert(preBootstrap.status === 401 && preBootstrap.data.success === false, 'central login must fail before bootstrap');
-    ok('central login fails before the verifier is configured');
+    assert(preBootstrap.status === 200 && preBootstrap.data.success === true, 'central login must self-bootstrap: ' + JSON.stringify(preBootstrap.data));
+    assert(preBootstrap.data.token.startsWith('sbs1.'));
+    ok('central login opens the troop itself before any leader configured it');
 
     const memberConfigure = await proxy(BASE, {
       troopId: '0082', action: 'configureTrustedTicketVerifier',

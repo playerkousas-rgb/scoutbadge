@@ -2,9 +2,10 @@
 
 const { getTroopConfig, isTrustedBackend } = require('../lib/registry');
 const {
-  isCentralLoginCandidate,
+  centralSubject,
   passwordMatches,
   superConfigured,
+  createCentralBootstrap,
   createSuperTicket,
   createBrowserSession,
   unwrapBrowserSession
@@ -60,10 +61,92 @@ function sanitizeForwardPayload(payload, troopConfig) {
   return forward;
 }
 
-function logResult({ troopId, action, status, startedAt, success, central }) {
+function logResult({ troopId, action, status, startedAt, success, central, centralFail }) {
   // Keep diagnostics useful without logging a password, ticket, API key,
   // backend URL, browser token, or request body.
-  console.log(`[proxy] troop=${troopId} action=${action} status=${status} duration=${Date.now() - startedAt}ms success=${success} central=${central}`);
+  console.log(`[proxy] troop=${troopId} action=${action} status=${status} duration=${Date.now() - startedAt}ms success=${success} central=${central}${centralFail ? ` centralFail=${centralFail}` : ''}`);
+}
+
+// A troop backend that predates the central-login contract answers an unknown
+// action. Say what to do instead of echoing the raw upstream text.
+function explainCentralUpstreamFailure(errorText) {
+  if (typeof errorText === 'string' && /Unknown action/i.test(errorText)) {
+    return '旅團後端尚未更新（缺少中央登入 superLogin）：請覆寫 apps-script/Code.gs，並在原有 Web App 部署新版本。';
+  }
+  return errorText;
+}
+
+function isVerifierUnconfigured(result) {
+  return Boolean(result) &&
+    (result.reason === 'central_verifier_not_configured' || result.code === 409);
+}
+
+// Pasting Code.gs into the editor is not enough: the /exec URL keeps serving
+// the version that was deployed. Say that out loud instead of pointing at a
+// leader session the administrator may not have.
+const CENTRAL_BOOTSTRAP_FAIL = '中央登入尚未設定，自動開通又失敗：請喺 Apps Script「部署 → 管理部署作業」為既有 Web App「建立新版本」（覆寫 Code.gs 之後一定要部署新版本，/exec 先行到新 code）；或者以領袖登入 →「成員管理 → 中央登入設定」手動設定。';
+
+// Reads go to Apps Script as a GET with the server-side key on the query
+// string; writes and every other action are POSTed as before.
+async function getUpstream(troopConfig, forwardPayload) {
+  const target = new URL(troopConfig.backend);
+  target.searchParams.set('action', 'load');
+  if (forwardPayload.token) target.searchParams.set('token', forwardPayload.token);
+  // ecportal v4.1.0：家長 sig bearer 可經 GET load 讀自己子女範圍
+  // （exp 係 number，一併 stringify；簽名訊息由 GAS 端還原）
+  for (const field of ['childId', 'sub', 'scope', 'exp', 'sig']) {
+    const v = forwardPayload[field];
+    if (v !== undefined && v !== null && v !== '') {
+      target.searchParams.set(field, String(v));
+    }
+  }
+  target.searchParams.set('apikey', troopConfig.apikey);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+  try {
+    return await fetch(target, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      redirect: 'follow',
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function postUpstream(backend, payload) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+  try {
+    return await fetch(backend, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+      redirect: 'follow',
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+// Where the troop's Apps Script should call back. Prefer the explicit
+// deployment variable; otherwise use the host this request was served from
+// (Vercel routes on Host, so a forged header does not reach this deployment).
+function centralVerifierUrl(req) {
+  const headers = (req && req.headers) || {};
+  const configured = String(process.env.SCOUTBADGE_VERIFY_URL || '').trim();
+  if (configured) return /^https:\/\//i.test(configured) ? configured : '';
+  const host = String(headers['x-forwarded-host'] || headers.host || '')
+    .split(',')[0]
+    .trim();
+  if (!host || !/^[A-Za-z0-9.-]+(:\d+)?$/.test(host)) return '';
+  const loopback = /^(127\.0\.0\.1|localhost)(:|$)/i.test(host);
+  const proto = loopback && process.env.SCOUTBADGE_PROXY_TEST === '1' && process.env.VERCEL !== '1'
+    ? 'http'
+    : 'https';
+  return `${proto}://${host}/api/verify-super-ticket`;
 }
 
 // Fixed server-side destination for the "new troop deployment" registration
@@ -143,6 +226,8 @@ module.exports = async function handler(req, res) {
   let action = '';
   let troopId = '';
   let central = false;
+  let centralSubjectId = null;
+  let centralBootstrapFailed = false;
 
   try {
     const payload = parsePayload(req.body);
@@ -161,30 +246,34 @@ module.exports = async function handler(req, res) {
     const troopConfig = getTroopConfig(troopId);
     if (!troopConfig) return fail(res, 404, '找不到指定旅團');
 
-    central = action === 'login' && isCentralLoginCandidate(payload.login_id);
+    centralSubjectId = action === 'login' ? centralSubject(payload.login_id) : null;
+    central = centralSubjectId !== null;
     let forwardPayload;
 
     if (central) {
-      // A short or missing key is rejected locally. No request reaches GAS.
-      if (!superConfigured()) {
-        return fail(res, 503, '登入服務暫時無法使用，請聯絡管理員');
-      }
       if (!loginRateLimit.allowed(req)) {
         return fail(res, 429, '登入嘗試次數過多，請稍後再試');
       }
+      // A short or missing key is rejected locally. No request reaches GAS.
+      if (!superConfigured()) {
+        logResult({ troopId, action, status: 503, startedAt, success: false, central, centralFail: 'key_unset' });
+        return fail(res, 503, '中央登入尚未設定（Vercel 環境變數 SUPER_KEY 未設定或太短），請聯絡管理員');
+      }
       if (!passwordMatches(payload.password)) {
+        // Only a wrong password is password guessing: count it.
         loginRateLimit.failed(req);
+        logResult({ troopId, action, status: 401, startedAt, success: false, central, centralFail: 'password' });
         return fail(res, 401, '登入失敗');
       }
 
       forwardPayload = {
         action: 'superLogin',
-        login_id: String(payload.login_id || '').trim(),
+        login_id: centralSubjectId,
         ticket: createSuperTicket({
           troopId: troopConfig.id,
           backend: troopConfig.backend,
           apikey: troopConfig.apikey,
-          loginId: payload.login_id
+          loginId: centralSubjectId
         }),
         apikey: troopConfig.apikey
       };
@@ -206,43 +295,11 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
-    let upstream;
-    try {
-      if (action === 'load') {
-        const target = new URL(troopConfig.backend);
-        target.searchParams.set('action', 'load');
-        if (forwardPayload.token) target.searchParams.set('token', forwardPayload.token);
-        // ecportal v4.1.0：家長 sig bearer 可經 GET load 讀自己子女範圍
-        // （exp 係 number，一併 stringify；簽名訊息由 GAS 端還原）
-        for (const field of ['childId', 'sub', 'scope', 'exp', 'sig']) {
-          const v = forwardPayload[field];
-          if (v !== undefined && v !== null && v !== '') {
-            target.searchParams.set(field, String(v));
-          }
-        }
-        target.searchParams.set('apikey', troopConfig.apikey);
-        upstream = await fetch(target, {
-          method: 'GET',
-          headers: { Accept: 'application/json' },
-          redirect: 'follow',
-          signal: controller.signal
-        });
-      } else {
-        upstream = await fetch(troopConfig.backend, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(forwardPayload),
-          redirect: 'follow',
-          signal: controller.signal
-        });
-      }
-    } finally {
-      clearTimeout(timeout);
-    }
+    let upstream = action === 'load'
+      ? await getUpstream(troopConfig, forwardPayload)
+      : await postUpstream(troopConfig.backend, forwardPayload);
 
-    const raw = await upstream.text();
+    let raw = await upstream.text();
     let result;
     try {
       result = JSON.parse(raw);
@@ -251,13 +308,64 @@ module.exports = async function handler(req, res) {
       return fail(res, 502, '後端服務暫時無法使用，請稍後再試');
     }
 
+    // Central login on a troop whose Apps Script has never had its verifier
+    // configured: open it right now, then retry once with the same ticket.
+    // Only reachable after the central password matched, so the SUPER_KEY
+    // holder is never blocked behind a leader session they may not have.
+    if (central && isVerifierUnconfigured(result)) {
+      const verifyUrl = centralVerifierUrl(req);
+      if (verifyUrl) {
+        const configured = await postUpstream(troopConfig.backend, {
+          action: 'configureTrustedTicketVerifier',
+          verifyUrl,
+          troopId: troopConfig.id,
+          bootstrap: createCentralBootstrap({ verifyUrl, troopId: troopConfig.id, apikey: troopConfig.apikey }),
+          apikey: troopConfig.apikey
+        });
+        const cfgRaw = await configured.text();
+        let cfgResult = null;
+        try { cfgResult = JSON.parse(cfgRaw); } catch (_) { /* non-JSON */ }
+        if (cfgResult && cfgResult.success === true) {
+          upstream = await postUpstream(troopConfig.backend, forwardPayload);
+          raw = await upstream.text();
+          try {
+            result = JSON.parse(raw);
+          } catch (_) {
+            console.error(`[proxy] upstream_non_json troop=${troopId} action=${action} status=${upstream.status}`);
+            return fail(res, 502, '後端服務暫時無法使用，請稍後再試');
+          }
+        } else {
+          // Usually a backend that was never re-deployed after the upgrade.
+          centralBootstrapFailed = true;
+          console.error(`[proxy] central_bootstrap_failed troop=${troopId}`);
+        }
+      } else {
+        centralBootstrapFailed = true;
+      }
+    }
+
     if (central) {
       if (!result || result.success !== true || typeof result.token !== 'string' || !result.token) {
-        loginRateLimit.failed(req);
-        logResult({ troopId, action, status: upstream.status, startedAt, success: false, central });
-        // 保留後端語意（例：409＝已接入主系統，請經主系統登入）
-        const errorText = (result && typeof result.error === 'string' && result.error) || '登入失敗';
-        const out = { success: false, error: errorText };
+        // A rejected ticket or a misconfigured verifier is not password
+        // guessing, so it must not lock the administrator out for 15 minutes
+        // while they are trying to repair the setup.
+        logResult({
+          troopId,
+          action,
+          status: upstream.status,
+          startedAt,
+          success: false,
+          central,
+          centralFail: centralBootstrapFailed
+            ? 'bootstrap_failed'
+            : (result && result.code ? `code_${result.code}` : 'upstream_rejected')
+        });
+        // 保留後端語意（例：409＝尚未設定驗證端點，502＝端點連不上）
+        const rawError = (result && typeof result.error === 'string' && result.error) || '登入失敗';
+        const out = {
+          success: false,
+          error: centralBootstrapFailed ? CENTRAL_BOOTSTRAP_FAIL : explainCentralUpstreamFailure(rawError)
+        };
         if (result && typeof result.code === 'number') out.code = result.code;
         return res.status(401).json(out);
       }

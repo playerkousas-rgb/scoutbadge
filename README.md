@@ -31,11 +31,16 @@ TROOP_0082_APIKEY=...
 ScoutBadge 係底層**支部進度追蹤系統（leaf）**，可被上層容器（童軍支部管理系統／旅管理系統）接入。整合採**信任鏈 sig**（HMAC-SHA256，用本團 API Key 簽名，leaf 逐次驗簽）；**三個入口並存**：本團密碼登入永遠可用，上層 sig（成員／領袖）與家長 sig（子女聯集、只讀）是額外免檢入口，上層接入唔會停用本團登入。
 
 - 合約細節、sig 格式、endpoint 列表：[docs/INTEGRATION_ECPORTAL_V4.md](docs/INTEGRATION_ECPORTAL_V4.md)
+- 中央登入（`sheep`）失敗排查：[docs/TROUBLESHOOT_82.md](docs/TROUBLESHOOT_82.md)「中央登入（sheep）失敗」
 - 合約 e2e 對真 `apps-script/Code.gs` 執行（`test/e2e_realgas.test.js`），已納入 `npm test`
 
 ## 升級既有旅團
 
-更新既有 Apps Script 時，覆蓋 `apps-script/Code.gs` 並部署**新版本**到既有 Web App deployment，以保留原有 `/exec` URL。本次設定改動不需要、也不應以初始化函式來變更現有工作表名稱、欄位或資料。
+更新既有 Apps Script 時，覆蓋 `apps-script/Code.gs`，然後必須在 Apps Script「部署 →
+管理部署作業」為**既有 Web App** 建立**新版本**（`/exec` URL 會保持不變）。只覆寫編輯器
+內的程式碼並不會改變 `/exec` 所提供的版本，這是升級後功能「似有冇效」最常見的原因。
+本次設定改動不需要、也不應以初始化函式（`initializeSheets()`／`repairSheets()`）來變更
+現有工作表名稱、欄位或資料。
 
 ## 開發與檢查
 
