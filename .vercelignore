@@ -24,7 +24,10 @@ backup
 backups
 
 # Source/documentation not needed by the deployed application
-apps-script
+# (`apps-script/Code.gs` must stay uploadable: build.js publishes it as the
+#  official "⬇️ 下載 Code.gs" download in the setup steps)
+apps-script/*
+!apps-script/Code.gs
 server.js
 README.md
 APP_ADMIN_WORKFLOW.md
