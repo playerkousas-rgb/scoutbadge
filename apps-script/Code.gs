@@ -651,8 +651,12 @@ function bytesToHex(bytes){
   for(let i=0;i<bytes.length;i++){ h+=('0'+(bytes[i]&255).toString(16)).slice(-2); }
   return h;
 }
+// 真實 Apps Script API 係 computeHmacSha256Signature(value, key)——冇算法參數。
+// 之前誤寫成 computeHmacSha256('SHA_256', msg, key)：call 錯名之餘，
+// 真正嘅 key 亦被當第三參數丟棄，結果簽名永遠同 Vercel（Node crypto）
+// 計嘅唔一樣，自動開通必敗。
 function hmacHex(key,msg){
-  return bytesToHex(Utilities.computeHmacSha256('SHA_256', msg, key));
+  return bytesToHex(Utilities.computeHmacSha256Signature(msg, key, Utilities.Charset.UTF_8));
 }
 function childIdToYmis(raw){
   const v=String(raw||'').trim();

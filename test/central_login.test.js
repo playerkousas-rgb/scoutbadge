@@ -19,11 +19,12 @@
  */
 
 const assert = require('assert');
+const crypto = require('crypto');
 const http = require('http');
 const path = require('path');
 const { spawn } = require('child_process');
 const { makeGas } = require('./gasvm');
-const { backendHash, isCentralLoginCandidate, centralSubject } = require('../lib/super-auth');
+const { backendHash, isCentralLoginCandidate, centralSubject, createCentralBootstrap } = require('../lib/super-auth');
 
 const GAS_PORT = 39531;
 const OLD_PORT = 39532;
@@ -214,6 +215,21 @@ async function run() {
     assert.strictEqual(first.data.success, true, JSON.stringify(first.data));
     assert.strictEqual(first.data.user.role, 'super_admin');
     ok('未設定 verifier：GAS 回 409＋提示；Proxy 用 SUPER_KEY 自動開通（解決雞生蛋）');
+
+    // ---- 2b+. 兩邊簽名互通回歸：Vercel（Node crypto）簽嘅開通許可真係要畀 GAS 驗到 ----
+    // 回歸 #23：hmacHex 之前誤傳 'SHA_256' 做 value、真正嘅 key 被丟棄，
+    // 兩邊簽名永遠唔一致 → 自動開通 100% 失敗（「中央登入尚未設定，自動開通又失敗」）。
+    const bootVerifyUrl = 'https://example.vercel.app/api/verify-super-ticket';
+    const bootSig = createCentralBootstrap({ verifyUrl: bootVerifyUrl, troopId: '0082', apikey: KEY });
+    assert.strictEqual(gas.sandbox.validCentralBootstrap(bootSig, bootVerifyUrl, '0082'), true,
+      'Vercel（Node crypto）簽嘅開通許可，GAS 一定要接受');
+    assert.strictEqual(gas.sandbox.validCentralBootstrap(bootSig, bootVerifyUrl, '9999'), false, '簽名唔可以換旅團重用');
+    assert.strictEqual(
+      gas.sandbox.hmacHex(KEY, 'scoutbadge|interop|vector'),
+      crypto.createHmac('sha256', KEY).update('scoutbadge|interop|vector', 'utf8').digest('hex'),
+      'GAS hmacHex 要同 Node crypto 一致（value／key 次序）'
+    );
+    ok('兩邊簽名互通：Node crypto 簽嘅開通許可畀真 Code.gs 驗到；hmacHex 同 Node 一致');
 
     // 2d. 開通之後，診斷要顯示 configured ＋ 後端一致
     const diagAfter = gas.sandbox.diagnoseCentralLogin();
