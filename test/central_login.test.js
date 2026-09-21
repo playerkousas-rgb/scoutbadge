@@ -91,6 +91,15 @@ async function proxy(body) {
   return { status: res.status, data };
 }
 
+async function gasDirect(body) {
+  const res = await fetch(EXEC_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(body)
+  });
+  return res.json();
+}
+
 async function verifier(body) {
   const res = await fetch(`${BASE}/api/verify-super-ticket`, {
     method: 'POST',
@@ -157,14 +166,33 @@ async function run() {
     assert.strictEqual(centralSubject('  SHEEP  '), 'SHEEP');
     ok('中央帳號識別：sheep／大小寫／空白／舊別名 sheep@scoutbadge.local');
 
-    // ---- 2. 未設定 verifier → 要講「邊一關衰」----
-    const before = await proxy({ troopId: '0082', action: 'login', login_id: 'sheep', password: SUPER_PASSWORD });
-    assert.strictEqual(before.status, 401, JSON.stringify(before.data));
-    assert.strictEqual(before.data.success, false);
-    assert.strictEqual(before.data.code, 409);
-    assert(String(before.data.error).indexOf('尚未設定') >= 0, before.data.error);
-    assert(String(before.data.error).indexOf('成員管理') >= 0, before.data.error);
-    ok('未設定 verifier：401＋code 409＋提示去「成員管理 → 中央登入設定」');
+    // ---- 2. 未設定 verifier：GAS 要講得出關卡，Proxy 要識自己開通 ----
+    // 2a. GAS 合約：未設定時回 409 ＋ 可行動提示
+    const direct = await gasDirect({ action: 'superLogin', apikey: KEY, login_id: 'sheep', ticket: 'x' });
+    assert.strictEqual(direct.success, false, JSON.stringify(direct));
+    assert.strictEqual(direct.code, 409);
+    assert(String(direct.error).indexOf('尚未設定') >= 0, direct.error);
+    assert(String(direct.error).indexOf('成員管理') >= 0, direct.error);
+    // 2b. 經 Proxy：密碼啱 → 自動幫旅團開通（唔使預先有領袖 session）
+    const first = await proxy({ troopId: '0082', action: 'login', login_id: 'sheep', password: SUPER_PASSWORD });
+    assert.strictEqual(first.status, 200, JSON.stringify(first.data));
+    assert.strictEqual(first.data.success, true, JSON.stringify(first.data));
+    assert.strictEqual(first.data.user.role, 'super_admin');
+    ok('未設定 verifier：GAS 回 409＋提示；Proxy 用 SUPER_KEY 自動開通（解決雞生蛋）');
+
+    // ---- 2c. 偽造 bootstrap：無 apikey 簽唔到，仍然要領袖權限 ----
+    const forged = await gasDirect({
+      action: 'configureTrustedTicketVerifier',
+      apikey: KEY,
+      verifyUrl: 'https://evil.example/api/verify-super-ticket',
+      troopId: '0082',
+      bootstrap: '99999999999.deadbeef'
+    });
+    assert.strictEqual(forged.success, false, JSON.stringify(forged));
+    assert(String(forged.error).indexOf('需領袖權限') >= 0, JSON.stringify(forged));
+    const stillOurs = await gasDirect({ action: 'testTrustedTicketVerifier', apikey: KEY, token: (await proxy({ troopId: '0082', action: 'login', login_id: '1234567890', password: 'PassA!234567' })).data.token });
+    assert.strictEqual(stillOurs.success, true, '偽造 bootstrap 唔可以改到設定：' + JSON.stringify(stillOurs));
+    ok('偽造 bootstrap 被拒：只有 Proxy（持有 apikey）先簽到開通許可');
 
     // ---- 3. 設定正確 → 測試連線要有 detail，唔係淨係 HTTP status ----
     const leader = await proxy({ troopId: '0082', action: 'login', login_id: '1234567890', password: 'PassA!234567' });

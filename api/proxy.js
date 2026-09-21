@@ -5,6 +5,7 @@ const {
   centralSubject,
   passwordMatches,
   superConfigured,
+  createCentralBootstrap,
   createSuperTicket,
   createBrowserSession,
   unwrapBrowserSession
@@ -73,6 +74,74 @@ function explainCentralUpstreamFailure(errorText) {
     return '旅團後端尚未更新（缺少中央登入 superLogin）：請覆寫 apps-script/Code.gs，並在原有 Web App 部署新版本。';
   }
   return errorText;
+}
+
+function isVerifierUnconfigured(result) {
+  return Boolean(result) &&
+    (result.reason === 'central_verifier_not_configured' || result.code === 409);
+}
+
+// Reads go to Apps Script as a GET with the server-side key on the query
+// string; writes and every other action are POSTed as before.
+async function getUpstream(troopConfig, forwardPayload) {
+  const target = new URL(troopConfig.backend);
+  target.searchParams.set('action', 'load');
+  if (forwardPayload.token) target.searchParams.set('token', forwardPayload.token);
+  // ecportal v4.1.0：家長 sig bearer 可經 GET load 讀自己子女範圍
+  // （exp 係 number，一併 stringify；簽名訊息由 GAS 端還原）
+  for (const field of ['childId', 'sub', 'scope', 'exp', 'sig']) {
+    const v = forwardPayload[field];
+    if (v !== undefined && v !== null && v !== '') {
+      target.searchParams.set(field, String(v));
+    }
+  }
+  target.searchParams.set('apikey', troopConfig.apikey);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+  try {
+    return await fetch(target, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      redirect: 'follow',
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function postUpstream(backend, payload) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+  try {
+    return await fetch(backend, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+      redirect: 'follow',
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+// Where the troop's Apps Script should call back. Prefer the explicit
+// deployment variable; otherwise use the host this request was served from
+// (Vercel routes on Host, so a forged header does not reach this deployment).
+function centralVerifierUrl(req) {
+  const headers = (req && req.headers) || {};
+  const configured = String(process.env.SCOUTBADGE_VERIFY_URL || '').trim();
+  if (configured) return /^https:\/\//i.test(configured) ? configured : '';
+  const host = String(headers['x-forwarded-host'] || headers.host || '')
+    .split(',')[0]
+    .trim();
+  if (!host || !/^[A-Za-z0-9.-]+(:\d+)?$/.test(host)) return '';
+  const loopback = /^(127\.0\.0\.1|localhost)(:|$)/i.test(host);
+  const proto = loopback && process.env.SCOUTBADGE_PROXY_TEST === '1' && process.env.VERCEL !== '1'
+    ? 'http'
+    : 'https';
+  return `${proto}://${host}/api/verify-super-ticket`;
 }
 
 // Fixed server-side destination for the "new troop deployment" registration
@@ -220,49 +289,49 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
-    let upstream;
-    try {
-      if (action === 'load') {
-        const target = new URL(troopConfig.backend);
-        target.searchParams.set('action', 'load');
-        if (forwardPayload.token) target.searchParams.set('token', forwardPayload.token);
-        // ecportal v4.1.0：家長 sig bearer 可經 GET load 讀自己子女範圍
-        // （exp 係 number，一併 stringify；簽名訊息由 GAS 端還原）
-        for (const field of ['childId', 'sub', 'scope', 'exp', 'sig']) {
-          const v = forwardPayload[field];
-          if (v !== undefined && v !== null && v !== '') {
-            target.searchParams.set(field, String(v));
-          }
-        }
-        target.searchParams.set('apikey', troopConfig.apikey);
-        upstream = await fetch(target, {
-          method: 'GET',
-          headers: { Accept: 'application/json' },
-          redirect: 'follow',
-          signal: controller.signal
-        });
-      } else {
-        upstream = await fetch(troopConfig.backend, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(forwardPayload),
-          redirect: 'follow',
-          signal: controller.signal
-        });
-      }
-    } finally {
-      clearTimeout(timeout);
-    }
+    let upstream = action === 'load'
+      ? await getUpstream(troopConfig, forwardPayload)
+      : await postUpstream(troopConfig.backend, forwardPayload);
 
-    const raw = await upstream.text();
+    let raw = await upstream.text();
     let result;
     try {
       result = JSON.parse(raw);
     } catch (_) {
       console.error(`[proxy] upstream_non_json troop=${troopId} action=${action} status=${upstream.status}`);
       return fail(res, 502, '後端服務暫時無法使用，請稍後再試');
+    }
+
+    // Central login on a troop whose Apps Script has never had its verifier
+    // configured: open it right now, then retry once with the same ticket.
+    // Only reachable after the central password matched, so the SUPER_KEY
+    // holder is never blocked behind a leader session they may not have.
+    if (central && isVerifierUnconfigured(result)) {
+      const verifyUrl = centralVerifierUrl(req);
+      if (verifyUrl) {
+        const configured = await postUpstream(troopConfig.backend, {
+          action: 'configureTrustedTicketVerifier',
+          verifyUrl,
+          troopId: troopConfig.id,
+          bootstrap: createCentralBootstrap({ verifyUrl, troopId: troopConfig.id, apikey: troopConfig.apikey }),
+          apikey: troopConfig.apikey
+        });
+        const cfgRaw = await configured.text();
+        let cfgResult = null;
+        try { cfgResult = JSON.parse(cfgRaw); } catch (_) { /* non-JSON */ }
+        if (cfgResult && cfgResult.success === true) {
+          upstream = await postUpstream(troopConfig.backend, forwardPayload);
+          raw = await upstream.text();
+          try {
+            result = JSON.parse(raw);
+          } catch (_) {
+            console.error(`[proxy] upstream_non_json troop=${troopId} action=${action} status=${upstream.status}`);
+            return fail(res, 502, '後端服務暫時無法使用，請稍後再試');
+          }
+        } else {
+          console.error(`[proxy] central_bootstrap_failed troop=${troopId}`);
+        }
+      }
     }
 
     if (central) {

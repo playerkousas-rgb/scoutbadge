@@ -26,7 +26,7 @@ TROOP_0082_APIKEY
 | 訊息 | 原因 | 處理 |
 |---|---|---|
 | 中央登入尚未設定（Vercel 環境變數 `SUPER_KEY` 未設定或太短） | Vercel 未設 `SUPER_KEY`（至少 4 字元） | 設定 `SUPER_KEY` 後重新部署 |
-| 中央登入尚未設定：請先由領袖登入 →「成員管理 → 中央登入設定」 | 該旅團 Apps Script 未做一次性 verifier 設定 | 以領袖（團長或以上）登入 →「成員管理 → 中央登入設定」→ 儲存 → 測試連線 |
+| 中央登入尚未設定：請先由領袖登入 →「成員管理 → 中央登入設定」 | 該旅團 Apps Script 未設定驗證端點，**而自動開通又失敗**（多數係後端仲係舊版） | 覆寫 `apps-script/Code.gs`，喺原有 Web App 部署新版本；正常情況 Proxy 會自動開通，唔使預先有領袖 session |
 | Vercel 登記嘅後端網址同本 Sheet 嘅 Web App 網址唔一致 | `TROOP_{ID}_BACKEND` 同 Sheet 嘅 `/exec` 網址唔同（多咗斜線／空格，或係舊部署 ID） | 修正 `TROOP_{ID}_BACKEND` → 重新部署 → 再撳一次「儲存設定」重新計雜湊 |
 | Vercel 未登記旅團編號 | `TROOP_{ID}_NAME／_BACKEND／_APIKEY` 唔齊，或編號同變數名唔一致 | 補齊三個變數（`0082` 同 `82` 唔互通） |
 | 中央登入驗證端點連唔到／回應異常 | 端點唔係公開 https、被重新導向，或 Vercel 未重新部署 | 端點填 `https://<本部署域名>/api/verify-super-ticket`；改動後重新部署 |
@@ -39,7 +39,12 @@ TROOP_0082_APIKEY
 - `SUPER_KEY` 前後有多餘空白／換行（Vercel 貼上常見）而家會自動 trim，唔會再變成長期登入失敗。
 - 「測試連線」而家係真自我檢查：會話你知旅團有冇登記、後端網址雜湊一唔一致，
   唔會再淨係睇 HTTP status 就報成功。
-- 一次性設定要**先有領袖登入到**；新旅團請先用領袖帳號登入做設定。
+- **唔使再預先做一次性領袖設定**：只要 `SUPER_KEY` 啱，Proxy 會喺登入時自動幫嗰個旅團
+  開通驗證端點（用本團 apikey 簽嘅 5 分鐘短效許可；瀏覽器冇 apikey，偽造唔到），
+  所以新旅團都唔會再出現「要有領袖先開到中央登入」嘅雞生蛋。
+- 「成員管理 → 中央登入設定」仍然保留：用嚟手動設定、或檢查後端網址一唔一致。
+- 如果部署網址推斷唔到（例如自訂網域、前面仲有 proxy），可以設
+  `SCOUTBADGE_VERIFY_URL=https://你的域名/api/verify-super-ticket`。
 
 ## Portal
 

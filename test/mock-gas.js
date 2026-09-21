@@ -65,6 +65,23 @@ class MockGas {
     return typeof token === 'string' && this.tokens.has(token) ? this.tokens.get(token) : null;
   }
 
+  _validBootstrap(bootstrap, verifyUrl, troopId) {
+    if (!bootstrap || !verifyUrl || !troopId) return false;
+    const parts = String(bootstrap).split('.');
+    if (parts.length !== 2) return false;
+    const exp = Number(parts[0]);
+    if (!Number.isFinite(exp) || exp <= 0) return false;
+    const nowS = Math.floor(Date.now() / 1000);
+    if (exp < nowS - 60 || exp > nowS + 600) return false;
+    const crypto = require('crypto');
+    const expected = crypto.createHmac('sha256', this.apikey)
+      .update(`${String(verifyUrl)}|${String(troopId)}|${parts[0]}`, 'utf8')
+      .digest('hex');
+    const left = Buffer.from(expected, 'utf8');
+    const right = Buffer.from(String(parts[1] || '').trim().toLowerCase(), 'utf8');
+    return left.length === right.length && crypto.timingSafeEqual(left, right);
+  }
+
   handleGet(url, res) {
     const u = new URL(url, 'http://127.0.0.1');
     const action = u.searchParams.get('action');
@@ -122,8 +139,12 @@ class MockGas {
       if (!body.apikey || body.apikey !== this.apikey) {
         return this._json(res, 200, { success: false, error: '未授權' });
       }
+      // Mirrors Code.gs: either a leader token, or the short-lived bootstrap
+      // the proxy signs with this troop's own API key (only issued after the
+      // central password matched). A browser has no API key and cannot forge it.
+      const bootOk = this._validBootstrap(body.bootstrap, body.verifyUrl, body.troopId);
       const cfgYmis = this._validate(body.token);
-      const cfgUser = cfgYmis ? this.users.get(cfgYmis) : null;
+      const cfgUser = bootOk ? { role: 'admin' } : (cfgYmis ? this.users.get(cfgYmis) : null);
       const roleLevel = { member: 0, branch_leader: 40, group_leader: 60, admin: 80, super_admin: 100 }[cfgUser ? cfgUser.role : ''] || 0;
       if (!cfgUser || roleLevel < 40) return this._json(res, 200, { success: false, error: '需領袖權限' });
       if (action === 'configureTrustedTicketVerifier') {
@@ -170,7 +191,11 @@ class MockGas {
         return this._json(res, 200, { success: false, error: '登入失敗' });
       }
       if (String(body.apikey) !== this.apikey) return this._json(res, 200, { success: false, error: '登入失敗' });
-      if (!this.authProps) return this._json(res, 200, { success: false, error: '登入失敗' });
+      // Mirrors Code.gs: an unconfigured verifier is reported as 409 with a
+      // reason, which is what lets the proxy open the troop itself.
+      if (!this.authProps) {
+        return this._json(res, 200, { success: false, code: 409, reason: 'central_verifier_not_configured', error: '中央登入尚未設定' });
+      }
       let valid = false;
       try {
         const response = await fetch(this.authProps.verifyUrl, {

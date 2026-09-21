@@ -639,6 +639,8 @@ function destroyToken(token){
 // 上層接入只係多一條入口，唔係取代本端入口。
 
 const PORTAL_SIG_MAX_TTL = 3600;
+// 中央登入自助開通許可有效期（秒；Proxy 簽發時用 5 分鐘）
+const CENTRAL_BOOTSTRAP_MAX_TTL = 600;
 function normId(s){
   const v=String(s||'').trim().toUpperCase();
   const m=v.match(/^(\d+)([A-Z]?)$/);
@@ -818,8 +820,10 @@ function doPost(e){
     // 用途：讓 GAS 知道要向哪個固定 Vercel 端點回調驗證短效票據。
     if(action==='configureTrustedTicketVerifier' || action==='testTrustedTicketVerifier'){
       if(!body.apikey || body.apikey!==getApiKey()) return jsonResponse({success:false,error:'未授權'});
+      // 身份：領袖 token，或 Proxy 簽發嘅中央自助開通許可（只喺 SUPER_KEY 通過後先有）
+      const bootOk=validCentralBootstrap(body.bootstrap,body.verifyUrl,body.troopId);
       const cfgYmis=body.token?validateToken(body.token):null;
-      const cfgUser=cfgYmis?getUser(cfgYmis):null;
+      const cfgUser=bootOk?{role:'admin'}:(cfgYmis?getUser(cfgYmis):null);
       if(!cfgUser || getRoleLevel(cfgUser.role)<40) return jsonResponse({success:false,error:'需領袖權限'});
       if(action==='configureTrustedTicketVerifier') return jsonResponse(configureTrustedTicketVerifier(body.verifyUrl,body.troopId));
       return jsonResponse(testTrustedTicketVerifier());
@@ -967,6 +971,26 @@ function configureTrustedTicketVerifier(verifyUrl,troopId){
   },false);
   return {success:true,troopId:troopId};
 }
+// 中央管理員自助開通（bootstrap）：Proxy 用「本團 apikey」簽一張 5 分鐘短效許可，
+// 等 sheep 唔使預先有領袖登入（雞生蛋）都可以設定驗證端點。
+// 只有 Proxy 持有 apikey 先簽得出，而 Proxy 只會喺 SUPER_KEY 驗證通過後先簽；
+// 瀏覽器無 apikey，偽造唔到。
+function validCentralBootstrap(bootstrap,verifyUrl,troopId){
+  if(!bootstrap || !verifyUrl || !troopId) return false;
+  const parts=String(bootstrap).split('.');
+  if(parts.length!==2) return false;
+  const exp=Number(parts[0]);
+  if(!isFinite(exp) || exp<=0) return false;
+  const nowS=Math.floor(Date.now()/1000);
+  if(exp < nowS-60 || exp > nowS+CENTRAL_BOOTSTRAP_MAX_TTL) return false; // 過期或遙遠未來
+  const sig=String(parts[1]||'').trim().toLowerCase();
+  if(!sig || sig.length>512) return false;
+  const expect=hmacHex(getApiKey(), String(verifyUrl)+'|'+String(troopId)+'|'+parts[0]);
+  if(expect.length!==sig.length) return false;
+  let diff=0;
+  for(let i=0;i<sig.length;i++){ diff |= (expect.charCodeAt(i)^sig.charCodeAt(i)); }
+  return diff===0;
+}
 // 中央登入「測試連線」：向驗證端點做一次自我檢查（probe）。
 // 端點只回 booleans（旅團是否已登記、後端網址雜湊是否一致），不回任何秘密；
 // 旅團編號／後端不一致時要講得出原因，否則管理員只會見到「登入失敗」。
@@ -1012,7 +1036,7 @@ function handleSuperLoginTicket(ticket,loginId,apiKey){
   if(String(apiKey||'')!==String(getApiKey())) return jsonResponse({success:false,error:'登入失敗',code:401});
   const check=validateTrustedTicket(ticket,loginId);
   if(!check.ok){
-    if(check.reason==='not_configured') return jsonResponse({success:false,code:409,error:'中央登入尚未設定：請先由領袖登入 →「成員管理 → 中央登入設定」→ 儲存端點並測試連線。'});
+    if(check.reason==='not_configured') return jsonResponse({success:false,code:409,reason:'central_verifier_not_configured',error:'中央登入尚未設定：請先由領袖登入 →「成員管理 → 中央登入設定」→ 儲存端點並測試連線。'});
     if(check.reason==='unreachable') return jsonResponse({success:false,code:502,error:'中央登入驗證端點連唔到：請確認端點係公開 https 網址（唔可以用 localhost），再撳「測試連線」。'});
     if(String(check.reason||'').indexOf('http_')===0) return jsonResponse({success:false,code:502,error:'中央登入驗證端點回應異常（'+String(check.reason).replace('http_','HTTP ')+'）：請按「測試連線」睇原因，或重新儲存設定。'});
     return jsonResponse({success:false,code:401,error:'中央登入票據被拒：旅團編號或後端網址同 Vercel 登記唔一致，請重新儲存中央登入設定。'});
