@@ -195,6 +195,12 @@ async function run() {
     assert.strictEqual(centralSubject('  SHEEP  '), 'SHEEP');
     ok('中央帳號識別：sheep／大小寫／空白／舊別名 sheep@scoutbadge.local');
 
+    // ---- 1b. 只讀診斷（喺 Apps Script 編輯器 Run diagnoseCentralLogin 用）----
+    const diagBefore = gas.sandbox.diagnoseCentralLogin();
+    assert.strictEqual(diagBefore.configured, false, JSON.stringify(diagBefore));
+    assert.strictEqual(diagBefore.storedHashTail, '');
+    assert(typeof diagBefore.hint === 'string' && diagBefore.hint.length > 0);
+
     // ---- 2. 未設定 verifier：GAS 要講得出關卡，Proxy 要識自己開通 ----
     // 2a. GAS 合約：未設定時回 409 ＋ 可行動提示
     const direct = await gasDirect({ action: 'superLogin', apikey: KEY, login_id: 'sheep', ticket: 'x' });
@@ -208,6 +214,16 @@ async function run() {
     assert.strictEqual(first.data.success, true, JSON.stringify(first.data));
     assert.strictEqual(first.data.user.role, 'super_admin');
     ok('未設定 verifier：GAS 回 409＋提示；Proxy 用 SUPER_KEY 自動開通（解決雞生蛋）');
+
+    // 2d. 開通之後，診斷要顯示 configured ＋ 後端一致
+    const diagAfter = gas.sandbox.diagnoseCentralLogin();
+    assert.strictEqual(diagAfter.configured, true, JSON.stringify(diagAfter));
+    assert.strictEqual(diagAfter.centralTroopId, '0082');
+    assert.strictEqual(diagAfter.hashMatches, true, JSON.stringify(diagAfter));
+    assert.strictEqual(diagAfter.storedHashTail.length, 8);
+    assert(String(diagAfter.verifyUrlTail).indexOf('super-ticket') >= 0, diagAfter.verifyUrlTail);
+    assert(String(diagAfter.serviceUrlTail).indexOf('/exec') >= 0, diagAfter.serviceUrlTail);
+    ok('只讀診斷 diagnoseCentralLogin：開通前後都講得出狀態（後端 hash 一唔一致）');
 
     // ---- 2c. 偽造 bootstrap：無 apikey 簽唔到，仍然要領袖權限 ----
     const forged = await gasDirect({

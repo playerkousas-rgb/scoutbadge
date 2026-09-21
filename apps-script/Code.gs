@@ -1016,6 +1016,30 @@ function testTrustedTicketVerifier(){
     return {success:false,error:'連唔上驗證端點：請確認網址係 Apps Script 可以連到嘅公開 https 網址（唔可以用 localhost）。'};
   }
 }
+// 只讀診斷：喺 Apps Script 編輯器直接 Run diagnoseCentralLogin()，睇中央登入卡喺邊一關。
+// 唔寫任何嘢、唔改設定；只回 hash／URL 嘅尾段，方便同 Vercel 嘅 TROOP_{ID}_BACKEND 對照。
+// 注意：由編輯器執行時 ScriptApp.getService().getUrl() 有時會返 /dev 而唔係 /exec，
+// 所以一定要對返條尾，唔好淨係信 hashMatches。
+function diagnoseCentralLogin(){
+  const cfg=trustedTicketConfig();
+  let serviceUrl='';
+  try{ serviceUrl=String(ScriptApp.getService().getUrl()||''); }catch(e){ serviceUrl=''; }
+  const currentHash=hashPassword(serviceUrl);
+  const out={
+    configured: !!cfg,
+    centralTroopId: cfg?String(cfg.troopId):'',
+    verifyUrlTail: cfg?String(cfg.verifyUrl).slice(-14):'',
+    serviceUrlTail: serviceUrl?String(serviceUrl).slice(-14):'',
+    storedHashTail: cfg?String(cfg.backendHash).slice(0,8):'',
+    currentHashTail: serviceUrl?String(currentHash).slice(0,8):'',
+    hashMatches: cfg?(String(cfg.backendHash)===currentHash):false,
+    hint: cfg
+      ? '對照 serviceUrlTail 同 Vercel 嘅 TROOP_{ID}_BACKEND 條尾（要同一個 /exec）；hashMatches=false 即係兩邊唔一致。'
+      : '尚未設定驗證端點：新版 Proxy 會喺 sheep 登入時自動開通；或以領袖登入 →「成員管理 → 中央登入設定」手動設定。'
+  };
+  Logger.log('中央登入診斷：'+JSON.stringify(out));
+  return out;
+}
 // 回傳 {ok, reason}：reason 用嚟畀管理員一個可以行動嘅提示，唔係內部細節。
 function validateTrustedTicket(ticket,loginId){
   const cfg=trustedTicketConfig();
