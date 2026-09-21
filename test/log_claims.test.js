@@ -121,7 +121,8 @@ function login(login_id, password){
   return { token: r.token, user: r.user };
 }
 function call(action, body){
-  const e = { postData: { contents: JSON.stringify(Object.assign({ action }, body)) } };
+  // ecportal v4.1.0：doPost 起碼要 apikey 或 sig；測試直接注入本團 apikey（等同 proxy 行為）
+  const e = { postData: { contents: JSON.stringify(Object.assign({ action, apikey: api.getApiKey() }, body)) } };
   global.__lastOut = null;
   api.doPost(e);
   return global.__lastOut;

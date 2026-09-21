@@ -1,4 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "outputDirectory": "public"
+  "version": 2,
+  "framework": null,
+  "buildCommand": "npm run build",
+  "outputDirectory": "public",
+  "functions": {
+    "api/proxy.js": { "maxDuration": 60 },
+    "api/troops.js": { "maxDuration": 60 },
+    "api/verify-super-ticket.js": { "maxDuration": 60 }
+  }
 }

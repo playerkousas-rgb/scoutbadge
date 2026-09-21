@@ -768,6 +768,13 @@ zh:{
   mock_title:'🧪 測試工具 (僅系統管理角色可見)', mock_desc:'一鍵載入 10個 MOCK 成員到前端快取，方便測試全團批量剔、會員章一眼睇等。示範資料只存瀏覽器快取，不會寫入正式 Google Sheet，除非你按確認寫入。',
   mock_load_btn:'🧪 載入示範成員到全團', mock_clear_btn:'🗑️ 清除示範資料快取', mock_view_json:'📄 查看示範資料 JSON', mock_dl_csv:'📄 下載 CSV 匯入 Sheet',
   privacy_title:'🔒 私隱設定 (僅團長/管理員可見)', privacy_desc:'普通成員預設只看自己，能否看其他成員由團長開放。有些旅團重私隱，有些想互相鼓勵，領袖及小隊長要按進度策劃活動。',
+  ca_title:'🔑 中央登入設定（領袖以上可見）', ca_note:'一次性設定：讓系統管理員帳號可用中央密碼登入。填好驗證端點與旅團編號後按「儲存設定」，再按「測試連線」確認回調成功。',
+  ca_url_label:'驗證端點', ca_id_label:'旅團編號', ca_save:'儲存設定', ca_test:'測試連線',
+  ca_saved:'設定已儲存', ca_test_ok:'連線測試成功：中央登入已啟用', ca_test_fail:'連線測試失敗',
+  ca_fill:'請填齊驗證端點與旅團編號',
+  ca_hint:'預設端點為本機域名 /api/verify-super-ticket；編號必須與 Vercel 登記的 TROOP_{編號}_BACKEND 完全一致（0082 與 82 不同）。',
+  entry_note:'三個入口並存：本團密碼登入一直可用；上層主系統（成員／領袖 sig）與家長（sig）以信任鏈「免檢」進入。被上層「食」咗唔會鎖走本團登入。',
+  portal_sig_parent:'家長模式：子女進度請經主系統介面查看',
   privacy_allow:'允許成員互相查看進度 (鼓勵模式)', privacy_on:'已開啟 - 成員可看全團', privacy_off:'已關閉 - 成員只看自己 (私隱)', privacy_now:'當前：',
   privacy_note:'說明：「只限隊長／副隊長」模式須在 Users 填寫 squad_role；隊員仍只能看自己。關閉時成員「我的進度」不能選其他人，全團總覽隱藏；開啟時成員可看全團 but 不能編輯。',
   privacy_scope:'成員可查看範圍：', scope_private:'只看自己', scope_team:'全隊（同小隊）', scope_leaders:'只限隊長／副隊長查看小隊', scope_troop:'全團', squad_compare:'開啟小隊完成率比較',
@@ -1116,6 +1123,13 @@ en:{
   mock_title:'🧪 Test Tools (system admin only)', mock_desc:'One-click loads 10 MOCK members into the browser cache to test troop-wide batch ticking, Membership at a glance, etc. Demo data stays in the browser cache and never touches the real Google Sheet unless you confirm the write.',
   mock_load_btn:'🧪 Load demo members to troop', mock_clear_btn:'🗑️ Clear demo cache', mock_view_json:'📄 View demo JSON', mock_dl_csv:'📄 Download CSV for Sheet import',
   privacy_title:'🔒 Privacy Settings (GSL/admin only)', privacy_desc:'Members see only themselves by default; the GSL may open viewing to others. Some troops value privacy, others mutual encouragement; leaders and patrol leaders plan activities from progress.',
+  ca_title:'🔑 Central Login Setup (leaders only)', ca_note:'One-time setup so the super-admin account can sign in with the central password. Enter the verify endpoint and troop ID, press Save, then Test connection to confirm the callback works.',
+  ca_url_label:'Verify endpoint', ca_id_label:'Troop ID', ca_save:'Save', ca_test:'Test connection',
+  ca_saved:'Saved', ca_test_ok:'Connection OK: central login is enabled', ca_test_fail:'Connection test failed',
+  ca_fill:'Enter both the verify endpoint and the troop ID',
+  ca_hint:'The default endpoint is this site\'s /api/verify-super-ticket. The ID must exactly match the Vercel variable TROOP_{ID}_BACKEND (0082 and 82 are different).',
+  entry_note:'Three entry points coexist: the troop\'s own password login always works; the parent system (member/leader sig) and parents (sig) enter "check-exempt" via the trust chain. Being consumed by a parent never locks out the troop\'s own login.',
+  portal_sig_parent:'Parent mode: view your children\'s progress through the hub',
   privacy_allow:'Allow members to view each other\'s progress (encouragement mode)', privacy_on:'ON — members can view the troop', privacy_off:'OFF — members see only themselves (private)', privacy_now:'Current: ',
   privacy_note:'Note: "patrol leaders only" mode requires squad_role in the Users sheet; plain members still see only themselves. When off, members cannot pick others in "My Progress" and Troop Overview is hidden; when on, members may view but not edit.',
   privacy_scope:'Member visibility scope: ', scope_private:'Self only', scope_team:'Whole patrol', scope_leaders:'Patrol leaders / APLs view patrol', scope_troop:'Whole troop', squad_compare:'Enable patrol completion comparison',
@@ -1509,6 +1523,14 @@ async function apiRequest(action, payload = {}, options = {}) {
   if (!reqBody.token && typeof currentToken !== 'undefined' && currentToken) {
     reqBody.token = currentToken;
   }
+  // ecportal v4.1.0 整合：無本地 token 時（家長 sig bearer 模式）隨請求附帶信任鏈 sig
+  if (!reqBody.token && currentSigPayload) {
+    reqBody.childId = currentSigPayload.childId;
+    reqBody.sub = currentSigPayload.sub;
+    reqBody.scope = currentSigPayload.scope;
+    reqBody.exp = currentSigPayload.exp;
+    reqBody.sig = currentSigPayload.sig;
+  }
 
   const controller = new AbortController();
   const timeoutMs = options.timeout || 30000;
@@ -1551,6 +1573,58 @@ async function apiRequest(action, payload = {}, options = {}) {
   }
 }
 let currentUser=null,currentToken='',loginType='member';
+/* ecportal v4.1.0 整合：主系統（支部／旅管理層）以 postMessage 注入信任鏈 sig。
+   sig 由主系統用本旅 apikey 簽發（HMAC-SHA256 hex），GAS 端自己驗。
+   成員／領袖 → portalLogin 換本地 token（既有流程照行）；
+   家長 → sig bearer（currentSigPayload 隨每個請求附帶，唔發本地 token）。 */
+let currentSigPayload=null; // {childId, sub, scope(string), exp, sig}
+function applyPortalSig(payload){
+  if(!payload || typeof payload!=='object') return {ok:false,error:'invalid'};
+  const p=payload.sig&&typeof payload.sig==='object'?payload.sig:payload;
+  if(typeof p.childId!=='string'||!p.childId.trim()) return {ok:false,error:'invalid'};
+  if(typeof p.sub!=='string'||!p.sub.trim()) return {ok:false,error:'invalid'};
+  if(typeof p.scope!=='string'||!p.scope.trim()) return {ok:false,error:'invalid'};
+  if(typeof p.sig!=='string'||!p.sig.trim()) return {ok:false,error:'invalid'};
+  if(!Number.isFinite(Number(p.exp))) return {ok:false,error:'invalid'};
+  p.exp=Number(p.exp);
+  currentSigPayload=p;
+  return {ok:true};
+}
+window.addEventListener('message', function(ev){
+  const d=ev.data;
+  if(!d || d.type!=='scoutbadge:portal-sig') return;
+  const r=applyPortalSig(d);
+  if(!r.ok){ console.warn('portal sig rejected', r.error); return; }
+  portalSigLogin();
+});
+async function portalSigLogin(){
+  if(!currentSigPayload) return;
+  try{
+    const d=await apiRequest('portalLogin', {
+      childId:currentSigPayload.childId, sub:currentSigPayload.sub,
+      scope:currentSigPayload.scope, exp:currentSigPayload.exp, sig:currentSigPayload.sig
+    });
+    if(!d.success) throw new Error(d.error);
+    if(d.auth_mode==='sig'){
+      // 家長：本系統 UI 以主系統介面呈現子女進度（sig 已備用，API 層可用）
+      showToast(t('portal_sig_parent'),'success');
+      return;
+    }
+    currentUser={...d.user,isPortal:portalLaunch};
+    currentToken=d.token;
+    localStorage.setItem(LS.session, JSON.stringify({troopId:currentTroopId,troopName:currentTroopName,token:currentToken,user:currentUser,savedAt:Date.now()}));
+    document.getElementById('homePage').style.display='none';
+    document.getElementById('loginPage').style.display='none';
+    document.getElementById('mainApp').style.display='block';
+    refreshAppTitle();
+    refreshUserInfoChip();
+    setupTabsByRole();
+    loadItemsAndProgress();
+  }catch(e){
+    console.warn('portal sig login failed', e);
+    showToast(t('error_colon')+e.message,'error');
+  }
+}
 let itemsData=null,progressFlat={},progressRich={},members=[],pendingChanges=[],pendingRequestsQueue=[],otherBadgesMap={},currentRequestItem=null;
 let selectedProgressYmis=null; // 領袖查看他人進度
 let appConfig={allow_member_view_others:'false',member_progress_scope:'private',allow_squad_comparison:'false',allow_member_requests:'true'}; // 系統設定
@@ -3588,7 +3662,27 @@ async function loadUsers(){
         </div>`;
       }
 
-      let h=roleExplain+systemSettingHtml+mockTool+`<div class="filter-bar"><button class="btn btn-sm btn-warning" onclick="openBulkOnboardModal()">${t('users_bulk_btn')}</button><button class="btn btn-sm btn-primary" onclick="addMemberFromApp()">${t('users_add_btn')}</button><button class="btn btn-sm btn-secondary" onclick="downloadSquadReport()">${t('users_report_btn')}</button><button class="btn btn-sm btn-outline" onclick="loadAuditHistory()">${t('users_audit_btn')}</button><button class="btn btn-sm btn-outline" onclick="loadApprovalHistory()">${t('users_hist_btn')}</button><label class="btn btn-sm btn-secondary">${t('users_csv_btn')}<input type="file" accept=".csv" onchange="importMembersFull(this.files[0])" style="display:none"></label><input type="text" id="userSearch" placeholder="${t('user_search_ph')}" oninput="filterUsers()" style="flex:1"></div><div id="userList">`;
+      // 中央登入 verifier 設定（一次性；領袖以上可見，GAS 端另查 apikey+權限）
+      let centralAuthHtml='';
+      if(['branch_leader','group_leader','admin','super_admin'].includes(currentUser.role)){
+        centralAuthHtml=`<div class="info-section" style="border-left-color:#7C3AED;background:#F5F3FF">
+          <h3>${t('ca_title')}</h3>
+          <p style="font-size:11px;color:var(--text-light)">${t('ca_note')}</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+            <input type="text" id="caVerifyUrl" value="${window.location.origin}/api/verify-super-ticket" placeholder="https://your-deploy/api/verify-super-ticket" style="flex:2;min-width:240px;font-size:12px">
+            <input type="text" id="caTroopId" value="${escapeHtml(currentTroopId)}" placeholder="0082" style="width:110px;font-size:12px">
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn btn-sm btn-primary" onclick="saveCentralAuthConfig()">${t('ca_save')}</button>
+            <button class="btn btn-sm btn-secondary" onclick="testCentralAuth()">${t('ca_test')}</button>
+          </div>
+          <div id="caStatus" style="font-size:11px;margin-top:8px;color:var(--text-light)"></div>
+          <div style="font-size:10px;color:var(--text-light);margin-top:4px">${t('ca_hint')}</div>
+          <div style="font-size:10px;color:var(--text-light);margin-top:4px">${t('entry_note')}</div>
+        </div>`;
+      }
+
+      let h=roleExplain+systemSettingHtml+centralAuthHtml+mockTool+`<div class="filter-bar"><button class="btn btn-sm btn-warning" onclick="openBulkOnboardModal()">${t('users_bulk_btn')}</button><button class="btn btn-sm btn-primary" onclick="addMemberFromApp()">${t('users_add_btn')}</button><button class="btn btn-sm btn-secondary" onclick="downloadSquadReport()">${t('users_report_btn')}</button><button class="btn btn-sm btn-outline" onclick="loadAuditHistory()">${t('users_audit_btn')}</button><button class="btn btn-sm btn-outline" onclick="loadApprovalHistory()">${t('users_hist_btn')}</button><label class="btn btn-sm btn-secondary">${t('users_csv_btn')}<input type="file" accept=".csv" onchange="importMembersFull(this.files[0])" style="display:none"></label><input type="text" id="userSearch" placeholder="${t('user_search_ph')}" oninput="filterUsers()" style="flex:1"></div><div id="userList">`;
       // v5.3.0：團長全團只可一位 —— 預先找出在職團長；有人嘗試升第二位時由 updateUserRole 彈提示阻擋（唔直接 disabled，令人知點解唔得）
       const gslHolder=(d.users||[]).find(u=>u.role==='group_leader')||null;
       const gslCount=(d.users||[]).filter(u=>u.role==='group_leader').length;
@@ -3914,6 +4008,32 @@ async function toggleAllowMemberViewOthers(checked){
   }catch(e){
     showToast(t('cfg_fail_colon')+e.message,'error');
   }
+}
+/* 中央登入 verifier：一次性設定。GAS 端會向 verifyUrl 回調 /api/verify-super-ticket
+   驗證 Proxy 簽發的短效票據；troopId 由 Proxy 以路由旅團為準。 */
+async function saveCentralAuthConfig(){
+  const status=document.getElementById('caStatus');
+  const verifyUrl=document.getElementById('caVerifyUrl').value.trim();
+  const troopId=document.getElementById('caTroopId').value.trim();
+  if(!verifyUrl||!troopId){ status.textContent=t('ca_fill'); status.style.color='var(--red)'; return; }
+  status.textContent='…'; status.style.color='var(--text-light)';
+  try{
+    const d=await apiRequest('configureTrustedTicketVerifier',{verifyUrl,troopId});
+    if(!d.success) throw new Error(d.error||t('ca_test_fail'));
+    status.textContent=t('ca_saved'); status.style.color='var(--green)';
+    testCentralAuth();
+  }catch(e){ status.textContent=e.message; status.style.color='var(--red)'; }
+}
+async function testCentralAuth(){
+  const status=document.getElementById('caStatus');
+  status.textContent='…'; status.style.color='var(--text-light)';
+  try{
+    const d=await apiRequest('testTrustedTicketVerifier',{});
+    if(!d.success) throw new Error(d.error||t('ca_test_fail'));
+    if(typeof d.status==='number' && d.status<500){
+      status.textContent=t('ca_test_ok')+' (HTTP '+d.status+')'; status.style.color='var(--green)';
+    }else throw new Error(t('ca_test_fail'));
+  }catch(e){ status.textContent=t('ca_test_fail')+'：'+e.message; status.style.color='var(--red)'; }
 }
 async function updateSystemConfig(key,value){
   try{const d=await apiRequest('updateConfig', {key, value});if(!d.success)throw new Error(d.error);appConfig[key]=value;setupTabsByRole();loadUsers();showToast(t('cfg_updated'),'success');}catch(e){showToast(t('cfg_fail_colon')+e.message,'error');}
