@@ -28,6 +28,7 @@ const { backendHash, isCentralLoginCandidate, centralSubject } = require('../lib
 const GAS_PORT = 39531;
 const OLD_PORT = 39532;
 const LEGACY_PORT = 39534;
+const PROTECTED_PORT = 39535;
 const DEV_PORT = 39533;
 const KEY = 'KEY_A';
 const EXEC_URL = `http://127.0.0.1:${GAS_PORT}/exec`;
@@ -35,6 +36,7 @@ const EXEC_URL = `http://127.0.0.1:${GAS_PORT}/exec`;
 const MISMATCH_URL = `${EXEC_URL}/`;
 const OLD_URL = `http://127.0.0.1:${OLD_PORT}/exec`;
 const LEGACY_URL = `http://127.0.0.1:${LEGACY_PORT}/exec`;
+const PROTECTED_URL = `http://127.0.0.1:${PROTECTED_PORT}/blocked`;
 const BASE = `http://127.0.0.1:${DEV_PORT}`;
 const SUPER_PASSWORD = '0728';
 
@@ -63,6 +65,16 @@ function gasHttpServer(gas) {
     });
     server.listen(GAS_PORT, '127.0.0.1', () => resolve(server));
   });
+}
+
+// Stands in for a Vercel deployment behind Deployment Protection: every
+// request - including Apps Script's callback - is answered with 401 HTML.
+// It must run as its own process: the gasvm UrlFetchApp shim blocks this
+// process while it waits for the HTTP response.
+function protectedServer() {
+  const script = "require('http').createServer((q, s) => { q.resume(); s.writeHead(401, { 'Content-Type': 'text/html' }); s.end('<html><body>Protected Deployment - Vercel</body></html>'); }).listen(39535, '127.0.0.1');";
+  const child = spawn(process.execPath, ['-e', script], { stdio: 'ignore' });
+  return new Promise((resolve) => setTimeout(() => resolve(child), 500));
 }
 
 // A backend that knows the central contract (it reports 409) but was never
@@ -158,6 +170,7 @@ async function run() {
   const gasServer = await gasHttpServer(gas);
   const oldServer = await oldBackendServer();
   const legacyServer = await legacyBackendServer();
+  const guardChild = await protectedServer();
 
   const child = spawn(process.execPath, [path.join(__dirname, '..', 'server.js')], {
     env: {
@@ -179,6 +192,10 @@ async function run() {
       TROOP_0066_NAME: '第 66 旅（未部署新版本）',
       TROOP_0066_BACKEND: LEGACY_URL,
       TROOP_0066_APIKEY: KEY,
+      // Same script, but its verifier points at a protection-guarded endpoint.
+      TROOP_0055_NAME: '第 55 旅（端點被保護）',
+      TROOP_0055_BACKEND: EXEC_URL,
+      TROOP_0055_APIKEY: KEY,
       // Pasted values often carry whitespace; login must still work.
       SUPER_KEY: `  ${SUPER_PASSWORD}  `
     },
@@ -310,6 +327,21 @@ async function run() {
     assert(String(legacy.data.error).indexOf('新版本') >= 0, legacy.data.error);
     ok('未部署新版本：提示去「部署 → 管理部署作業」建立新版本（貼 Code.gs 唔等於 deploy）');
 
+    // ---- 8b. 端點被 Vercel Deployment Protection 擋住（401）→ 要講名原因 ----
+    const guardCfg = await proxy({
+      troopId: '0055', action: 'configureTrustedTicketVerifier',
+      verifyUrl: PROTECTED_URL, token: leader.data.token
+    });
+    assert.strictEqual(guardCfg.data.success, true, JSON.stringify(guardCfg.data));
+    const guardTest = await proxy({ troopId: '0055', action: 'testTrustedTicketVerifier', token: leader.data.token });
+    assert.strictEqual(guardTest.data.success, false, JSON.stringify(guardTest.data));
+    assert.strictEqual(guardTest.data.status, 401);
+    assert(String(guardTest.data.error).indexOf('Deployment Protection') >= 0, guardTest.data.error);
+    const guardLogin = await proxy({ troopId: '0055', action: 'login', login_id: 'sheep', password: SUPER_PASSWORD });
+    assert.strictEqual(guardLogin.status, 401);
+    assert(String(guardLogin.data.error).indexOf('Deployment Protection') >= 0, guardLogin.data.error);
+    ok('端點被 Vercel 保護（401）：直接講名 Deployment Protection，唔好再淨係話 HTTP 401');
+
     // ---- 9. 密碼真係錯 → 仍然要擋（5 次後 429）----
     let locked = null;
     for (let i = 0; i < 5; i++) {
@@ -325,6 +357,7 @@ async function run() {
     gasServer.close();
     oldServer.close();
     legacyServer.close();
+    guardChild.kill('SIGTERM');
   }
 
   console.log(`\n=== 中央登入診斷：${passed} 通過 ===`);

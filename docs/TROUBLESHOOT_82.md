@@ -33,6 +33,29 @@ TROOP_0082_APIKEY
 > 唔使、亦唔應該為咗呢啲改動而執行 `initializeSheets()`／`repairSheets()`：
 > 佢哋會改既有工作表，對已經有資料嘅旅團有風險。
 
+## Vercel Deployment Protection 會擋死中央登入
+
+中央登入嘅最後一關，係旅團嘅 Apps Script 用 `UrlFetchApp` 回調本系統嘅
+`/api/verify-super-ticket`。**Apps Script 係「冇人」打去 Vercel** —— 佢冇 Vercel 登入
+state，所以只要 Deployment Protection（Vercel Authentication／SSO）開咗，回調就一定
+收到 401／403 嘅登入頁，而唔係 JSON。結果：旅團設定全部正確，但 `sheep` 永遠入唔到。
+
+（舊版「測試連線」淨係睇 HTTP status < 500，所以 401 會被當成功 —— 呢個正正係
+「測試連線話成功、但係點都入唔到」嘅由來。）
+
+解決方法（揀一個）：
+
+1. **閂咗保護**：Vercel → Project → Settings → Deployment Protection → 將
+   Production（同埋你用緊嘅環境）嘅 Vercel Authentication 關掉。
+2. **用 bypass token**：同一頁開「Protection Bypass for Automation」攞一串 secret，
+   然後設環境變數
+   `SCOUTBADGE_VERIFY_URL=https://<你的域名>/api/verify-super-ticket?x-vercel-protection-bypass=<secret>`
+   （網址必須 https）。
+
+檢查方法：用一個**冇登入 Vercel** 嘅瀏覽器（或無痕視窗）開
+`https://<你的域名>/api/verify-super-ticket` —— 如果見到 Vercel 登入頁而唔係 JSON，
+即係保護仲開緊。
+
 ## 中央登入（sheep）失敗
 
 中央帳號 `sheep` 嘅密碼係 Vercel 嘅 `SUPER_KEY`，唔再存喺 Sheet。失敗時登入頁／
@@ -46,6 +69,7 @@ TROOP_0082_APIKEY
 | Vercel 登記嘅後端網址同本 Sheet 嘅 Web App 網址唔一致 | `TROOP_{ID}_BACKEND` 同 Sheet 嘅 `/exec` 網址唔同（多咗斜線／空格，或係舊部署 ID） | 修正 `TROOP_{ID}_BACKEND` → 重新部署 → 再撳一次「儲存設定」重新計雜湊 |
 | Vercel 未登記旅團編號 | `TROOP_{ID}_NAME／_BACKEND／_APIKEY` 唔齊，或編號同變數名唔一致 | 補齊三個變數（`0082` 同 `82` 唔互通） |
 | 中央登入驗證端點連唔到／回應異常 | 端點唔係公開 https、被重新導向，或 Vercel 未重新部署 | 端點填 `https://<本部署域名>/api/verify-super-ticket`；改動後重新部署 |
+| 中央登入驗證端點回應異常（**HTTP 401／403**） | **Vercel Deployment Protection 開咗** —— Apps Script 冇 Vercel 登入 state，一定過唔到 | 見下面「Vercel Deployment Protection」 |
 | 旅團後端尚未更新（缺少中央登入 `superLogin`） | Sheet 上嘅 Apps Script 係舊版 | 覆寫 `apps-script/Code.gs`，喺原有 Web App 部署新版本（保留 `/exec` URL） |
 | 登入嘗試次數過多，請稍後再試 | 密碼錯 5 次，鎖 15 分鐘（**只計密碼錯**，設定問題唔會鎖） | 等 15 分鐘；順便確認 `SUPER_KEY` |
 

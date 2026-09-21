@@ -997,13 +997,22 @@ function validCentralBootstrap(bootstrap,verifyUrl,troopId){
 function centralVerifierHint(troopId,what){
   return '請檢查 Vercel 嘅 TROOP_'+troopId+'_'+what+'，改好後重新部署。';
 }
+// 端點回非 200 嘅常見原因：Apps Script 係「冇人」打去 Vercel，
+// 所以任何 Vercel Deployment Protection／SSO 保護都會直接擋住佢（401／403）。
+function centralHttpHint(status){
+  const code=Number(status);
+  if(code===401||code===403) return '多數係 Vercel Deployment Protection 開咗：Apps Script 冇 Vercel 登入 state，一定過唔到。請喺 Vercel 項目「Settings → Deployment Protection」閂咗 Production 保護，或者開「Protection Bypass for Automation」攞 token 加落網址（設 SCOUTBADGE_VERIFY_URL）。';
+  if(code>=300&&code<400) return '端點被重新導向（'+code+'）：網址要直接指去 /api/verify-super-ticket，唔好經任何跳轉（http→https、自訂網域、多餘斜線都會跳）。';
+  if(code===404) return '端點唔存在：Vercel 係咪未部署到有 /api/verify-super-ticket 嘅版本？';
+  return '請確認網址正確、冇被重新導向（例如 http→https 或自訂網域跳轉）。';
+}
 function testTrustedTicketVerifier(){
   const cfg=trustedTicketConfig();
   if(!cfg) return {success:false,error:'尚未設定驗證端點（請先在「成員管理 → 中央登入設定」按「儲存設定」）'};
   try{
     const response=UrlFetchApp.fetch(cfg.verifyUrl,{method:'post',contentType:'application/json',payload:JSON.stringify({ticket:'test',troopId:cfg.troopId,backendHash:cfg.backendHash,loginId:'test'}),muteHttpExceptions:true,followRedirects:false});
     const status=response.getResponseCode();
-    if(status!==200) return {success:false,status:status,error:'驗證端點回應 HTTP '+status+'（應為 200）：請確認網址正確、冇被重新導向（例如 http→https 或自訂網域跳轉）。'};
+    if(status!==200) return {success:false,status:status,error:'驗證端點回應 HTTP '+status+'（應為 200）：'+centralHttpHint(status)};
     let result=null;
     try{ result=JSON.parse(response.getContentText()); }catch(e){ result=null; }
     if(!result) return {success:false,status:status,error:'驗證端點回傳唔係 JSON：請重新部署 Vercel 最新版本。'};
@@ -1062,7 +1071,10 @@ function handleSuperLoginTicket(ticket,loginId,apiKey){
   if(!check.ok){
     if(check.reason==='not_configured') return jsonResponse({success:false,code:409,reason:'central_verifier_not_configured',error:'中央登入尚未設定：請先由領袖登入 →「成員管理 → 中央登入設定」→ 儲存端點並測試連線。'});
     if(check.reason==='unreachable') return jsonResponse({success:false,code:502,error:'中央登入驗證端點連唔到：請確認端點係公開 https 網址（唔可以用 localhost），再撳「測試連線」。'});
-    if(String(check.reason||'').indexOf('http_')===0) return jsonResponse({success:false,code:502,error:'中央登入驗證端點回應異常（'+String(check.reason).replace('http_','HTTP ')+'）：請按「測試連線」睇原因，或重新儲存設定。'});
+    if(String(check.reason||'').indexOf('http_')===0){
+      const code=String(check.reason).replace('http_','');
+      return jsonResponse({success:false,code:502,error:'中央登入驗證端點回應異常（HTTP '+code+'）：'+centralHttpHint(code)});
+    }
     return jsonResponse({success:false,code:401,error:'中央登入票據被拒：旅團編號或後端網址同 Vercel 登記唔一致，請重新儲存中央登入設定。'});
   }
   const user=getUser(SUPER_ADMIN_ID);
