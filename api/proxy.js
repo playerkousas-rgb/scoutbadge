@@ -2,7 +2,7 @@
 
 const { getTroopConfig, isTrustedBackend } = require('../lib/registry');
 const {
-  isCentralLoginCandidate,
+  centralSubject,
   passwordMatches,
   superConfigured,
   createSuperTicket,
@@ -60,10 +60,19 @@ function sanitizeForwardPayload(payload, troopConfig) {
   return forward;
 }
 
-function logResult({ troopId, action, status, startedAt, success, central }) {
+function logResult({ troopId, action, status, startedAt, success, central, centralFail }) {
   // Keep diagnostics useful without logging a password, ticket, API key,
   // backend URL, browser token, or request body.
-  console.log(`[proxy] troop=${troopId} action=${action} status=${status} duration=${Date.now() - startedAt}ms success=${success} central=${central}`);
+  console.log(`[proxy] troop=${troopId} action=${action} status=${status} duration=${Date.now() - startedAt}ms success=${success} central=${central}${centralFail ? ` centralFail=${centralFail}` : ''}`);
+}
+
+// A troop backend that predates the central-login contract answers an unknown
+// action. Say what to do instead of echoing the raw upstream text.
+function explainCentralUpstreamFailure(errorText) {
+  if (typeof errorText === 'string' && /Unknown action/i.test(errorText)) {
+    return '旅團後端尚未更新（缺少中央登入 superLogin）：請覆寫 apps-script/Code.gs，並在原有 Web App 部署新版本。';
+  }
+  return errorText;
 }
 
 // Fixed server-side destination for the "new troop deployment" registration
@@ -143,6 +152,7 @@ module.exports = async function handler(req, res) {
   let action = '';
   let troopId = '';
   let central = false;
+  let centralSubjectId = null;
 
   try {
     const payload = parsePayload(req.body);
@@ -161,30 +171,34 @@ module.exports = async function handler(req, res) {
     const troopConfig = getTroopConfig(troopId);
     if (!troopConfig) return fail(res, 404, '找不到指定旅團');
 
-    central = action === 'login' && isCentralLoginCandidate(payload.login_id);
+    centralSubjectId = action === 'login' ? centralSubject(payload.login_id) : null;
+    central = centralSubjectId !== null;
     let forwardPayload;
 
     if (central) {
-      // A short or missing key is rejected locally. No request reaches GAS.
-      if (!superConfigured()) {
-        return fail(res, 503, '登入服務暫時無法使用，請聯絡管理員');
-      }
       if (!loginRateLimit.allowed(req)) {
         return fail(res, 429, '登入嘗試次數過多，請稍後再試');
       }
+      // A short or missing key is rejected locally. No request reaches GAS.
+      if (!superConfigured()) {
+        logResult({ troopId, action, status: 503, startedAt, success: false, central, centralFail: 'key_unset' });
+        return fail(res, 503, '中央登入尚未設定（Vercel 環境變數 SUPER_KEY 未設定或太短），請聯絡管理員');
+      }
       if (!passwordMatches(payload.password)) {
+        // Only a wrong password is password guessing: count it.
         loginRateLimit.failed(req);
+        logResult({ troopId, action, status: 401, startedAt, success: false, central, centralFail: 'password' });
         return fail(res, 401, '登入失敗');
       }
 
       forwardPayload = {
         action: 'superLogin',
-        login_id: String(payload.login_id || '').trim(),
+        login_id: centralSubjectId,
         ticket: createSuperTicket({
           troopId: troopConfig.id,
           backend: troopConfig.backend,
           apikey: troopConfig.apikey,
-          loginId: payload.login_id
+          loginId: centralSubjectId
         }),
         apikey: troopConfig.apikey
       };
@@ -253,11 +267,21 @@ module.exports = async function handler(req, res) {
 
     if (central) {
       if (!result || result.success !== true || typeof result.token !== 'string' || !result.token) {
-        loginRateLimit.failed(req);
-        logResult({ troopId, action, status: upstream.status, startedAt, success: false, central });
-        // 保留後端語意（例：409＝已接入主系統，請經主系統登入）
-        const errorText = (result && typeof result.error === 'string' && result.error) || '登入失敗';
-        const out = { success: false, error: errorText };
+        // A rejected ticket or a misconfigured verifier is not password
+        // guessing, so it must not lock the administrator out for 15 minutes
+        // while they are trying to repair the setup.
+        logResult({
+          troopId,
+          action,
+          status: upstream.status,
+          startedAt,
+          success: false,
+          central,
+          centralFail: (result && result.code ? `code_${result.code}` : 'upstream_rejected')
+        });
+        // 保留後端語意（例：409＝尚未設定驗證端點，502＝端點連不上）
+        const rawError = (result && typeof result.error === 'string' && result.error) || '登入失敗';
+        const out = { success: false, error: explainCentralUpstreamFailure(rawError) };
         if (result && typeof result.code === 'number') out.code = result.code;
         return res.status(401).json(out);
       }

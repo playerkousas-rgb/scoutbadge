@@ -4021,6 +4021,7 @@ async function saveCentralAuthConfig(){
     const d=await apiRequest('configureTrustedTicketVerifier',{verifyUrl,troopId});
     if(!d.success) throw new Error(d.error||t('ca_test_fail'));
     status.textContent=t('ca_saved'); status.style.color='var(--green)';
+    // 儲存後立即自我檢查：旅團有冇登記、後端網址雜湊一唔一致都要講得出
     testCentralAuth();
   }catch(e){ status.textContent=e.message; status.style.color='var(--red)'; }
 }
@@ -4030,9 +4031,8 @@ async function testCentralAuth(){
   try{
     const d=await apiRequest('testTrustedTicketVerifier',{});
     if(!d.success) throw new Error(d.error||t('ca_test_fail'));
-    if(typeof d.status==='number' && d.status<500){
-      status.textContent=t('ca_test_ok')+' (HTTP '+d.status+')'; status.style.color='var(--green)';
-    }else throw new Error(t('ca_test_fail'));
+    status.textContent=(d.detail||t('ca_test_ok'))+(typeof d.status==='number'?' (HTTP '+d.status+')':'');
+    status.style.color='var(--green)';
   }catch(e){ status.textContent=t('ca_test_fail')+'：'+e.message; status.style.color='var(--red)'; }
 }
 async function updateSystemConfig(key,value){

@@ -61,6 +61,8 @@ sig     = HMAC-SHA256( apiKey, message )   // 小寫 hex
 
 - **SUPER id（`sheep`／`L+數字` 中央身份）唔接受** sig —— 中央登入走另外嘅
   trusted-ticket 路徑（見 `README`／`api/verify-super-ticket.js`）。
+  中央登入失敗時，失敗關卡（未設定 verifier／旅團未登記／後端網址唔一致／
+  後端未更新）會變成可行動嘅提示，對照表見 `docs/TROUBLESHOOT_82.md`。
 - 家長**只讀**：`handleParentAction` 只放行 `load`／`getOtherBadges`／
   `getServiceRecords`／`getMembers`（全部 server-side 收縮到子女聯集）；
   其他 action（寫入、審批、改密碼…）一律 `code:403`。

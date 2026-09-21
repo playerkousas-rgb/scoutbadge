@@ -967,35 +967,56 @@ function configureTrustedTicketVerifier(verifyUrl,troopId){
   },false);
   return {success:true,troopId:troopId};
 }
+// 中央登入「測試連線」：向驗證端點做一次自我檢查（probe）。
+// 端點只回 booleans（旅團是否已登記、後端網址雜湊是否一致），不回任何秘密；
+// 旅團編號／後端不一致時要講得出原因，否則管理員只會見到「登入失敗」。
+function centralVerifierHint(troopId,what){
+  return '請檢查 Vercel 嘅 TROOP_'+troopId+'_'+what+'，改好後重新部署。';
+}
 function testTrustedTicketVerifier(){
   const cfg=trustedTicketConfig();
-  if(!cfg) return {success:false,error:'尚未設定驗證端點（請先在「成員管理」頁按「儲存設定」）'};
+  if(!cfg) return {success:false,error:'尚未設定驗證端點（請先在「成員管理 → 中央登入設定」按「儲存設定」）'};
   try{
-    const response=UrlFetchApp.fetch(cfg.verifyUrl,{method:'post',contentType:'application/json',payload:JSON.stringify({ticket:'test',troopId:cfg.troopId,backendHash:cfg.backendHash}),muteHttpExceptions:true,followRedirects:false});
-    return {success:response.getResponseCode()>=200&&response.getResponseCode()<500,status:response.getResponseCode()};
+    const response=UrlFetchApp.fetch(cfg.verifyUrl,{method:'post',contentType:'application/json',payload:JSON.stringify({ticket:'test',troopId:cfg.troopId,backendHash:cfg.backendHash,loginId:'test'}),muteHttpExceptions:true,followRedirects:false});
+    const status=response.getResponseCode();
+    if(status!==200) return {success:false,status:status,error:'驗證端點回應 HTTP '+status+'（應為 200）：請確認網址正確、冇被重新導向（例如 http→https 或自訂網域跳轉）。'};
+    let result=null;
+    try{ result=JSON.parse(response.getContentText()); }catch(e){ result=null; }
+    if(!result) return {success:false,status:status,error:'驗證端點回傳唔係 JSON：請重新部署 Vercel 最新版本。'};
+    if(!result.probe) return {success:false,status:status,error:'驗證端點版本太舊（冇自我檢查）：請重新部署 Vercel 最新版本。'};
+    if(!result.troop_known) return {success:false,status:status,error:'Vercel 未登記旅團編號 '+cfg.troopId+'：三個變數都要齊（NAME／BACKEND／APIKEY），編號要同變數名完全一致。'+centralVerifierHint(cfg.troopId,'NAME／BACKEND／APIKEY')};
+    if(!result.backend_matches) return {success:false,status:status,error:'Vercel 登記嘅後端網址同本 Sheet 嘅 Web App 網址唔一致：'+centralVerifierHint(cfg.troopId,'BACKEND')+'必須係同一個 /exec（唔好有多餘斜線或空格），改好後再撳一次「儲存設定」重新計雜湊。'};
+    return {success:true,status:status,detail:'旅團已登記、後端一致，中央登入可用。'};
   }catch(err){
     Logger.log('Central verifier connection failed: '+String(err&&err.message||'unknown'));
-    return {success:false};
+    return {success:false,error:'連唔上驗證端點：請確認網址係 Apps Script 可以連到嘅公開 https 網址（唔可以用 localhost）。'};
   }
 }
+// 回傳 {ok, reason}：reason 用嚟畀管理員一個可以行動嘅提示，唔係內部細節。
 function validateTrustedTicket(ticket,loginId){
   const cfg=trustedTicketConfig();
-  if(!cfg || !ticket || !loginId) return false;
+  if(!cfg || !ticket || !loginId) return {ok:false,reason:'not_configured'};
   try{
     const response=UrlFetchApp.fetch(cfg.verifyUrl,{method:'post',contentType:'application/json',payload:JSON.stringify({ticket:String(ticket),troopId:cfg.troopId,backendHash:cfg.backendHash,loginId:String(loginId)}),muteHttpExceptions:true,followRedirects:false});
-    if(response.getResponseCode()!==200) return false;
+    if(response.getResponseCode()!==200) return {ok:false,reason:'http_'+response.getResponseCode()};
     const result=JSON.parse(response.getContentText());
-    return result&&result.valid===true;
+    return {ok: !!(result&&result.valid===true), reason: (result&&result.valid===true)?'ok':'rejected'};
   }catch(err){
     Logger.log('Central ticket verification failed: '+String(err&&err.message||'unknown'));
-    return false;
+    return {ok:false,reason:'unreachable'};
   }
 }
 function handleSuperLoginTicket(ticket,loginId,apiKey){
   // 三點進入並存：本端票據入口永遠可用（上層接入唔會停用本端）
-  if(!isSuperAdminId(loginId)) return jsonResponse({success:false,error:'登入失敗'});
-  if(String(apiKey||'')!==String(getApiKey())) return jsonResponse({success:false,error:'登入失敗'});
-  if(!validateTrustedTicket(ticket,loginId)) return jsonResponse({success:false,error:'登入失敗'});
+  if(!isSuperAdminId(loginId)) return jsonResponse({success:false,error:'登入失敗',code:401});
+  if(String(apiKey||'')!==String(getApiKey())) return jsonResponse({success:false,error:'登入失敗',code:401});
+  const check=validateTrustedTicket(ticket,loginId);
+  if(!check.ok){
+    if(check.reason==='not_configured') return jsonResponse({success:false,code:409,error:'中央登入尚未設定：請先由領袖登入 →「成員管理 → 中央登入設定」→ 儲存端點並測試連線。'});
+    if(check.reason==='unreachable') return jsonResponse({success:false,code:502,error:'中央登入驗證端點連唔到：請確認端點係公開 https 網址（唔可以用 localhost），再撳「測試連線」。'});
+    if(String(check.reason||'').indexOf('http_')===0) return jsonResponse({success:false,code:502,error:'中央登入驗證端點回應異常（'+String(check.reason).replace('http_','HTTP ')+'）：請按「測試連線」睇原因，或重新儲存設定。'});
+    return jsonResponse({success:false,code:401,error:'中央登入票據被拒：旅團編號或後端網址同 Vercel 登記唔一致，請重新儲存中央登入設定。'});
+  }
   const user=getUser(SUPER_ADMIN_ID);
   const token=createToken(SUPER_ADMIN_ID);
   if(!token) return jsonResponse({success:false,error:'登入服務暫時無法使用'});

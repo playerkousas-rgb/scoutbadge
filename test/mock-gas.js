@@ -145,12 +145,20 @@ class MockGas {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ticket: 'test', troopId: this.authProps.troopId, backendHash: this.authProps.backendHash })
         });
+        // Mirrors Code.gs: the probe must answer on HTTP 200 and confirm both
+        // the troop registration and the backend hash — a bare status code is
+        // not proof that central login will work.
+        let probe = null;
+        try { probe = await response.json(); } catch (_) { probe = null; }
+        const healthy = response.status === 200 && Boolean(probe) &&
+          probe.probe === true && probe.troop_known === true && probe.backend_matches === true;
         return this._json(res, 200, {
-          success: response.status >= 200 && response.status < 500,
-          status: response.status
+          success: healthy,
+          status: response.status,
+          detail: healthy ? '旅團已登記、後端一致，中央登入可用。' : '驗證端點自我檢查未通過。'
         });
       } catch (err) {
-        return this._json(res, 200, { success: false });
+        return this._json(res, 200, { success: false, error: '連唔上驗證端點' });
       }
     }
 
