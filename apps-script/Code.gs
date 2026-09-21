@@ -647,6 +647,18 @@ function doPost(e){
     // v5.2.1：公開入口接受成員／領袖申請（角色在 handleApply 內嚴格驗證，只限 member / branch_leader）
     if(action==='apply') return handleApply(body.ymis,body.name,body.email,body.requested_role||'member',body.branch);
 
+    // 中央登入一次性的 verifier 設定／測試（領袖權限）。
+    // apikey 由同源 Proxy 伺服器端注入（瀏覽器不持有），另需有效領袖 token。
+    // 用途：讓 GAS 知道要向哪個固定 Vercel 端點回調驗證短效票據。
+    if(action==='configureTrustedTicketVerifier' || action==='testTrustedTicketVerifier'){
+      if(!body.apikey || body.apikey!==getApiKey()) return jsonResponse({success:false,error:'未授權'});
+      const cfgYmis=body.token?validateToken(body.token):null;
+      const cfgUser=cfgYmis?getUser(cfgYmis):null;
+      if(!cfgUser || getRoleLevel(cfgUser.role)<40) return jsonResponse({success:false,error:'需領袖權限'});
+      if(action==='configureTrustedTicketVerifier') return jsonResponse(configureTrustedTicketVerifier(body.verifyUrl,body.troopId));
+      return jsonResponse(testTrustedTicketVerifier());
+    }
+
     // save & addMember 需要 apikey (v4 向下兼容：若無 apikey 但有有效 token 也允許)
     if(action==='save' || action==='addMember' || action==='addUser' || action==='bulkAddUsers' || action==='saveOtherBadge'){
       const reqKey=body.apikey;
@@ -782,7 +794,7 @@ function configureTrustedTicketVerifier(verifyUrl,troopId){
 }
 function testTrustedTicketVerifier(){
   const cfg=trustedTicketConfig();
-  if(!cfg) return {success:false};
+  if(!cfg) return {success:false,error:'尚未設定驗證端點（請先在「成員管理」頁按「儲存設定」）'};
   try{
     const response=UrlFetchApp.fetch(cfg.verifyUrl,{method:'post',contentType:'application/json',payload:JSON.stringify({ticket:'test',troopId:cfg.troopId,backendHash:cfg.backendHash}),muteHttpExceptions:true,followRedirects:false});
     return {success:response.getResponseCode()>=200&&response.getResponseCode()<500,status:response.getResponseCode()};

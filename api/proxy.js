@@ -1,6 +1,6 @@
 'use strict';
 
-const { getTroopConfig } = require('../lib/registry');
+const { getTroopConfig, isTrustedBackend } = require('../lib/registry');
 const {
   isCentralLoginCandidate,
   passwordMatches,
@@ -66,6 +66,69 @@ function logResult({ troopId, action, status, startedAt, success, central }) {
   console.log(`[proxy] troop=${troopId} action=${action} status=${status} duration=${Date.now() - startedAt}ms success=${success} central=${central}`);
 }
 
+// Fixed server-side destination for the "new troop deployment" registration
+// form (see the 新旅團部署 tab). The applicant's GAS URL and API key are
+// forwarded to this admin inbox only; the browser never learns the destination
+// and it is never accepted from the request. Leave unset to disable the form
+// with a clear message instead of routing it to a troop backend.
+const ADMIN_API_ENV = 'SCOUTBADGE_ADMIN_API';
+
+function trustedAdminApi() {
+  const raw = String(process.env[ADMIN_API_ENV] || '').trim();
+  return raw && isTrustedBackend(raw) ? raw : null;
+}
+
+function clampText(value, max) {
+  return String(value === undefined || value === null ? '' : value).trim().slice(0, max);
+}
+
+async function handleRegistration(res, payload, startedAt) {
+  const adminApi = trustedAdminApi();
+  if (!adminApi) {
+    logResult({ troopId: 'REG', action: 'submitContact', status: 503, startedAt, success: false, central: false });
+    return fail(res, 503, '接入申請功能尚未啟用，請直接聯絡管理員');
+  }
+  const regPayload = {
+    troopId: clampText(payload.troopId, 32),
+    troopName: clampText(payload.troopName, 100),
+    scriptUrl: clampText(payload.scriptUrl, 300),
+    apiKey: clampText(payload.apiKey, 120),
+    appType: 'scoutbadge',
+    note: clampText(payload.note, 500)
+  };
+  if (!regPayload.troopId || !regPayload.scriptUrl || !regPayload.apiKey) {
+    return fail(res, 400, '申請資料不完整');
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+  try {
+    const upstream = await fetch(adminApi, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(regPayload),
+      redirect: 'follow',
+      signal: controller.signal
+    });
+    const raw = await upstream.text();
+    let result = null;
+    try { result = JSON.parse(raw); } catch (_) { /* non-JSON inbox response */ }
+    if (!upstream.ok || !result || result.success !== true) {
+      console.error(`[proxy] registration_upstream_bad status=${upstream.status}`);
+      logResult({ troopId: 'REG', action: 'submitContact', status: 502, startedAt, success: false, central: false });
+      return fail(res, 502, '申請未能送達管理員，請稍後重試');
+    }
+    logResult({ troopId: 'REG', action: 'submitContact', status: upstream.status, startedAt, success: true, central: false });
+    return res.status(200).json({ success: true, message: '申請已提交' });
+  } catch (error) {
+    const timeoutHit = error && error.name === 'AbortError';
+    console.error(`[proxy] registration_fetch_error timeout=${timeoutHit}`);
+    logResult({ troopId: 'REG', action: 'submitContact', status: timeoutHit ? 504 : 502, startedAt, success: false, central: false });
+    return fail(res, timeoutHit ? 504 : 502, timeoutHit ? '提交逾時，請稍後重試' : '申請未能送達管理員，請稍後重試');
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 module.exports = async function handler(req, res) {
   attachResponseHelpers(res);
   res.setHeader('Cache-Control', 'no-store');
@@ -89,9 +152,14 @@ module.exports = async function handler(req, res) {
     action = safeAction(payload.action);
     if (!troopId || !action) return fail(res, 400, '請求資料不完整');
 
+    if (action === 'superLogin') return fail(res, 403, '未授權請求');
+    // Registration applies to a troop that is NOT registered yet, so it must
+    // be resolved before the registry lookup (the destination is fixed
+    // server-side, never the troop's own backend).
+    if (action === 'submitContact') return handleRegistration(res, payload, startedAt);
+
     const troopConfig = getTroopConfig(troopId);
     if (!troopConfig) return fail(res, 404, '找不到指定旅團');
-    if (action === 'superLogin') return fail(res, 403, '未授權請求');
 
     central = action === 'login' && isCentralLoginCandidate(payload.login_id);
     let forwardPayload;
@@ -122,6 +190,11 @@ module.exports = async function handler(req, res) {
       };
     } else {
       forwardPayload = sanitizeForwardPayload(payload, troopConfig);
+      // The verifier bootstrap always targets the routed troop itself; the
+      // sanitiser stripped the routing key, so hand it back explicitly.
+      if (action === 'configureTrustedTicketVerifier') {
+        forwardPayload.troopId = troopConfig.id;
+      }
       if (typeof forwardPayload.token === 'string' && forwardPayload.token) {
         const session = unwrapBrowserSession(forwardPayload.token, {
           troopId: troopConfig.id,

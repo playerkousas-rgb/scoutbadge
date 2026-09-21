@@ -33,9 +33,14 @@ TROOP_0082_APIKEY=...
 ## 開發與檢查
 
 ```bash
-npm test
-node server.js
+npm run check   # 語法檢查（含 index.html 與 Code.gs）
+npm test        # 單元 + 真實 HTTP 端到端（含 mock GAS 旅團、中央登入回調全循環）
+npm run dev     # 本機預覽：mock 旅團 0082 + 開發伺服器（預設 port 3000）
+npm run build   # 產生 public/
+node server.js  # 只有開發伺服器（不帶 mock）
 ```
+
+`npm test` 的最後一步（`test/e2e_http.test.js`）會啟動真實 dev server 與兩個 mock GAS 旅團，走完整 HTTP 流程：旅團清單、登入、讀取／寫入、跨旅團隔離、中央登入（verifier 設定 → 票據簽發 → GAS 回調驗證 → 封裝 session）、新旅團接入申請。改動 Proxy、Registry 或 Code.gs 的 API 層後，以它作為部署前的最後一道門。
 
 開發伺服器會綁定 `0.0.0.0`。部署範圍、依賴與圖片原則見 [DEPLOYMENT_HYGIENE.md](DEPLOYMENT_HYGIENE.md)。
 
@@ -44,6 +49,12 @@ node server.js
 Vercel 的 Output Directory 是 `public/`，由 `npm run build`（`build.js`）在建置時產生，內容只有瀏覽器需要的 `index.html`、`assets/`、`data/`、`docs/`，以及 `apps-script/Code.gs`（開團步驟 1 的官方下載檔）。`vercel.json` 已固定 `outputDirectory`，並覆蓋 Dashboard 的 Build 設定，所以不需要在 Project Settings 手動調整；`public/` 是建置產物，已列入 `.gitignore`，不要提交。
 
 `api/` 留在專案根目錄，由 Vercel 偵測為 Functions，每個 Function 自行 bundle 所需的 `lib/`。`lib/`、`server.js`、`package.json`、測試與腳本都不會出現在公開靜態目錄。
+
+`vercel.json` 同時固定三件事，Project Settings 不需手動調整：
+
+- `buildCommand: npm run build` —— Vercel 建置時執行 build.js 產生 `public/`（沒有這一行，`public/` 不會在部署時被建立，靜態頁面會全部 404）
+- `outputDirectory: public` —— 公開靜態目錄只有 `public/`
+- `functions` —— 三個 API 的 `maxDuration` 設為 60 秒（GAS 冷啟動可能超過預設上限，超時會回 504）
 
 ## 資料來源
 
