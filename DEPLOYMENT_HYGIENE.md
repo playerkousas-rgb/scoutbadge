@@ -5,6 +5,9 @@
 ## 部署範圍
 
 - 只部署執行所需的靜態頁面、資料、前端資產、`api/` 端點及其 server-side library。
+- 公開靜態目錄是 `public/`，由 `npm run build`（`build.js`）產生，只複製 `index.html`、`assets/`、`data/`、`docs/`；`vercel.json` 的 `outputDirectory` 固定為 `public`。`public/` 是產物，不提交到 Git。
+- `api/` 與 `lib/` 留在專案根目錄：`api/` 由 Vercel 建立 Functions，`lib/` 被各 Function bundle，兩者都不會被靜態服務，因此 server-side 原始碼不會公開下載。
+- `build.js` 會核對 `index.html` 引用的本機路徑。未發布的路徑必須在 `KNOWN_UNDEPLOYED` 列明原因，否則建置失敗，避免新資產在 production 靜默 404。
 - `.vercelignore` 排除 Git 資料、依賴目錄、測試、備份、log、暫存、上載目錄、文件與本機快取；Apps Script 原始碼也不會作為 Vercel 靜態資產部署。
 - Server-side helper 放在 `lib/`，不放成公開 API 路由。
 - 依賴維持極簡；建置或測試工具應列為 `devDependencies`。新增執行期依賴前，先確認原生平台功能不能完成同一工作。
