@@ -81,6 +81,11 @@ function isVerifierUnconfigured(result) {
     (result.reason === 'central_verifier_not_configured' || result.code === 409);
 }
 
+// Pasting Code.gs into the editor is not enough: the /exec URL keeps serving
+// the version that was deployed. Say that out loud instead of pointing at a
+// leader session the administrator may not have.
+const CENTRAL_BOOTSTRAP_FAIL = '中央登入尚未設定，自動開通又失敗：請喺 Apps Script「部署 → 管理部署作業」為既有 Web App「建立新版本」（覆寫 Code.gs 之後一定要部署新版本，/exec 先行到新 code）；或者以領袖登入 →「成員管理 → 中央登入設定」手動設定。';
+
 // Reads go to Apps Script as a GET with the server-side key on the query
 // string; writes and every other action are POSTed as before.
 async function getUpstream(troopConfig, forwardPayload) {
@@ -222,6 +227,7 @@ module.exports = async function handler(req, res) {
   let troopId = '';
   let central = false;
   let centralSubjectId = null;
+  let centralBootstrapFailed = false;
 
   try {
     const payload = parsePayload(req.body);
@@ -329,8 +335,12 @@ module.exports = async function handler(req, res) {
             return fail(res, 502, '後端服務暫時無法使用，請稍後再試');
           }
         } else {
+          // Usually a backend that was never re-deployed after the upgrade.
+          centralBootstrapFailed = true;
           console.error(`[proxy] central_bootstrap_failed troop=${troopId}`);
         }
+      } else {
+        centralBootstrapFailed = true;
       }
     }
 
@@ -346,11 +356,16 @@ module.exports = async function handler(req, res) {
           startedAt,
           success: false,
           central,
-          centralFail: (result && result.code ? `code_${result.code}` : 'upstream_rejected')
+          centralFail: centralBootstrapFailed
+            ? 'bootstrap_failed'
+            : (result && result.code ? `code_${result.code}` : 'upstream_rejected')
         });
         // 保留後端語意（例：409＝尚未設定驗證端點，502＝端點連不上）
         const rawError = (result && typeof result.error === 'string' && result.error) || '登入失敗';
-        const out = { success: false, error: explainCentralUpstreamFailure(rawError) };
+        const out = {
+          success: false,
+          error: centralBootstrapFailed ? CENTRAL_BOOTSTRAP_FAIL : explainCentralUpstreamFailure(rawError)
+        };
         if (result && typeof result.code === 'number') out.code = result.code;
         return res.status(401).json(out);
       }

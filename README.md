@@ -36,7 +36,11 @@ ScoutBadge 係底層**支部進度追蹤系統（leaf）**，可被上層容器�
 
 ## 升級既有旅團
 
-更新既有 Apps Script 時，覆蓋 `apps-script/Code.gs` 並部署**新版本**到既有 Web App deployment，以保留原有 `/exec` URL。本次設定改動不需要、也不應以初始化函式來變更現有工作表名稱、欄位或資料。
+更新既有 Apps Script 時，覆蓋 `apps-script/Code.gs`，然後必須在 Apps Script「部署 →
+管理部署作業」為**既有 Web App** 建立**新版本**（`/exec` URL 會保持不變）。只覆寫編輯器
+內的程式碼並不會改變 `/exec` 所提供的版本，這是升級後功能「似有冇效」最常見的原因。
+本次設定改動不需要、也不應以初始化函式（`initializeSheets()`／`repairSheets()`）來變更
+現有工作表名稱、欄位或資料。
 
 ## 開發與檢查
 

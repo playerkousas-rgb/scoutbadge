@@ -27,12 +27,14 @@ const { backendHash, isCentralLoginCandidate, centralSubject } = require('../lib
 
 const GAS_PORT = 39531;
 const OLD_PORT = 39532;
+const LEGACY_PORT = 39534;
 const DEV_PORT = 39533;
 const KEY = 'KEY_A';
 const EXEC_URL = `http://127.0.0.1:${GAS_PORT}/exec`;
 // Deliberate mismatch: same Apps Script, registered with a trailing slash.
 const MISMATCH_URL = `${EXEC_URL}/`;
 const OLD_URL = `http://127.0.0.1:${OLD_PORT}/exec`;
+const LEGACY_URL = `http://127.0.0.1:${LEGACY_PORT}/exec`;
 const BASE = `http://127.0.0.1:${DEV_PORT}`;
 const SUPER_PASSWORD = '0728';
 
@@ -60,6 +62,28 @@ function gasHttpServer(gas) {
       });
     });
     server.listen(GAS_PORT, '127.0.0.1', () => resolve(server));
+  });
+}
+
+// A backend that knows the central contract (it reports 409) but was never
+// re-deployed with bootstrap support: configuring still demands a leader.
+function legacyBackendServer() {
+  return new Promise((resolve) => {
+    const server = http.createServer((req, res) => {
+      let raw = '';
+      req.on('data', (c) => { raw += c; });
+      req.on('end', () => {
+        let body = {};
+        try { body = JSON.parse(raw || '{}'); } catch (_) { body = {}; }
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        if (body.action === 'superLogin') {
+          res.end(JSON.stringify({ success: false, code: 409, reason: 'central_verifier_not_configured', error: '中央登入尚未設定' }));
+          return;
+        }
+        res.end(JSON.stringify({ success: false, error: '需領袖權限' }));
+      });
+    });
+    server.listen(LEGACY_PORT, '127.0.0.1', () => resolve(server));
   });
 }
 
@@ -133,6 +157,7 @@ async function run() {
   seed(gas);
   const gasServer = await gasHttpServer(gas);
   const oldServer = await oldBackendServer();
+  const legacyServer = await legacyBackendServer();
 
   const child = spawn(process.execPath, [path.join(__dirname, '..', 'server.js')], {
     env: {
@@ -150,6 +175,10 @@ async function run() {
       TROOP_0077_NAME: '第 77 旅（舊版後端）',
       TROOP_0077_BACKEND: OLD_URL,
       TROOP_0077_APIKEY: KEY,
+      // Backend that reports 409 but cannot self-bootstrap (never re-deployed).
+      TROOP_0066_NAME: '第 66 旅（未部署新版本）',
+      TROOP_0066_BACKEND: LEGACY_URL,
+      TROOP_0066_APIKEY: KEY,
       // Pasted values often carry whitespace; login must still work.
       SUPER_KEY: `  ${SUPER_PASSWORD}  `
     },
@@ -258,7 +287,14 @@ async function run() {
     assert(String(old.data.error).indexOf('Unknown action') < 0, '唔好直接彈後端原文畀使用者');
     ok('舊版後端：提示「尚未更新（缺少中央登入 superLogin）」而唔係 Unknown action');
 
-    // ---- 8. 密碼真係錯 → 仍然要擋（5 次後 429）----
+    // ---- 8. 識回 409 但唔支援自動開通（Code.gs 冇部署新版本）→ 要講明「部署新版本」----
+    const legacy = await proxy({ troopId: '0066', action: 'login', login_id: 'sheep', password: SUPER_PASSWORD });
+    assert.strictEqual(legacy.status, 401);
+    assert(String(legacy.data.error).indexOf('管理部署作業') >= 0, legacy.data.error);
+    assert(String(legacy.data.error).indexOf('新版本') >= 0, legacy.data.error);
+    ok('未部署新版本：提示去「部署 → 管理部署作業」建立新版本（貼 Code.gs 唔等於 deploy）');
+
+    // ---- 9. 密碼真係錯 → 仍然要擋（5 次後 429）----
     let locked = null;
     for (let i = 0; i < 5; i++) {
       locked = await proxy({ troopId: '0082', action: 'login', login_id: 'sheep', password: 'wrong-' + i });
@@ -272,6 +308,7 @@ async function run() {
     await new Promise((r) => { child.once('exit', r); setTimeout(r, 500); });
     gasServer.close();
     oldServer.close();
+    legacyServer.close();
   }
 
   console.log(`\n=== 中央登入診斷：${passed} 通過 ===`);
