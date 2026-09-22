@@ -208,61 +208,17 @@ class MockGas {
         };
         return this._json(res, 200, { success: true, troopId });
       }
-      if (!this.authProps) return this._json(res, 200, { success: false, error: '尚未設定驗證端點' });
-      try {
-        const response = await fetch(this.authProps.verifyUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ticket: 'test', troopId: this.authProps.troopId, backendHash: this.authProps.backendHash })
-        });
-        // Mirrors Code.gs: the probe must answer on HTTP 200 and confirm both
-        // the troop registration and the backend hash — a bare status code is
-        // not proof that central login will work.
-        let probe = null;
-        try { probe = await response.json(); } catch (_) { probe = null; }
-        const healthy = response.status === 200 && Boolean(probe) &&
-          probe.probe === true && probe.troop_known === true && probe.backend_matches === true;
-        return this._json(res, 200, {
-          success: healthy,
-          status: response.status,
-          detail: healthy ? '旅團已登記、後端一致，中央登入可用。' : '驗證端點自我檢查未通過。'
-        });
-      } catch (err) {
-        return this._json(res, 200, { success: false, error: '連唔上驗證端點' });
-      }
+      return this._json(res, 200, { success: true, status: 200, mode: 'one_way', detail: '中央登入採純單向驗證，無需外部回調；未檢查 Vercel 登記。' });
     }
 
-    // Central super login: verify the proxy-signed ticket via the configured
-    // verifier callback, exactly like Code.gs handleSuperLoginTicket.
+    // One-way server-authenticated central login, matching Code.gs.
     if (action === 'superLogin') {
       const superUser = [...this.users.values()].find((u) => u.role === 'super_admin');
       if (!superUser || String(body.login_id) !== superUser.ymis) {
         return this._json(res, 200, { success: false, error: '登入失敗' });
       }
       if (String(body.apikey) !== this.apikey) return this._json(res, 200, { success: false, error: '登入失敗' });
-      // Mirrors Code.gs: an unconfigured verifier is reported as 409 with a
-      // reason, which is what lets the proxy open the troop itself.
-      if (!this.authProps) {
-        return this._json(res, 200, { success: false, code: 409, reason: 'central_verifier_not_configured', error: '中央登入尚未設定' });
-      }
-      let valid = false;
-      try {
-        const response = await fetch(this.authProps.verifyUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ticket: String(body.ticket),
-            troopId: this.authProps.troopId,
-            backendHash: this.authProps.backendHash,
-            loginId: superUser.ymis
-          })
-        });
-        if (response.status === 200) {
-          const out = await response.json();
-          valid = out && out.valid === true;
-        }
-      } catch (_) { valid = false; }
-      if (!valid) return this._json(res, 200, { success: false, error: '登入失敗' });
+      if (body.isSuperAdmin !== true) return this._json(res, 200, { success: false, error: '登入失敗' });
       const token = this._tokenFor(superUser.ymis);
       return this._json(res, 200, {
         success: true,

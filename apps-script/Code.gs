@@ -801,7 +801,7 @@ function doPost(e){
     // 本地 doPost 開頭加 if (!ALLOW_LOCAL_LOGIN && !isSig) return 403
     // （登入/開戶都攔，upsertUser/setPw 等 server-to-server 放行，SUPER 災難恢復放行）
     if(!allowLocal && !isSig){
-      if(action==='login' && !body.isSuperAdmin){
+      if(action==='login'){
         return jsonResponse({success:false, error:'此進度追蹤系統已關閉直接登入，請經由支部／旅管理系統登入', code:403});
       }
       if(action==='apply'){
@@ -811,8 +811,8 @@ function doPost(e){
 
     if(action==='setDownstreamAccess') return handleSetDownstreamAccess(body, isSig);
     if(action==='getDownstreamAccess') return jsonResponse({success:true, allowLocal: allowLocal});
-    if(action==='superLogin') return handleSuperLoginTicket(body.ticket,body.login_id,body.apikey);
-    if(action==='login') return handleLogin(body.login_id,body.password,body.isSuperAdmin);
+    if(action==='superLogin') return handleSuperLogin(body.login_id,body.apikey,body.isSuperAdmin);
+    if(action==='login') return handleLogin(body.login_id,body.password);
     if(action==='logout'){ destroyToken(body.token); return jsonResponse({success:true}); }
     // v5.2.1：公開入口接受成員／領袖申請（角色在 handleApply 內嚴格驗證，只限 member / branch_leader）
     if(action==='apply') return handleApply(body.ymis,body.name,body.email,body.requested_role||'member',body.branch);
@@ -1452,30 +1452,9 @@ function validCentralBootstrap(bootstrap,verifyUrl,troopId){
   for(let i=0;i<sig.length;i++){ diff |= (expect.charCodeAt(i)^sig.charCodeAt(i)); }
   return diff===0;
 }
-// 中央登入「測試連線」：向驗證端點做一次自我檢查（probe）。
-// 端點只回 booleans（旅團是否已登記、後端網址雜湊是否一致），不回任何秘密；
-// 旅團編號／後端不一致時要講得出原因，否則管理員只會見到「登入失敗」。
-function centralVerifierHint(troopId,what){
-  return '請檢查 Vercel 嘅 TROOP_'+troopId+'_'+what+'，改好後重新部署。';
-}
+// 舊版管理介面的相容入口：只回報本端模式，並未探測 Vercel 登記資料。
 function testTrustedTicketVerifier(){
-  const cfg=trustedTicketConfig();
-  if(!cfg) return {success:false,error:'尚未設定驗證端點（請先在「成員管理 → 中央登入設定」按「儲存設定」）'};
-  try{
-    const response=UrlFetchApp.fetch(cfg.verifyUrl,{method:'post',contentType:'application/json',payload:JSON.stringify({ticket:'test',troopId:cfg.troopId,backendHash:cfg.backendHash,loginId:'test'}),muteHttpExceptions:true,followRedirects:false});
-    const status=response.getResponseCode();
-    if(status!==200) return {success:false,status:status,error:'驗證端點回應 HTTP '+status+'（應為 200）：請確認網址正確、冇被重新導向（例如 http→https 或自訂網域跳轉）。'};
-    let result=null;
-    try{ result=JSON.parse(response.getContentText()); }catch(e){ result=null; }
-    if(!result) return {success:false,status:status,error:'驗證端點回傳唔係 JSON：請重新部署 Vercel 最新版本。'};
-    if(!result.probe) return {success:false,status:status,error:'驗證端點版本太舊（冇自我檢查）：請重新部署 Vercel 最新版本。'};
-    if(!result.troop_known) return {success:false,status:status,error:'Vercel 未登記旅團編號 '+cfg.troopId+'：三個變數都要齊（NAME／BACKEND／APIKEY），編號要同變數名完全一致。'+centralVerifierHint(cfg.troopId,'NAME／BACKEND／APIKEY')};
-    if(!result.backend_matches) return {success:false,status:status,error:'Vercel 登記嘅後端網址同本 Sheet 嘅 Web App 網址唔一致：'+centralVerifierHint(cfg.troopId,'BACKEND')+'必須係同一個 /exec（唔好有多餘斜線或空格），改好後再撳一次「儲存設定」重新計雜湊。'};
-    return {success:true,status:status,detail:'旅團已登記、後端一致，中央登入可用。'};
-  }catch(err){
-    Logger.log('Central verifier connection failed: '+String(err&&err.message||'unknown'));
-    return {success:false,error:'連唔上驗證端點：請確認網址係 Apps Script 可以連到嘅公開 https 網址（唔可以用 localhost）。'};
-  }
+  return {success:true,status:200,mode:'one_way',detail:'中央登入採純單向驗證，無需外部回調；此操作不檢查 Vercel 旅團登記或後端網址一致性。'};
 }
 // 只讀診斷：喺 Apps Script 編輯器直接 Run diagnoseCentralLogin()，睇中央登入卡喺邊一關。
 // 唔寫任何嘢、唔改設定；只回 hash／URL 嘅尾段，方便同 Vercel 嘅 TROOP_{ID}_BACKEND 對照。
@@ -1496,54 +1475,28 @@ function diagnoseCentralLogin(){
     hashMatches: cfg?(String(cfg.backendHash)===currentHash):false,
     hint: cfg
       ? '對照 serviceUrlTail 同 Vercel 嘅 TROOP_{ID}_BACKEND 條尾（要同一個 /exec）；hashMatches=false 即係兩邊唔一致。'
-      : '尚未設定驗證端點：新版 Proxy 會喺 sheep 登入時自動開通；或以領袖登入 →「成員管理 → 中央登入設定」手動設定。'
+      : '純單向中央登入不需要驗證端點；請確認 Vercel SUPER_KEY 及本團 BACKEND／APIKEY。'
   };
   Logger.log('中央登入診斷：'+JSON.stringify(out));
   return out;
 }
-// 回傳 {ok, reason}：reason 用嚟畀管理員一個可以行動嘅提示，唔係內部細節。
-function validateTrustedTicket(ticket,loginId){
-  const cfg=trustedTicketConfig();
-  if(!cfg || !ticket || !loginId) return {ok:false,reason:'not_configured'};
-  try{
-    const response=UrlFetchApp.fetch(cfg.verifyUrl,{method:'post',contentType:'application/json',payload:JSON.stringify({ticket:String(ticket),troopId:cfg.troopId,backendHash:cfg.backendHash,loginId:String(loginId)}),muteHttpExceptions:true,followRedirects:false});
-    if(response.getResponseCode()!==200) return {ok:false,reason:'http_'+response.getResponseCode()};
-    const result=JSON.parse(response.getContentText());
-    return {ok: !!(result&&result.valid===true), reason: (result&&result.valid===true)?'ok':'rejected'};
-  }catch(err){
-    Logger.log('Central ticket verification failed: '+String(err&&err.message||'unknown'));
-    return {ok:false,reason:'unreachable'};
-  }
-}
-function handleSuperLoginTicket(ticket,loginId,apiKey){
-  // 三點進入並存：本端票據入口永遠可用（上層接入唔會停用本端）
-  if(!isSuperAdminId(loginId)) return jsonResponse({success:false,error:'登入失敗',code:401});
-  if(String(apiKey||'')!==String(getApiKey())) return jsonResponse({success:false,error:'登入失敗',code:401});
-  const check=validateTrustedTicket(ticket,loginId);
-  if(!check.ok){
-    if(check.reason==='not_configured') return jsonResponse({success:false,code:409,reason:'central_verifier_not_configured',error:'中央登入尚未設定：請先由領袖登入 →「成員管理 → 中央登入設定」→ 儲存端點並測試連線。'});
-    if(check.reason==='unreachable') return jsonResponse({success:false,code:502,error:'中央登入驗證端點連唔到：請確認端點係公開 https 網址（唔可以用 localhost），再撳「測試連線」。'});
-    if(String(check.reason||'').indexOf('http_')===0) return jsonResponse({success:false,code:502,error:'中央登入驗證端點回應異常（'+String(check.reason).replace('http_','HTTP ')+'）：請按「測試連線」睇原因，或重新儲存設定。'});
-    return jsonResponse({success:false,code:401,error:'中央登入票據被拒：旅團編號或後端網址同 Vercel 登記唔一致，請重新儲存中央登入設定。'});
+// Vercel 驗證 SUPER_KEY 後，使用本團伺服器 API_KEY 單向授權。
+// isSuperAdmin 不是秘密；必須同時核對非空 API_KEY 及保留身份。
+function handleSuperLogin(loginId,apiKey,isSuperAdmin){
+  const expectedKey=String(getApiKey()||'');
+  if(isSuperAdmin!==true || !isSuperAdminId(loginId) || !expectedKey || String(apiKey||'')!==expectedKey){
+    return jsonResponse({success:false,error:'登入失敗',code:401});
   }
   const user=getUser(SUPER_ADMIN_ID);
   const token=createToken(SUPER_ADMIN_ID);
   if(!token) return jsonResponse({success:false,error:'登入服務暫時無法使用'});
   return jsonResponse({success:true,token:token,user:user});
 }
-function handleLogin(loginId,password,isSuperAdmin){
+function handleLogin(loginId,password){
   // 三點進入並存：本端密碼登入永遠可用（上層接入唔會停用本端）
   if(!loginId||!password) return jsonResponse({success:false,error:'請填寫帳號和密碼'});
   
-  // 簡化中央登入：Vercel 已經驗證 SUPER_KEY，直接授予超管權限
-  if(isSuperAdmin && isSuperAdminId(loginId)){
-    const user=getUser(SUPER_ADMIN_ID);
-    const token=createToken(SUPER_ADMIN_ID);
-    if(!token) return jsonResponse({success:false,error:'登入服務暫時無法使用'});
-    return jsonResponse({success:true,token:token,user:user});
-  }
-  
-  // This identity is accepted only through handleSuperLoginTicket above (now disabled).
+  // 中央身份只接受已核對 API_KEY 的 superLogin 入口。
   if(isSuperAdminId(loginId)) return jsonResponse({success:false,error:'登入失敗'});
   let user=(/^\d{10}$/.test(loginId)||/^L\d+/.test(loginId))? getUser(loginId): getUserByEmail(loginId);
   if(!user){

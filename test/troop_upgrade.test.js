@@ -165,7 +165,7 @@ async function run() {
   assert.strictEqual(pLogin.user.ymis, '1234560001');
 
   // 5b. SUPER 災難恢復登入（isSuperAdmin）→ 放行
-  const superLogin = gas.post({ action: 'login', login_id: 'sheep', password: 'any', isSuperAdmin: true, apikey: KEY });
+  const superLogin = gas.post({ action: 'superLogin', login_id: 'sheep', isSuperAdmin: true, apikey: KEY });
   assert.strictEqual(superLogin.success, true, 'SUPER 災難恢復應放行');
   assert.strictEqual(superLogin.user.role, 'super_admin');
   console.log('  [PASS] 上層 sig 與 SUPER 災難恢復在閂口後均正常放行');

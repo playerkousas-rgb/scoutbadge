@@ -257,7 +257,7 @@ async function run() {
     assert.strictEqual(entryParent.data.view_as, 'parent', '家長 sig 入口必須成功：' + JSON.stringify(entryParent.data));
     ok('三點進入並存：本團密碼 + 上層 sig + 家長 sig 同時可用（無鎖死）');
 
-    // ---- 中央登入（standalone 既有流程，真 Code.gs 回調）----
+    // ---- 中央登入（standalone 既有流程，真 Code.gs 純單向驗證）----
     const cfg = await proxy({
       troopId: '0082', action: 'configureTrustedTicketVerifier',
       verifyUrl: `${BASE}/api/verify-super-ticket`, token: lLogin.data.token
@@ -269,7 +269,7 @@ async function run() {
     assert.strictEqual(superLogin.data.success, true, JSON.stringify(superLogin.data));
     assert.strictEqual(superLogin.data.user.role, 'super_admin');
     assert(superLogin.data.token.startsWith('sbs1.'));
-    ok('中央登入全循環（真 Code.gs 回調 /api/verify-super-ticket）');
+    ok('中央登入全循環（真 Code.gs 純單向驗證）');
 
     console.log(`\n=== Realgas v4.1.0 合約：${passed} 通過 ===`);
   } finally {
