@@ -266,17 +266,11 @@ module.exports = async function handler(req, res) {
         return fail(res, 401, '登入失敗');
       }
 
-      forwardPayload = {
-        action: 'superLogin',
-        login_id: centralSubjectId,
-        ticket: createSuperTicket({
-          troopId: troopConfig.id,
-          backend: troopConfig.backend,
-          apikey: troopConfig.apikey,
-          loginId: centralSubjectId
-        }),
-        apikey: troopConfig.apikey
-      };
+      // 簡化方案：Vercel 直接驗證密碼，加 flag 話畀 Apps Script 知
+      // 不再需要 trusted-ticket 回調，因此不需要 script.external_request
+      forwardPayload = sanitizeForwardPayload(payload, troopConfig);
+      forwardPayload.isSuperAdmin = true;
+      forwardPayload.login_id = centralSubjectId;
     } else {
       forwardPayload = sanitizeForwardPayload(payload, troopConfig);
       // The verifier bootstrap always targets the routed troop itself; the
@@ -308,47 +302,9 @@ module.exports = async function handler(req, res) {
       return fail(res, 502, '後端服務暫時無法使用，請稍後再試');
     }
 
-    // Central login on a troop whose Apps Script has never had its verifier
-    // configured: open it right now, then retry once with the same ticket.
-    // Only reachable after the central password matched, so the SUPER_KEY
-    // holder is never blocked behind a leader session they may not have.
-    if (central && isVerifierUnconfigured(result)) {
-      const verifyUrl = centralVerifierUrl(req);
-      if (verifyUrl) {
-        const configured = await postUpstream(troopConfig.backend, {
-          action: 'configureTrustedTicketVerifier',
-          verifyUrl,
-          troopId: troopConfig.id,
-          bootstrap: createCentralBootstrap({ verifyUrl, troopId: troopConfig.id, apikey: troopConfig.apikey }),
-          apikey: troopConfig.apikey
-        });
-        const cfgRaw = await configured.text();
-        let cfgResult = null;
-        try { cfgResult = JSON.parse(cfgRaw); } catch (_) { /* non-JSON */ }
-        if (cfgResult && cfgResult.success === true) {
-          upstream = await postUpstream(troopConfig.backend, forwardPayload);
-          raw = await upstream.text();
-          try {
-            result = JSON.parse(raw);
-          } catch (_) {
-            console.error(`[proxy] upstream_non_json troop=${troopId} action=${action} status=${upstream.status}`);
-            return fail(res, 502, '後端服務暫時無法使用，請稍後再試');
-          }
-        } else {
-          // Usually a backend that was never re-deployed after the upgrade.
-          centralBootstrapFailed = true;
-          console.error(`[proxy] central_bootstrap_failed troop=${troopId}`);
-        }
-      } else {
-        centralBootstrapFailed = true;
-      }
-    }
-
     if (central) {
       if (!result || result.success !== true || typeof result.token !== 'string' || !result.token) {
-        // A rejected ticket or a misconfigured verifier is not password
-        // guessing, so it must not lock the administrator out for 15 minutes
-        // while they are trying to repair the setup.
+        loginRateLimit.failed(req);
         logResult({
           troopId,
           action,
@@ -356,18 +312,9 @@ module.exports = async function handler(req, res) {
           startedAt,
           success: false,
           central,
-          centralFail: centralBootstrapFailed
-            ? 'bootstrap_failed'
-            : (result && result.code ? `code_${result.code}` : 'upstream_rejected')
+          centralFail: 'password'
         });
-        // 保留後端語意（例：409＝尚未設定驗證端點，502＝端點連不上）
-        const rawError = (result && typeof result.error === 'string' && result.error) || '登入失敗';
-        const out = {
-          success: false,
-          error: centralBootstrapFailed ? CENTRAL_BOOTSTRAP_FAIL : explainCentralUpstreamFailure(rawError)
-        };
-        if (result && typeof result.code === 'number') out.code = result.code;
-        return res.status(401).json(out);
+        return fail(res, 401, '登入失敗');
       }
       loginRateLimit.succeeded(req);
       result = {

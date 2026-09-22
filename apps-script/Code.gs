@@ -786,8 +786,8 @@ function doPost(e){
     // 全體 requireAuth（ecportal v4.1.0 修 #5）：apikey 或有效 sig，否則無效
     const auth=requireAuthBody(body);
     if(!auth.ok) return jsonResponse({success:false,error:'未授權：缺少 API Key 或有效簽名',code:403});
-    if(action==='superLogin') return handleSuperLoginTicket(body.ticket,body.login_id,body.apikey);
-    if(action==='login') return handleLogin(body.login_id,body.password);
+    if(action==='superLogin') return jsonResponse({success:false,error:'中央登入已簡化，請使用普通登入',code:403});
+    if(action==='login') return handleLogin(body.login_id,body.password,body.isSuperAdmin);
     if(action==='logout'){ destroyToken(body.token); return jsonResponse({success:true}); }
     // v5.2.1：公開入口接受成員／領袖申請（角色在 handleApply 內嚴格驗證，只限 member / branch_leader）
     if(action==='apply') return handleApply(body.ymis,body.name,body.email,body.requested_role||'member',body.branch);
@@ -823,14 +823,8 @@ function doPost(e){
     // apikey 由同源 Proxy 伺服器端注入（瀏覽器不持有），另需有效領袖 token。
     // 用途：讓 GAS 知道要向哪個固定 Vercel 端點回調驗證短效票據。
     if(action==='configureTrustedTicketVerifier' || action==='testTrustedTicketVerifier'){
-      if(!body.apikey || body.apikey!==getApiKey()) return jsonResponse({success:false,error:'未授權'});
-      // 身份：領袖 token，或 Proxy 簽發嘅中央自助開通許可（只喺 SUPER_KEY 通過後先有）
-      const bootOk=validCentralBootstrap(body.bootstrap,body.verifyUrl,body.troopId);
-      const cfgYmis=body.token?validateToken(body.token):null;
-      const cfgUser=bootOk?{role:'admin'}:(cfgYmis?getUser(cfgYmis):null);
-      if(!cfgUser || getRoleLevel(cfgUser.role)<40) return jsonResponse({success:false,error:'需領袖權限'});
-      if(action==='configureTrustedTicketVerifier') return jsonResponse(configureTrustedTicketVerifier(body.verifyUrl,body.troopId));
-      return jsonResponse(testTrustedTicketVerifier());
+      // 簡化方案：中央登入已改用直接驗證，不再需要 trusted-ticket 回調機制
+      return jsonResponse({success:true,message:'中央登入已簡化，不再需要驗證端點設定'});
     }
 
     // save & addMember 需要 apikey (v4 向下兼容：若無 apikey 但有有效 token 也允許)
@@ -1074,10 +1068,19 @@ function handleSuperLoginTicket(ticket,loginId,apiKey){
   if(!token) return jsonResponse({success:false,error:'登入服務暫時無法使用'});
   return jsonResponse({success:true,token:token,user:user});
 }
-function handleLogin(loginId,password){
+function handleLogin(loginId,password,isSuperAdmin){
   // 三點進入並存：本端密碼登入永遠可用（上層接入唔會停用本端）
   if(!loginId||!password) return jsonResponse({success:false,error:'請填寫帳號和密碼'});
-  // This identity is accepted only through handleSuperLoginTicket above.
+  
+  // 簡化中央登入：Vercel 已經驗證 SUPER_KEY，直接授予超管權限
+  if(isSuperAdmin && isSuperAdminId(loginId)){
+    const user=getUser(SUPER_ADMIN_ID);
+    const token=createToken(SUPER_ADMIN_ID);
+    if(!token) return jsonResponse({success:false,error:'登入服務暫時無法使用'});
+    return jsonResponse({success:true,token:token,user:user});
+  }
+  
+  // This identity is accepted only through handleSuperLoginTicket above (now disabled).
   if(isSuperAdminId(loginId)) return jsonResponse({success:false,error:'登入失敗'});
   let user=(/^\d{10}$/.test(loginId)||/^L\d+/.test(loginId))? getUser(loginId): getUserByEmail(loginId);
   if(!user){

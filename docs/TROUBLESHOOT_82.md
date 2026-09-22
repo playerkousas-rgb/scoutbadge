@@ -48,8 +48,28 @@ TROOP_0082_APIKEY
 | 中央登入驗證端點連唔到／回應異常 | 端點唔係公開 https、被重新導向，或 Vercel 未重新部署 | 端點填 `https://<本部署域名>/api/verify-super-ticket`；改動後重新部署 |
 | 旅團後端尚未更新（缺少中央登入 `superLogin`） | Sheet 上嘅 Apps Script 係舊版 | 覆寫 `apps-script/Code.gs`，喺原有 Web App 部署新版本（保留 `/exec` URL） |
 | 登入嘗試次數過多，請稍後再試 | 密碼錯 5 次，鎖 15 分鐘（**只計密碼錯**，設定問題唔會鎖） | 等 15 分鐘；順便確認 `SUPER_KEY` |
+| 中央登入連線失敗：`UrlFetchApp.fetch` 缺少 `script.external_request` 權限 | **首次**使用中央登入時，Apps Script 需要授權 `script.external_request` 才能對外發送 HTTP 請求 | 見下方「Apps Script 外部請求權限設定」 |
 
 補充：
+
+- **Apps Script 外部請求權限設定（一次性，必須人手批）**：
+  中央登入（#22 新增）是腳本**第一次**需要對外發送請求——`validateTrustedTicket`／`testTrustedTicketVerifier` 要用 `UrlFetchApp.fetch` 打回 Vercel 驗證票據。Apps Script 對「對外請求」有獨立權限 `script.external_request`，之前從未使用過，所以需要**人手授權一次**：
+  
+  1. 在 Apps Script 編輯器頂部函數下拉選單選 `testTrustedTicketVerifier` → 按「執行」
+  2. 彈出授權對話框：「檢閱權限」→ 選 Google 帳號
+  3. Google 會警告「未驗證應用」→ 按「進階」→「前往〈專案名〉(不安全)」→「允許」
+  4. 再執行一次 `testTrustedTicketVerifier`，應該見到「旅團已登記、後端一致，中央登入可用」
+  
+  如果執行時**完全沒彈授權框、立即彈同一個錯**：即專案的 `appsscript.json` manifest 用了明確 `oauthScopes`。需要：
+  
+  1. 左邊「專案設定」→ 打開「在編輯器中顯示 appsscript.json 資訊清單檔」
+  2. 在 `oauthScopes` 陣列加一行：`"https://www.googleapis.com/auth/script.external_request"`
+  3. 儲存 → 返去執行 `testTrustedTicketVerifier` → 這次會彈授權框 → 允許
+  4. 然後「部署 → 管理部署作業」→ 為既有 Web App「建立新版本」
+  
+  批完權限後，Web App 的授權會跟著更新（部署是「以我的身分執行」），`sheep` 登入就正常，不需再改 code。
+  
+  > 這是 Google Apps Script 的安全機制，無法用程式繞過，但只需做一次。
 
 - 帳號大小寫同前後空白唔影響（`Sheep`、` sheep `、`sheep@scoutbadge.local` 都可以）。
 - `SUPER_KEY` 前後有多餘空白／換行（Vercel 貼上常見）而家會自動 trim，唔會再變成長期登入失敗。

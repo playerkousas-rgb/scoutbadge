@@ -60,6 +60,10 @@ Portal 卡片可使用不帶後端憑證的連結，例如：
 4. 系統會接著自動「測試連線」。它是一次真正的自我檢查：會回報旅團是否已登記、
    以及 Vercel 登記的後端網址是否與本 Sheet 的 Web App 網址一致；顯示「旅團已登記、
    後端一致」才代表中央登入可用。任何一項不符，訊息會直接指出要改哪個變數。
+   
+   > **首次測試時，若出現 `UrlFetchApp.fetch` 權限錯誤**：
+   > 這是 Apps Script 要求授權 `script.external_request`（外部 HTTP 請求權限）。
+   > 請先按上述步驟手動授權一次，然後再重新測試。詳見 [docs/TROUBLESHOOT_82.md](docs/TROUBLESHOOT_82.md)「Apps Script 外部請求權限設定」。
 5. 之後在登入頁以中央帳號（`sheep`，大小寫與前後空白不拘）+ Vercel 的 `SUPER_KEY` 登入即可。
 
 > 若登入失敗，登入頁會顯示失敗的關卡與處理方法（尚未設定／後端網址不一致／
