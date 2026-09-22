@@ -15,15 +15,15 @@ ScoutBadge 有**三個同時並存嘅進入方式**，上層「食」入唔會�
 
 | 入口 | 身份 | 認證方式 | 說明 |
 |---|---|---|---|
-| 1. 本團密碼登入 | 成員／領袖 | 本地 `Users` 密碼 | **永遠可用**，唔會因上層接入而停用 |
-| 2. 上層 sig | 成員／領袖 | 信任鏈 `sig`（免檢） | 上層容器用本團 API Key 簽名，leaf 驗簽後放行 |
-| 3. 家長 sig | 家長 | 信任鏈 `sig`（免檢） | 家長只看**自己子女（聯集）**，只讀 |
+| 1. 本團密碼登入 | 成員／領袖 | 本地 `Users` 密碼 | 預設新部署啟用（`ALLOW_LOCAL_LOGIN=true`）。可由上層透過 sig 調用 `setDownstreamAccess` 統一控管。 |
+| 2. 上層 sig | 成員／領袖 | 信任鏈 `sig`（免檢） | 上層容器用本團 API Key 簽名，leaf 驗簽後放行。領袖經 sig 入下游無 row 亦可放行並具領袖權限。 |
+| 3. 家長 sig | 家長 | 信任鏈 `sig`（免檢） | 家長只看**自己子女（聯集）**，只讀。 |
 
-> **設計決定（對規格嘅有意偏離）**：v4.1.0 `01_AUTH_FINAL` 有「被吃後下級停用
-> password 只接受 sig」一句。本系統**不**照辦 —— 本地密碼入口保留，上層 sig 只係
-> **多一條免檢入口**，唔係取代本端。理由：上層接入唔應該鎖走本團自己嘅登入。
-> 因此 v4.1.0 嘅 `integrated`/`standalone` 整合模式（及 `setIntegrationMode`／
-> `getIntegrationMode`／`PORTAL_INTEGRATION_MODE`）在本系統**不设**。
+> **入口開關（上游控、下游寫）設計**：
+> - **單獨使用不受影響**：新部署預設 `ALLOW_LOCAL_LOGIN = true`，進度追蹤平台獨立使用時完全正常。
+> - **進度前端無關閉按鈕**：進度前端介面不設「關閉入口」掣，避免單獨使用時誤鎖本團。
+> - **上游集中控制**：若旅團全面接入上層支部／總系統，上層可調用 `setDownstreamAccess({ allowLocal: false })`（必須附帶有效 upstream `sig`，純 apikey 拒絕）關閉本地入口。
+> - **關閉後攔截範圍**：關閉後本地密碼登入（`action: 'login'`）與帳號申請（`action: 'apply'`）均回傳 403 攔截。上層 `sig` 免檢登入、Server-to-Server 管理操作（如 `upsertUser`、`setPw` 等）及 SUPER 災難恢復緊急登入依然放行。
 
 ---
 
@@ -103,6 +103,31 @@ sig     = HMAC-SHA256( apiKey, message )   // 小寫 hex
 { "action":"getRegistrySafe", "apikey":"..." }  →  { "success":true, "members":[...] }
 ```
 
+### `setDownstreamAccess` / `getDownstreamAccess`（入口開關）
+- `setDownstreamAccess` **嚴格要求上游 sig**（純 apikey 或無效 sig 均回 403 拒絕）。
+  ```json
+  { "action":"setDownstreamAccess", "allowLocal":false, "childId":"...", "sub":"...", "scope":"...", "exp":..., "sig":"..." }
+  ```
+- `getDownstreamAccess` 讀取當前狀態：
+  ```json
+  { "action":"getDownstreamAccess", "apikey":"..." }  →  { "success":true, "allowLocal":true }
+  ```
+
+### `exportAll`（完整系統備份與移轉）
+**只接受 API Key 或 sig**。吐出完整 JSON（包含成員名單、進度、徽章履歷、審批等），附帶 `meta.sha256` 雜湊校驗碼。
+- 預設（`include_hash: false`）：剝除密碼雜湊，供標準備份。
+- 移轉模式（`include_hash: true`）：保留 `password_hash`、`salt`、`iterations`，供上層支部直插匯入。
+
+### `upsertUser`（帳號同步與直插匯入）
+**只接受 API Key 或 sig**。支援上游轉移使用者，直接插入既有密碼雜湊，使用者照舊密碼登入，毋須重設或強制 `1234 + mustChangePw`。
+- 支援 `transferId`：若同一 `transferId` 重複傳入，視為冪等成功放行。
+- 防衝突：自動檢查 YMIS 與 Email 唯一性，避免與既有不同帳戶相撞。
+
+### `setPw` / `verifyPw` / `setStatus`（伺服器對伺服器帳號維護）
+- `setPw`：上游直接更新成員密碼雜湊。
+- `verifyPw`：上游驗證成員密碼是否吻合。
+- `setStatus`：更新帳號狀態（`active` / `transferred_out` / `disabled`）。
+
 ### 家長只讀 action
 `load`（名冊／進度／flat／pending／其他獎章／履歷全部收縮到子女聯集）、
 `getOtherBadges`、`getServiceRecords`、`getMembers`（都接受 sig 或 token）。
@@ -137,6 +162,10 @@ sig     = HMAC-SHA256( apiKey, message )   // 小寫 hex
 - `test/e2e_realgas.test.js` — **打真 `apps-script/Code.gs`**（vm shim 執行原碼），
   覆蓋 v4.1.0 合約：requireAuth、三種 sig 身份、家長子女聯集收縮、403、
   篡改／過期／錯 key、`getRegistrySafe`、normId、**三點進入並存**、中央登入全循環（15 項）。
+- `test/troop_upgrade.test.js` — **進度追蹤旅系統升級版回歸測試**（10 項），
+  覆蓋前端無關閉按鈕、預設新部署 `ALLOW_LOCAL_LOGIN=true`、`setDownstreamAccess` 驗簽防護、
+  閂口後本地 403 與上層 sig 放行、上游領袖免 local row、`exportAll` JSON 吐出校驗、
+  `upsertUser` 直插密碼與 transferId 冪等、`setPw`/`verifyPw`/`setStatus`，以及重開後免 1234 登入。
 
 > 重要：v4.1.0 合約必須對**真 Code.gs** 做 e2e，唔可以只用 mock backend
 > （`test/mock-gas.js` 係假後端，只供快速 proxy 測試；ecportal 歷史證明
