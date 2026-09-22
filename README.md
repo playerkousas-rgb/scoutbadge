@@ -44,6 +44,8 @@ ScoutBadge 係底層**支部進度追蹤系統（leaf）**，可被上層容器�
 
 ## 開發與檢查
 
+GS 版號及歷史更新集中於 [Apps Script 維護紀錄](apps-script/CHANGELOG.md)，不隨 GS 下載檔或網站部署發布。
+
 ```bash
 npm run check   # 語法檢查（含 index.html 與 Code.gs）
 npm test        # 單元 + 真實 HTTP 端到端（含 mock GAS 旅團、中央登入純單向全循環）

@@ -1,31 +1,4 @@
-// ===== 批量開戶 Apps Script（直接寫入主資料表版本）=====
-// 適用：你已有一份「我們的 Sheet」（即 app 後端所用的 Google Sheet），
-//       想把成員一次過寫入其中的 Users 工作表。
-//
-// 用法：
-//   1. 在 Google Sheets 新建試算表，選單「檔案 > 匯入 > 上載 > 選取本機 CSV」匯入 members_template.csv
-//      （或從 app 的「批量開戶」下載同一份 CSV 再匯入）
-//   2. 擴充套件 > Apps Script，貼上本檔，儲存
-//   3. 回到試算表，重新整理，出現「批量開戶」選單
-//   4. 填好資料後：
-//      -「✍️ 直接寫入主資料表」：最快，不需後端，直接 append 到我們的 Sheet（支援全新空白 Sheet）
-//      -「📤 轉JSON並推送後端」：逐列經 app 後端 addMember / addUser
-//
-// 欄位：ymis,name,email,squad,squad_role,role,can_tick,password,note
-//   ymis      ：10 位數字（必填，作為帳號）
-//   name      ：姓名（必填）
-//   email     ：電郵（開立可登入帳號時建議填）
-//   squad     ：小隊名稱
-//   squad_role：member / 隊長 / 副隊長
-//   role      ：member / branch_leader / group_leader / admin
-//   can_tick  ：true / false（可否勾選進度）
-//   password  ：有填則開立可登入帳號（直接寫入會以 SHA-256 雜湊儲存，與 app 後端完全一致）
-//   note      ：備註（Users 工作表無此欄，僅作填寫提醒）
-//
-// 直接寫入的工作表結構會與 app 後端 Users 工作表完全相同：
-//   ymis,name,email,role,password_hash,branch,can_tick,auth_by,auth_date,
-//   created_at,last_login,status,allowed_badges,squad,squad_role,force_change_password
-
+// 批量開戶：先設定 CONFIG；操作說明見 docs/BULK_ONBOARD.md。
 var CONFIG = {
   BACKEND_URL: 'https://script.google.com/macros/s/你的部署ID/exec', // app 的 doPost 網址（用推送後端時需要）
   APIKEY: '你的TROOP_APIKEY',          // 與 app 登入使用的 apikey 相同
@@ -33,7 +6,6 @@ var CONFIG = {
   USERS_SHEET: 'Users'                // 主資料表內存放成員的工作表名稱（需與 app 後端相同：Users）
 };
 
-// Users 工作表標準欄位（與 app 後端 initializeSheets 完全一致）
 var USERS_HEADER = ['ymis','name','email','role','password_hash','branch','can_tick','auth_by','auth_date','created_at','last_login','status','allowed_badges','squad','squad_role','force_change_password'];
 
 function onOpen() {
@@ -44,7 +16,6 @@ function onOpen() {
     .addToUi();
 }
 
-// 與 app 後端相同的 SHA-256 雜湊（確保直接寫入的密碼可以登入）
 function hashPassword(p) {
   var raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, p, Utilities.Charset.UTF_8);
   return raw.map(function (b) { return ('0' + (b & 0xFF).toString(16)).slice(-2); }).join('');
@@ -84,7 +55,6 @@ function previewJson() {
   SpreadsheetApp.getUi().alert('將轉換 ' + json.length + ' 筆：\n\n' + JSON.stringify(json, null, 2).slice(0, 4000));
 }
 
-// 方法 A：透過 app 後端寫入（重複使用 addMember / addUser，與 app 完全一致）
 function pushToBackend() {
   var json = toJson(readRows());
   if (!json.length) { SpreadsheetApp.getUi().alert('沒有資料'); return; }
@@ -116,7 +86,6 @@ function pushToBackend() {
   SpreadsheetApp.getUi().alert('推送完成：成功 ' + ok + ' 筆，失敗 ' + fail + ' 筆' + (fails.length ? '\n\n' + fails.join('\n') : ''));
 }
 
-// 確保主資料表存在 Users 工作表；若為全新/空白工作表則自動建立標準表頭
 function ensureUsersSheet(ss) {
   var sh = ss.getSheetByName(CONFIG.USERS_SHEET);
   if (!sh) {
@@ -136,8 +105,6 @@ function ensureUsersSheet(ss) {
   return { sh: sh, needsHeader: needsHeader };
 }
 
-// 方法 B：直接寫入主資料表（不需後端，以案主資料表權限寫入）
-// 支援「全新 Sheet」：自動建立 Users 工作表 + 標準表頭；密碼以 SHA-256 雜湊儲存，開戶即可登入。
 function writeToMainSheet() {
   var json = toJson(readRows());
   if (!json.length) { SpreadsheetApp.getUi().alert('沒有資料'); return; }
@@ -154,7 +121,6 @@ function writeToMainSheet() {
     ? sh.getRange(2, ymisCol + 1, lastRow - 1, 1).getValues().map(function (r) { return String(r[0]).trim(); })
     : [];
 
-  // 讀取成員名單已有的 YMIS，避免重複寫入
   var mSheet = null, mExisting = {};
   try {
     mSheet = ss.getSheetByName('成員名單');
@@ -192,7 +158,6 @@ function writeToMainSheet() {
     set('created_at', nowStr);
     sh.appendRow(row);
     added++;
-    // 同步寫入成員名單（與 app 後端 addUser / addMember 行為一致）
     if (mSheet && !mExisting[m.ymis]) {
       mSheet.appendRow([m.ymis, m.name, new Date(), '', '', m.squad]);
       mExisting[m.ymis] = true;

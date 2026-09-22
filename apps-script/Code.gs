@@ -1,28 +1,4 @@
-// ============================================================
-// 童軍支部進度及行政平台 - Apps Script 後端 v5.2
-// 完全兼容舊版 + 新增待批申請、批量寫入優化、日誌
-// v5.2 新增（對齊 VSBADGE v8.4/v8.5，中英文對照）：
-//   活動履歷「團員自行申報 → 領袖審批」/ Activity-log claims: members self-declare, leaders approve
-//   - 新工作表「待批履歷」（執行 initializeSheets() 自動補建，不影響既有資料）
-//     New sheet "待批履歷" (pending log claims); auto-created by initializeSheets(), existing data untouched
-//   - 新 action：requestLogRecord（團員申報新增／修改）/ getLogRequests / reviewLogRequest / cancelLogRequest
-//   - 團員只可為自己申報；「修改申報」只限自己的紀錄，批准後以同一 record_id 更新（需領袖重批）
-//     Members can only claim for themselves; edit-claims target own records only and, once approved,
-//     update in place with the SAME record_id (leader re-approval required).
-//   - 同一紀錄同時只可有一個待批修改申報；批准前可取消；全部寫入操作紀錄
-//   - 進度待批（待批完成）及其他獎章流程不變：批准後只有領袖可改
-//     Progress claims & other badges are unchanged: after approval only leaders may edit.
-//   - handleLoad 回應新增 logRequests + logRequestsSupported
-//   - 修復 handleSaveLogRecord setValues 欄數不符（13→12）的既有 bug / fix setValues column-count bug
-// v5.2.1 新增（對齊 VSBADGE v8.2：帳戶自助申請支援領袖）:
-//   - apply 只接受 requested_role = member / branch_leader（童軍無執委；團長／管理員須由現任管理層直接開立）
-// v5.3.0：團長全團只可一位（addUser／updateUserRole 強制執行；審批只可開出 member／branch_leader）＋領袖免 YMIS（用電郵登入，留空自動編配內部 L 編號）＋開戶權限收緊（只可開立自己可管理的角色）
-//   - 成員申請：YMIS 10 位必填；領袖申請：Email 必填，YMIS 選填（留空則批准時自動編配 L 開頭臨時編號）
-//   - reviewApplication 按申請角色開戶（審批者權限不足時退回 member），回應加 final_role + temp_password
-//   - 無新工作表、無新欄位（force_change_password 欄若缺會自動補）：覆蓋 Code.gs 並重新部署即可，毋須 initializeSheets()
-// v5.3.1：YMIS／Email 全團唯一（含已停用、成員名單、待審批），禁止用同一個再開另一個帳號；用戶管理合併成員名單，匯入未開登入的團員可見、可刪除／修改
-// v5.3.2：用戶管理可由領袖直接設定成員新密碼（無電郵也可面對面告知；毋須 initializeSheets()）
-// ============================================================
+// ScoutBadge Apps Script 後端
 
 const ADMIN_YMIS = '1111111111';
 const SUPER_ADMIN_ID = 'sheep';
@@ -33,7 +9,6 @@ function isSuperAdminReserved(ymis){
   return isSuperAdminId(ymis);
 }
 
-// v5.3.1：YMIS／Email 全團唯一（含已停用、成員名單、待審批申請），禁止用同一個再開另一個帳號
 function normalizeYmis(v){
   if(v===null || v===undefined || v==='') return '';
   if(typeof v==='number' && isFinite(v)) return String(Math.round(v));
@@ -178,7 +153,6 @@ const MIN_PASSWORD_LEN = 4;
 const MAX_PASSWORD_LEN = 128;
 const DEFAULT_TEMP_PASSWORD = '1234';
 
-// ===== 工具 =====
 function getSheet() { return SpreadsheetApp.getActiveSpreadsheet(); }
 function getApiKey() {
   const props = PropertiesService.getScriptProperties();
@@ -193,15 +167,12 @@ function showApiKey() {
   return getApiKey();
 }
 
-// v5.1 活動履歷（服務／活動／訓練班紀錄）—— 參考 VSBADGE 設計
 const LOG_SHEET_NAME = '活動履歷';
 const LOG_HEADERS = ['record_id','type','ymis','name','date','title','role','hours','cert_no','detail','recorder','recorded_at','updated_at'];
 const LOG_TYPES = ['service','activity','training'];
-// v5.2 待批履歷（團員自行申報 → 領袖審批）/ Pending log claims (member self-declare → leader approves)
 const LOG_REQ_SHEET_NAME = '待批履歷';
 const LOG_REQ_HEADERS = ['request_id','kind','target_record_id','type','ymis','name','date','title','role','hours','cert_no','detail','status','created_at','reviewed_by','reviewed_at','review_note'];
 
-// ===== 新增：診斷 82 旅 SHEET 健康狀態 v5.1.1 =====
 const REQUIRED_SHEETS = [
   {name:'進度追蹤', headers:['YMIS','項目 ID','完成日期','更新時間','確認者','備註']},
   {name:'成員名單', headers:['YMIS','姓名','加入日期','支部','聯絡','小隊']},
@@ -236,7 +207,6 @@ function diagnoseSheets() {
     if(existing.indexOf(req.name)>=0) present.push(req.name);
     else missing.push(req.name);
   });
-  // 特別檢查 Users 成員數量
   let usersCount = 0;
   let membersCount = 0;
   try{
@@ -275,7 +245,6 @@ function getSpreadsheetInfo(){
   };
 }
 
-
 function repairSheets() {
   const diag = diagnoseSheets();
   if(diag.allOk) return jsonResponse({success:true, message:'所有工作表已齊全，無需修復', diagnose:diag});
@@ -293,8 +262,6 @@ function now(){ return Utilities.formatDate(new Date(), 'Asia/Hong_Kong', 'yyyy-
 function formatDate(d){ if(!d) return ''; if(d instanceof Date) return Utilities.formatDate(d,'Asia/Hong_Kong','yyyy-MM-dd'); return d.toString().split(' ')[0]; }
 function jsonResponse(obj){ return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
 
-// v5.1 活動履歷（服務／活動／訓練班紀錄）—— 參考 VSBADGE 設計
-// 活動履歷／待批履歷常數已移至檔首（REQUIRED_SHEETS 需要引用）
 function safeSheetText(v,maxLen){
   let text=String(v||'').trim().substring(0,maxLen||200);
   if(/^[=+\-@]/.test(text)) text="'"+text;
@@ -313,7 +280,7 @@ function canUserTick(r){ return CAN_TICK_ROLES.indexOf(r)>=0; }
 function getRoleLevel(r){ return ROLE_HIERARCHY[r]||0; }
 function canManageRole(m,t){ return (CAN_MANAGE_ROLES[m]||[]).indexOf(t)>=0; }
 function canManageUser(manager,targetRole){ return manager && (manager.role==='super_admin' || canManageRole(manager.role,targetRole)); }
-// v5.3.0：領袖免 YMIS（用電郵登入）—— 為領袖帳戶自動編配內部唯一 L 編號（只做 Users 表鍵值，不會向領袖展示為 YMIS）
+// 領袖以電郵登入；L 編號只作內部 Users 鍵值。
 function generateLeaderId(){ return getNextLeaderId(); }
 function getNextLeaderId(){
   let maxNum=0;
@@ -340,7 +307,7 @@ function getNextLeaderId(){
 function gslLockMsg(name){
   return '團長只能有一位，全團已有現任團長（'+(name||'現任')+'）。如需更換，請先將現任團長轉為其他角色。';
 }
-// v5.3.0：團長全團只可有一位 —— 取現任在職團長（可排除指定 YMIS；換人流程：先將現任轉為其他角色，再升新人）
+// 團長只可一位；換人須先將現任轉為其他角色。
 function findActiveGroupLeader(excludeYmis){
   const uSheet=getSheet().getSheetByName('Users');
   if(!uSheet) return null;
@@ -354,13 +321,11 @@ function findActiveGroupLeader(excludeYmis){
 }
 function getActiveGroupLeader(){ return findActiveGroupLeader(''); }
 
-// v5.2.1（對齊 VSBADGE v8.2）：公開申請入口只接受 member / branch_leader（童軍無執委）
-// 團長／管理員必須由現任管理層在「用戶管理」直接開立，不可自行申請。
+// 自助申請只接受 member / branch_leader；團長／管理員由管理層開立。
 const VALID_ROLES = ['admin','group_leader','branch_leader','member'];
 const APPLY_ROLES = ['member','branch_leader'];
 function generateTemporaryPassword(){ return DEFAULT_TEMP_PASSWORD; }
 
-// ===== 初始化 =====
 function initializeSheets() {
   const ss = getSheet();
   let pSheet = ss.getSheetByName('進度追蹤');
@@ -370,7 +335,6 @@ function initializeSheets() {
     pSheet.getRange(1,1,1,6).setFontWeight('bold').setBackground('#8B0000').setFontColor('#FFFFFF');
     pSheet.setFrozenRows(1);
   } else {
-    // ensure 6 columns header
     if(pSheet.getLastColumn()<6){
       pSheet.getRange(1,5).setValue('確認者'); pSheet.getRange(1,6).setValue('備註');
     }
@@ -404,7 +368,6 @@ function initializeSheets() {
     uSheet.getRange(2,16).setValue(true); // 首次登入強制改密
 
   } else {
-    // 確保第13欄存在
     if(uSheet.getLastColumn()<13) uSheet.getRange(1,13).setValue('allowed_badges');
     if(uSheet.getLastColumn()<14) uSheet.getRange(1,14).setValue('squad');
     if(uSheet.getLastColumn()<15) uSheet.getRange(1,15).setValue('squad_role');
@@ -433,7 +396,6 @@ function initializeSheets() {
     cSheet.appendRow(['login_mode','standalone',now(),'system']);
     cSheet.appendRow(['admin_email',ADMIN_EMAIL,now(),'system']);
   }
-  // 新增：待批完成表
   let prSheet = ss.getSheetByName('待批完成');
   if(!prSheet){
     prSheet = ss.insertSheet('待批完成');
@@ -441,7 +403,6 @@ function initializeSheets() {
     prSheet.getRange(1,1,1,13).setFontWeight('bold').setBackground('#8B0000').setFontColor('#FFFFFF');
     prSheet.setFrozenRows(1);
   }
-  // 其他獎章紀錄表
   let oSheet = ss.getSheetByName('其他獎章');
   if(!oSheet){
     oSheet = ss.insertSheet('其他獎章');
@@ -449,7 +410,6 @@ function initializeSheets() {
     oSheet.getRange(1,1,1,7).setFontWeight('bold').setBackground('#8B0000').setFontColor('#FFFFFF');
     oSheet.setFrozenRows(1);
   }
-  // 確保系統設定有 allow_member_view_others
   let cfgSheet = ss.getSheetByName('SystemConfig');
   if(cfgSheet){
     const cfgData=cfgSheet.getDataRange().getValues();
@@ -465,7 +425,6 @@ function initializeSheets() {
   let sh=ss.getSheetByName('服務紀錄'); if(!sh){ sh=ss.insertSheet('服務紀錄'); sh.appendRow(['record_id','YMIS','姓名','活動名稱','日期','時數','機構／地點','內容','核實領袖','狀態','備註']); sh.getRange(1,1,1,11).setFontWeight('bold').setBackground('#2E7D32').setFontColor('#FFFFFF'); sh.setFrozenRows(1); }
   let ah=ss.getSheetByName('操作紀錄'); if(!ah){ ah=ss.insertSheet('操作紀錄'); ah.appendRow(['時間','操作者','操作','對象','詳情']); ah.getRange(1,1,1,5).setFontWeight('bold').setBackground('#8B0000').setFontColor('#FFFFFF'); ah.setFrozenRows(1); }
 
-  // v5.1：活動履歷（服務／活動／訓練班紀錄）
   let lSheet2 = ss.getSheetByName(LOG_SHEET_NAME);
   if(!lSheet2){
     lSheet2 = ss.insertSheet(LOG_SHEET_NAME);
@@ -473,8 +432,6 @@ function initializeSheets() {
     lSheet2.getRange(1,1,1,LOG_HEADERS.length).setFontWeight('bold').setBackground('#8B0000').setFontColor('#FFFFFF');
     lSheet2.setFrozenRows(1);
   }
-  // v5.2：待批履歷（團員自行申報 → 領袖審批；批准後寫入／更新「活動履歷」）
-  // Pending log claims (members self-declare → leaders approve; approval writes/updates "活動履歷")
   let lrSheet = ss.getSheetByName(LOG_REQ_SHEET_NAME);
   if(!lrSheet){
     lrSheet = ss.insertSheet(LOG_REQ_SHEET_NAME);
@@ -488,13 +445,12 @@ function initializeSheets() {
   try{
     const ui=SpreadsheetApp.getUi();
     if(ui){
-      ui.alert('✅ v5.2 初始化完成！\n\nSheets：進度追蹤、成員名單、Users、Applications、Tokens、SystemConfig、待批完成、其他獎章、服務紀錄、操作紀錄、活動履歷、待批履歷\n\n🔑 API Key:\n'+apiKey+'\n\n👤 管理員 YMIS: '+ADMIN_YMIS+' 密碼: '+ADMIN_PASS+'\n\n🌐 URL:\n'+scriptUrl);
+      ui.alert('✅ 初始化完成！\n\nSheets：進度追蹤、成員名單、Users、Applications、Tokens、SystemConfig、待批完成、其他獎章、服務紀錄、操作紀錄、活動履歷、待批履歷\n\n🔑 API Key:\n'+apiKey+'\n\n👤 管理員 YMIS: '+ADMIN_YMIS+' 密碼: '+ADMIN_PASS+'\n\n🌐 URL:\n'+scriptUrl);
     }
   }catch(e){}
   return {success:true,apiKey:apiKey,scriptUrl:scriptUrl};
 }
 
-// ===== 用戶查詢 =====
 function getUser(ymis){
   if(isSuperAdminId(ymis)){
     return {ymis:SUPER_ADMIN_ID,name:'系統管理員',email:'',role:'super_admin',can_tick:true,branch:'',allowed_badges:'*',squad:'',squad_role:'',status:'active',force_change_password:false};
@@ -541,7 +497,7 @@ function getUserByEmail(email){
   return null;
 }
 function getAllUsers(){
-  // v5.3.1：用戶管理要同時列出 Users 表＋成員名單（匯入而未開登入帳號的團員以往會消失，導致無法刪除／修改）
+  // 合併 Users 與成員名單，包含未開登入帳號的團員。
   const users=[]; const seen={};
   const sheet=getSheet().getSheetByName('Users');
   if(sheet){
@@ -593,7 +549,6 @@ function getAllUsers(){
   return users;
 }
 
-// Token
 function validateToken(token){
   if(!token) return null;
   const sheet=getSheet().getSheetByName('Tokens'); if(!sheet) return null;
@@ -622,28 +577,7 @@ function destroyToken(token){
   for(let i=1;i<data.length;i++){ if(data[i][0]===token){ sheet.deleteRow(i+1); return; } }
 }
 
-// ===== API =====
-// ===== ecportal v4.1.0 整合（leaf 端合約）=====
-// 本系統（支部進度追蹤）係最底層 leaf；上層「童軍支部管理系統／旅管理系統」
-// 容器會「食」呢度：容器 registry 持有本部署 apikey，用佢簽信任鏈，本端自己驗。
-//
-// 簽名格式（容器 → leaf，scope 必須係 JSON 字串，唔好解析後再 stringify）：
-//   msg = `${childId}|${sub}|${scopeJSON}|${exp}`
-//   sig = hex( HMAC-SHA256( 本部署 apikey, msg ) )
-//   sub = EMAIL（領袖／家長）或 10 位 YMIS（成員）
-//   scope = {"role":..., "children_ids":[...], "targetYmis":...}（家長 role 必須 'parent'）
-//   exp = Unix 秒（上限 3600s，含 60s 時鐘容差）
-//   childId = 全域 ID（例 PROG_0082S）；若 Script Property PORTAL_GLOBAL_ID 有設，
-//             兩邊經 normId 後必須相等（82S 與 0082S 唔撞號）。
-// 家長超然：scope.children_ids 內必須有本團成員先放行；只可睇自己子女（聯集）。
-// 三點進入並存（設計決定，對 01_AUTH_FINAL「被吃後停用 password」clause 的有意偏離）：
-//   1. 本端密碼登入 —— 永遠可用，唔會因上層「食」咗而停用
-//   2. 上層 sig（成員／領袖）—— 免檢：有有效信任鏈 sig 即收
-//   3. 家長 sig —— 子女聯集視角
-// 上層接入只係多一條入口，唔係取代本端入口。
-
 const PORTAL_SIG_MAX_TTL = 3600;
-// 中央登入自助開通許可有效期（秒；Proxy 簽發時用 5 分鐘）
 const CENTRAL_BOOTSTRAP_MAX_TTL = 600;
 function normId(s){
   const v=String(s||'').trim().toUpperCase();
@@ -655,10 +589,7 @@ function bytesToHex(bytes){
   for(let i=0;i<bytes.length;i++){ h+=('0'+(bytes[i]&255).toString(16)).slice(-2); }
   return h;
 }
-// 真實 Apps Script API 係 computeHmacSha256Signature(value, key)——冇算法參數。
-// 之前誤寫成 computeHmacSha256('SHA_256', msg, key)：call 錯名之餘，
-// 真正嘅 key 亦被當第三參數丟棄，結果簽名永遠同 Vercel（Node crypto）
-// 計嘅唔一樣，自動開通必敗。
+// GAS HMAC API 參數順序為 (value, key, charset)，沒有算法參數。
 function hmacHex(key,msg){
   return bytesToHex(Utilities.computeHmacSha256Signature(msg, key, Utilities.Charset.UTF_8));
 }
@@ -698,7 +629,6 @@ function verifyPortalSig(p){
   let diff=0;
   for(let i=0;i<sig.length;i++){ diff |= (expect.charCodeAt(i)^sig.charCodeAt(i)); }
   if(diff!==0) return {ok:false};
-  // ---- 身份解析 ----
   if(isSuperAdminId(sub) || /^L\d+$/i.test(sub)) return {ok:false}; // SUPER 行主系統層
   const role=String(parsed.role||'');
   const children=resolveChildrenToYmis(Array.isArray(parsed.children_ids)?parsed.children_ids:[]);
@@ -717,12 +647,10 @@ function verifyPortalSig(p){
     if(!children.length) return {ok:false};
     return {ok:true, identity:{kind:'parent', ymis:'', email:sub, role:'parent', can_tick:false, children:children, targetYmis:targetYmis, sub:sub}};
   }
-  // 領袖/旅長經 sig 入，下游唔使有 row（BUILD.md §2 開戶錨點）
+  // 領袖經有效 sig 登入不要求本地 Users 紀錄。
   return {ok:true, identity:{kind:'leader', ymis:sub, email:sub, role:role||'branch_leader', can_tick:true, children:children, targetYmis:targetYmis, sub:sub}};
 }
-// 全體 requireAuth（修 #5）：apikey（同源 proxy／容器 registry 注入）或有效 sig，
-// 兩者都無 → 拒絕。/exec 直接打（無 key 無 sig）無效。
-// 放行條件（任一）：本團 apikey ／ 有效 sig ／ 有效本地 token（向下兼容舊 token-only 客戶）
+// 接受本團 apikey、有效 sig 或有效本地 token。
 function requireAuthBody(body){
   body=body||{};
   let ok=body.apikey && String(body.apikey)===getApiKey();
@@ -771,8 +699,6 @@ function doGet(e){
     const reqToken=e.parameter.token;
     if(reqKey && reqKey!==getApiKey()) return jsonResponse({success:false,error:'Invalid API Key',code:403});
     if(reqToken && !validateToken(reqToken)) return jsonResponse({success:false,error:'Token 無效或過期',code:401});
-    // v5.2：有 token 時，待批履歷只回傳該登入者可見範圍（領袖全部；團員只見自己的申報）
-    // v6.0：家長可用 sig（query）直接讀自己子女範圍
     let loadUser=null;
     if(reqToken){ const ly=validateToken(reqToken); if(ly) loadUser=getUser(ly); }
     if(!loadUser && auth.identity && auth.identity.kind==='parent'){
@@ -790,16 +716,13 @@ function doPost(e){
   try{
     const body=JSON.parse(e.postData.contents);
     const action=body.action;
-    // 全體 requireAuth（ecportal v4.1.0 修 #5）：apikey 或有效 sig，否則無效
     const auth=requireAuthBody(body);
     if(!auth.ok) return jsonResponse({success:false,error:'未授權：缺少 API Key 或有效簽名',code:403});
 
     const isSig = auth.identity !== null;
     const allowLocal = getDownstreamAccessConfig();
 
-    // 上游控、下游寫：本地入口受 ALLOW_LOCAL_LOGIN 旗控
-    // 本地 doPost 開頭加 if (!ALLOW_LOCAL_LOGIN && !isSig) return 403
-    // （登入/開戶都攔，upsertUser/setPw 等 server-to-server 放行，SUPER 災難恢復放行）
+    // ALLOW_LOCAL_LOGIN 只攔本地登入／申請；上游管理及 SUPER 恢復入口保留。
     if(!allowLocal && !isSig){
       if(action==='login'){
         return jsonResponse({success:false, error:'此進度追蹤系統已關閉直接登入，請經由支部／旅管理系統登入', code:403});
@@ -814,11 +737,8 @@ function doPost(e){
     if(action==='superLogin') return handleSuperLogin(body.login_id,body.apikey,body.isSuperAdmin);
     if(action==='login') return handleLogin(body.login_id,body.password);
     if(action==='logout'){ destroyToken(body.token); return jsonResponse({success:true}); }
-    // v5.2.1：公開入口接受成員／領袖申請（角色在 handleApply 內嚴格驗證，只限 member / branch_leader）
     if(action==='apply') return handleApply(body.ymis,body.name,body.email,body.requested_role||'member',body.branch);
 
-    // ===== ecportal v4.1.0 整合 actions（leaf 端）=====
-    // 信任鏈 sig → 本地 session（成員／領袖發 token；家長為 sig bearer，唔發本地 token）
     if(action==='portalLogin'){
       const s=verifyPortalSig(body);
       if(!s.ok) return jsonResponse({success:false,error:'簽名驗證失敗',code:403});
@@ -828,7 +748,6 @@ function doPost(e){
       }
       let u=id.kind==='member'?getUser(id.ymis):getUserByEmail(id.email);
       if(!u && id.kind==='leader'){
-        // 領袖/旅長經 sig 入，下游唔使有 row（BUILD.md §2 開戶錨點）
         u = {
           ymis: id.ymis || id.email,
           name: id.email,
@@ -843,13 +762,11 @@ function doPost(e){
       if(!token) return jsonResponse({success:false,error:'登入服務暫時無法使用'});
       return jsonResponse({success:true,auth_mode:'token',token:token,user:u});
     }
-    // 上層容器 registry「吃」：server-side 拉名冊（無密碼／無 token／無私隱欄）
     if(action==='getRegistrySafe'){
       if(!body.apikey || String(body.apikey)!==getApiKey()) return jsonResponse({success:false,error:'未授權：getRegistrySafe 只接受 API Key',code:403});
       return jsonResponse({success:true,members:getMembers()});
     }
 
-    // ===== 旅系統升級版：資料同步與批量開戶（server-to-server / 上游 sig）=====
     if(action==='exportAll'){
       let allowed = false;
       if(body.apikey && String(body.apikey) === getApiKey()) allowed = true;
@@ -919,7 +836,6 @@ function doPost(e){
       return handleParentAction(action, body, auth.identity);
     }
 
-    // 中央登入一次性的 verifier 設定／測試（領袖權限）。
     if(action==='configureTrustedTicketVerifier'){
       const verifyUrl=String(body.verifyUrl||'').trim();
       const troopId=String(body.troopId||'').trim();
@@ -947,11 +863,9 @@ function doPost(e){
       return jsonResponse(testTrustedTicketVerifier());
     }
 
-    // save & addMember 需要 apikey (v4 向下兼容：若無 apikey 但有有效 token 也允許)
     if(action==='save' || action==='addMember' || action==='addUser' || action==='bulkAddUsers' || action==='saveOtherBadge'){
       const reqKey=body.apikey;
       if(reqKey && reqKey!==getApiKey()) return jsonResponse({success:false,error:'Invalid API Key'});
-      // 若無 apikey，嘗試 token 驗證作為後備
       if(!reqKey && body.token){
         const tk=validateToken(body.token);
         if(!tk && action!=='addMember') return jsonResponse({success:false,error:'未授權 - 需 API Key 或有效 Token'});
@@ -962,7 +876,6 @@ function doPost(e){
       if(action==='bulkAddUsers'){ let my=body.token?validateToken(body.token):null; let mgr=my?getUser(my):null; if(!mgr && body.apikey && body.apikey===getApiKey()) mgr={role:'admin'}; if(!mgr || getRoleLevel(mgr.role)<40) return jsonResponse({success:false,error:'只有領袖可以批量開戶'}); return handleBulkAddUsers(body.users||[],mgr); }
       if(action==='saveOtherBadge') return handleSaveOtherBadge(body.records, body.apikey);
     }
-    // member request - needs token; sig 身份（ecportal v4.1.0）次之；apikey 直連為 v4 向下兼容
     if(action==='requestComplete'){
       let ymis=null; if(body.token){ ymis=validateToken(body.token); }
       if(!ymis && auth.identity && auth.identity.kind!=='parent'){
@@ -973,13 +886,11 @@ function doPost(e){
       return handleRequestComplete(body, ymis);
     }
 
-    // 以下需要身份：本地 token，或信任鏈 sig（ecportal v4.1.0；家長已在上面分派）
     let ymis=body.token?validateToken(body.token):null;
     let user=ymis?getUser(ymis):null;
     if(!user && auth.identity && auth.identity.kind!=='parent'){
       user=(auth.identity.kind==='member')?getUser(auth.identity.ymis):getUserByEmail(auth.identity.email);
       if(!user && auth.identity.kind==='leader'){
-        // 領袖/旅長經 sig 入，下游唔使有 row（BUILD.md §2 開戶錨點）
         user = {
           ymis: auth.identity.ymis || auth.identity.email,
           name: auth.identity.email,
@@ -1004,11 +915,9 @@ function doPost(e){
     if(action==='getApplications'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足，需團長/支部領袖'}); return handleGetApplications(); }
     if(action==='reviewApplication'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'}); return handleReviewApplication(body.app_id,body.decision,body.review_note,user,body.temp_password); }
     if(action==='getConfig'){
-      // 任何已登入用戶都可讀取公開設定
       return handleGetConfig();
     }
 
-    // 以下為高權限
     if(action==='changePassword') return handleChangePassword(ymis,body.old_password,body.new_password);
     if(action==='resetPassword'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'}); return handleResetPassword(body.target_ymis,ymis,body.new_password); }
     if(action==='addServiceRecord'){
@@ -1019,7 +928,6 @@ function doPost(e){
     if(action==='getAuditLog'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'}); return handleGetAuditLog(); }
     if(action==='getApprovalHistory'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'}); return handleGetApprovalHistory(); }
     if(action==='updateUserRole'){
-      // 允許團長/支部領袖/管理員更新角色 + 細緻權限
       if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'});
       return handleUpdateUserRole(body.target_ymis,body.new_role,body.can_tick,ymis, body.allowed_badges, body.squad, body.squad_role);
     }
@@ -1038,7 +946,6 @@ function doPost(e){
       return handleUpdateConfig(body.key,body.value,ymis);
     }
     if(action==='deactivateUser'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'}); return handleDeactivateUser(body); }
-    // v5.1：活動履歷（服務／活動／訓練班紀錄）。讀取任何登入者可；寫入／刪除需已獲勾選權限的領袖（同進度寫入）。
     if(action==='getLogRecords') return handleGetLogRecords(user);
     if(action==='saveLogRecord'){
       if(!canUserTick(user.role)) return jsonResponse({success:false,error:'權限不足，需領袖權限'});
@@ -1048,14 +955,9 @@ function doPost(e){
       if(!canUserTick(user.role)) return jsonResponse({success:false,error:'權限不足，需領袖權限'});
       return handleDeleteLogRecord(body.record_id, ymis);
     }
-    // v5.2：活動履歷申報（團員自行申報 → 領袖審批）。
-    //   - requestLogRecord：任何登入者可為「自己」申報新增／修改（修改只限自己的紀錄，批准後需領袖重批才更新）
-    //   - reviewLogRequest：需領袖權限（同進度審批）
-    //   - 其他流程（待批完成／其他獎章）不變：批准後只有領袖可改
     if(action==='requestLogRecord') return handleRequestLogRecord(body, user);
     if(action==='getLogRequests') return handleGetLogRequests(user);
     if(action==='reviewLogRequest'){
-      // 與 reviewRequest／saveLogRecord 一致：領袖角色即可審批（同進度審批權限）
       if(!canUserTick(user.role)) return jsonResponse({success:false,error:'權限不足，需領袖權限'});
       return handleReviewLogRequest(body.request_id, body.decision, body.review_note, user);
     }
@@ -1074,7 +976,6 @@ function doPost(e){
   }catch(err){ Logger.log('Request failed: '+String(err&&err.message||'unknown')); return jsonResponse({success:false,error:'服務暫時無法使用'}); }
 }
 
-// ===== 入口開關（上游控、下游寫）=====
 function getDownstreamAccessConfig(){
   const prop = PropertiesService.getScriptProperties().getProperty('ALLOW_LOCAL_LOGIN');
   // 預設新部署 ALLOW_LOCAL_LOGIN=true，單用時唔會誤閂
@@ -1082,7 +983,7 @@ function getDownstreamAccessConfig(){
 }
 
 function handleSetDownstreamAccess(body, isSig){
-  // 新增 setDownstreamAccess({allowLocal})：只接受上游 sig 驗證先可寫 ScriptProperties ALLOW_LOCAL_LOGIN
+  // 只有上游 sig 可更改入口開關。
   if(!isSig){
     return jsonResponse({success:false, error:'未授權：只接受上游簽名驗證', code:403});
   }
@@ -1091,7 +992,6 @@ function handleSetDownstreamAccess(body, isSig){
   return jsonResponse({success:true, allowLocal: allow});
 }
 
-// ===== 旅系統升級版：資料同步、備份與批量開戶 =====
 function handleExportAll(includeHash){
   const sheet = getSheet().getSheetByName('Users');
   const users = [];
@@ -1186,7 +1086,6 @@ function handleUpsertUser(body){
   const password = user.password ? String(user.password).trim() : '';
   const transferId = String(body.transferId || user.transferId || '').trim();
 
-  // transferId 冪等檢查
   if(transferId){
     const props = PropertiesService.getScriptProperties();
     const seenTransfers = String(props.getProperty('SEEN_TRANSFER_IDS') || '');
@@ -1229,7 +1128,6 @@ function handleUpsertUser(body){
       rowIndex = i + 1;
       break;
     }
-    // 撞號阻擋：同一 Email 已被其他不同 YMIS 佔用
     if(targetE && rowE === targetE && rowY !== targetY && isActiveStatus(data[i][statusCol])){
       return jsonResponse({success: false, error: '此電郵已被其他帳戶使用 (' + rowY + ')', code: 409});
     }
@@ -1237,7 +1135,6 @@ function handleUpsertUser(body){
 
   const nowStr = now();
   if(rowIndex > 1){
-    // 更新現有用戶
     if(name && nameCol >= 0) uSheet.getRange(rowIndex, nameCol + 1).setValue(name);
     if(email && emailCol >= 0) uSheet.getRange(rowIndex, emailCol + 1).setValue(email);
     if(role && roleCol >= 0) uSheet.getRange(rowIndex, roleCol + 1).setValue(role);
@@ -1247,7 +1144,6 @@ function handleUpsertUser(body){
     if(canTickCol >= 0 && user.can_tick !== undefined) uSheet.getRange(rowIndex, canTickCol + 1).setValue(canTick);
     if(status && statusCol >= 0) uSheet.getRange(rowIndex, statusCol + 1).setValue(status);
 
-    // 直插 hash（唔經 1234+mustChangePw）
     if(passwordHash && pwHashCol >= 0){
       uSheet.getRange(rowIndex, pwHashCol + 1).setValue(passwordHash);
       if(forcePwCol >= 0){
@@ -1265,7 +1161,6 @@ function handleUpsertUser(body){
     }
     return jsonResponse({success: true, action: 'updated', ymis: ymis});
   } else {
-    // 新增用戶
     const newRow = new Array(headers.length).fill('');
     function setCell(n, v){ const c = headers.indexOf(n); if(c >= 0) newRow[c] = v; }
     setCell('ymis', ymis);
@@ -1279,7 +1174,6 @@ function handleUpsertUser(body){
     setCell('status', status || 'active');
     setCell('allowed_badges', role === 'member' ? '' : '*');
 
-    // 直插 hash（保留密碼，唔經 1234+mustChangePw）
     if(passwordHash){
       setCell('password_hash', passwordHash);
       setCell('force_change_password', user.force_change_password === true);
@@ -1406,8 +1300,6 @@ function handleImportAll(body){
   return jsonResponse({success: true, imported: imported, skipped: skipped, total: data.users.length});
 }
 
-// ===== 邏輯 =====
-// ===== 中央登入票據 =====
 function trustedTicketConfig(){
   const props=PropertiesService.getScriptProperties();
   const verifyUrl=String(props.getProperty('CENTRAL_AUTH_VERIFY_URL')||'').trim();
@@ -1432,10 +1324,7 @@ function configureTrustedTicketVerifier(verifyUrl,troopId){
   },false);
   return {success:true,troopId:troopId};
 }
-// 中央管理員自助開通（bootstrap）：Proxy 用「本團 apikey」簽一張 5 分鐘短效許可，
-// 等 sheep 唔使預先有領袖登入（雞生蛋）都可以設定驗證端點。
-// 只有 Proxy 持有 apikey 先簽得出，而 Proxy 只會喺 SUPER_KEY 驗證通過後先簽；
-// 瀏覽器無 apikey，偽造唔到。
+// 相容舊 bootstrap：以本團 apikey 驗證短效許可。
 function validCentralBootstrap(bootstrap,verifyUrl,troopId){
   if(!bootstrap || !verifyUrl || !troopId) return false;
   const parts=String(bootstrap).split('.');
@@ -1456,10 +1345,7 @@ function validCentralBootstrap(bootstrap,verifyUrl,troopId){
 function testTrustedTicketVerifier(){
   return {success:true,status:200,mode:'one_way',detail:'中央登入採純單向驗證，無需外部回調；此操作不檢查 Vercel 旅團登記或後端網址一致性。'};
 }
-// 只讀診斷：喺 Apps Script 編輯器直接 Run diagnoseCentralLogin()，睇中央登入卡喺邊一關。
-// 唔寫任何嘢、唔改設定；只回 hash／URL 嘅尾段，方便同 Vercel 嘅 TROOP_{ID}_BACKEND 對照。
-// 注意：由編輯器執行時 ScriptApp.getService().getUrl() 有時會返 /dev 而唔係 /exec，
-// 所以一定要對返條尾，唔好淨係信 hashMatches。
+// 編輯器診斷只讀；getUrl() 可能回傳 /dev，需核對部署 URL 尾段。
 function diagnoseCentralLogin(){
   const cfg=trustedTicketConfig();
   let serviceUrl='';
@@ -1493,7 +1379,6 @@ function handleSuperLogin(loginId,apiKey,isSuperAdmin){
   return jsonResponse({success:true,token:token,user:user});
 }
 function handleLogin(loginId,password){
-  // 三點進入並存：本端密碼登入永遠可用（上層接入唔會停用本端）
   if(!loginId||!password) return jsonResponse({success:false,error:'請填寫帳號和密碼'});
   
   // 中央身份只接受已核對 API_KEY 的 superLogin 入口。
@@ -1552,7 +1437,6 @@ function handleResetPassword(targetYmis,managerYmis,newPassword){
       }
     }
   }
-  // 只有成員名單、尚未開登入帳號：補建 Users 後設定密碼
   const roster=findRosterAccountByYmis(targetYmis);
   if(!roster) return jsonResponse({success:false,error:'找不到成員'});
   const nowStr=now();
@@ -1589,9 +1473,6 @@ function handleChangePassword(ymis,oldP,newP){
   return jsonResponse({success:false,error:'原密碼錯誤'});
 }
 function handleApply(ymis,name,email,role,branch){
-  // 三點進入並存：本端自申請永遠可用（上層接入唔會停用本端）
-  // v5.2.1（對齊 VSBADGE v8.2）：成員／領袖都可自行申請；角色嚴格驗證，只限 member / branch_leader。
-  // v5.3.0：領袖免 YMIS（用電郵登入），領袖申請一律忽略 YMIS。
   ymis=normalizeYmis(ymis); name=safeSheetText(name,100);
   email=String(email||'').trim().substring(0,160); branch=safeSheetText(branch,100);
   role=String(role||'member').trim()||'member';
@@ -1600,7 +1481,7 @@ function handleApply(ymis,name,email,role,branch){
   if(role==='member'){
     if(!/^\d{10}$/.test(ymis)) return jsonResponse({success:false,error:'成員需 10位 YMIS'});
   }else{
-    // v5.3.0：領袖免 YMIS（用電郵登入）—— 忽略任何傳入的 YMIS，批准時一律自動編配內部 L 編號
+    // 領袖申請忽略傳入 YMIS，批准時編配內部 L 編號。
     ymis='';
     if(!email) return jsonResponse({success:false,error:'領袖申請必須填寫聯絡電郵'});
   }
@@ -1620,9 +1501,7 @@ function handleGetApplications(){
   return jsonResponse({success:true,applications:apps});
 }
 function handleReviewApplication(appId,decision,note,manager,tempPassword){
-  // v5.2.1（對齊 VSBADGE v8.2）：按申請人要求的角色開戶；若審批者權限層級不能設定該角色則退回 member
-  // （批准後團長仍可在「用戶管理」調整）。回應加 final_role + temp_password，首次登入須更改密碼。
-  // v5.3.0：審批只可開出 member／branch_leader（即使有人手改 Sheet 寫入 group_leader／admin 亦會退回 member，配合團長唯一鎖）
+  // 審批者不能設定要求的角色時退回 member。
   if(decision!=='approved' && decision!=='rejected') return jsonResponse({success:false,error:'無效決定'});
   const sheet=getSheet().getSheetByName('Applications');
   if(!sheet) return jsonResponse({success:false,error:'找不到 Applications 工作表'});
@@ -1645,8 +1524,7 @@ function handleReviewApplication(appId,decision,note,manager,tempPassword){
   const appName=String(appData[2]||'');
   const appEmail=String(appData[3]||'').trim();
   const branchVal=safeSheetText(appData[5],100);
-  // v5.3.0：領袖免 YMIS —— 批准時一律自動編配內部 L 編號（即使因審批者權限不足而退回 member 也一樣，
-  // 否則該申請會永遠卡在待批無法批准；一律用 Email 登入）
+  // 領袖申請即使退回 member 仍須編配 L 編號，避免空 YMIS 卡住批准。
   if(!ymis){ ymis=generateLeaderId(); }
   // 批准時：Users 表（含停用）不可重覆；若只在成員名單則掛上登入帳號，不重開另一戶
   const uniq=uniquenessError(ymis,appEmail,{checkRoster:false, checkPending:true, excludeAppId:appId});
@@ -1684,9 +1562,7 @@ function handleReviewApplication(appId,decision,note,manager,tempPassword){
 function handleUpdateUserRole(targetYmis,newRole,canTick,managerYmis, allowedBadges, squad, squadRole){
   const manager=getUser(managerYmis);
   if(!manager) return jsonResponse({success:false,error:'找不到管理員'});
-  // super_admin 可以改任何人，admin 可以改團長/支部領袖/成員，團長可改支部領袖/成員，支部領袖可改成員
   if(manager.role!=='super_admin' && !canManageRole(manager.role,newRole) && manager.role!=='admin') return jsonResponse({success:false,error:'權限不足，你的等級不可設定此角色'});
-  // v5.3.0：團長全團只可有一位（換人流程：先將現任轉為其他角色，再升新人）
   if(newRole==='group_leader'){
     const cur=findActiveGroupLeader(targetYmis);
     if(cur) return jsonResponse({success:false,error:gslLockMsg(cur.name)});
@@ -1715,7 +1591,6 @@ function handleUpdateUserRole(targetYmis,newRole,canTick,managerYmis, allowedBad
       }
     }
   }
-  // 只有成員名單、尚未開登入帳號：先補建 Users 再套用角色／小隊
   const roster=findRosterAccountByYmis(targetYmis);
   if(!roster) return jsonResponse({success:false,error:'找不到用戶'});
   const nowStr=now();
@@ -1746,7 +1621,6 @@ function handleGetConfig(){
       if(data[i][0]) cfg[data[i][0].toString()]=data[i][1]?data[i][1].toString():'';
     }
   }
-  // 默認值
   if(!cfg['allow_member_view_others']) cfg['allow_member_view_others']='false';
   if(!cfg['member_progress_scope']) cfg['member_progress_scope']='private';
   if(!cfg['allow_squad_comparison']) cfg['allow_squad_comparison']='false';
@@ -1762,22 +1636,15 @@ function handleLoad(loadUser){
   const ss=getSheet();
   const pSheet=ss.getSheetByName('進度追蹤'); const progress={};
   if(pSheet){ const data=pSheet.getDataRange().getValues(); for(let i=1;i<data.length;i++){ const ymis=data[i][0].toString(); if(!ymis) continue; if(!progress[ymis]) progress[ymis]={}; progress[ymis][data[i][1].toString()]={date:data[i][2]?formatDate(data[i][2]):'',confirmer:data[i][4]?data[i][4].toString():''}; } }
-  // 簡化版：同時提供 flat
   const flat={}; for(const y in progress){ flat[y]={}; for(const k in progress[y]){ flat[y][k]=progress[y][k].date; } }
   let members=getMembers();
-  // pending requests
   const prSheet=ss.getSheetByName('待批完成'); const pending=[];
   if(prSheet){ const data=prSheet.getDataRange().getValues(); for(let i=1;i<data.length;i++){ if(data[i][7].toString()==='pending'){ pending.push({request_id:data[i][0].toString(),ymis:data[i][1].toString(),name:data[i][2].toString(),item_id:data[i][3].toString(),item_name:data[i][4].toString(),requested_date:data[i][5]?formatDate(data[i][5]):'',evidence:data[i][6]?data[i][6].toString():'',status:'pending',created_at:data[i][8]?formatDate(data[i][8]):''}); } } }
-  // other badges
   const oSheet=ss.getSheetByName('其他獎章'); const other={};
   if(oSheet){ const data=oSheet.getDataRange().getValues(); for(let i=1;i<data.length;i++){ const y=data[i][0].toString(); if(!y) continue; if(!other[y]) other[y]={}; other[y][data[i][1].toString()]={name:data[i][2]?data[i][2].toString():'',date:data[i][3]?formatDate(data[i][3]):'',cert:data[i][4]?data[i][4].toString():''}; } }
-  // v5.1：活動履歷回包（logsSupported 讓前端分辨後端是否已升級）
   const lSheet=ss.getSheetByName(LOG_SHEET_NAME);
-  // v5.2：待批履歷（團員自行申報，logRequestsSupported 讓前端分辨後端是否已升級 v5.2）
-  // 領袖（can_tick）可見全部待批；其他登入者只見自己的申報；未登入（apikey 載入）不傳待批。
   const lrSheet=ss.getSheetByName(LOG_REQ_SHEET_NAME);
   const isLogReviewer=!!(loadUser && canUserTick(loadUser.role));
-  // v6.0 家長超然（ecportal v4.1.0）：子女見到咩家長見到咩 —— 全部收縮到自己子女（聯集）
   const isParent=!!(loadUser && loadUser.role==='parent');
   let parentSet=null;
   if(isParent){
@@ -1839,10 +1706,8 @@ function handleAddUser(body,mgr){
   const squad=(body.squad||'').toString().trim();
   const squadRole=(body.squad_role||'member').toString().trim();
   const canTick=body.can_tick===true||body.can_tick==='true'||body.can_tick==='TRUE';
-  // v5.3.0：角色嚴格驗證＋權限收緊 —— 開戶者只可開立自己等級可管理的角色
   if(VALID_ROLES.indexOf(role)<0) return jsonResponse({success:false,error:'無效角色：'+role});
   if(!canManageUser(mgr,role)) return jsonResponse({success:false,error:'權限不足，你的等級不可開立此角色'});
-  // v5.3.0：領袖免 YMIS（用電郵登入）—— 領袖留空 YMIS 且有 Email 即自動編配內部 L 編號
   if(!ymis && role!=='member'){
     if(!email) return jsonResponse({success:false,error:'領袖開戶必須填寫 Email（用作登入帳號）'});
     ymis=generateLeaderId();
@@ -1852,7 +1717,6 @@ function handleAddUser(body,mgr){
   if(password && !role) return jsonResponse({success:false,error:'開立帳號需指定 role'});
   const uniqAdd=uniquenessError(ymis,email,{checkRoster:false});
   if(uniqAdd) return jsonResponse({success:false,error:uniqAdd});
-  // v5.3.0：團長全團只可有一位
   if(role==='group_leader'){
     const cur=findActiveGroupLeader('');
     if(cur) return jsonResponse({success:false,error:gslLockMsg(cur.name)});
@@ -1888,7 +1752,6 @@ function handleBulkAddUsers(users,mgr){
   });
   return jsonResponse({success:true,created:created,failed:users.length-created,results:results});
 }
-// 待批完成
 function handleDeactivateUser(body){
   const ymis=normalizeYmis(body.target_ymis);
   if(!ymis) return jsonResponse({success:false,error:'請提供 YMIS'});
@@ -1957,14 +1820,13 @@ function handleGetOtherBadges(ymis){
   if(sheet){ const data=sheet.getDataRange().getValues(); for(let i=1;i<data.length;i++){ if(data[i][0].toString()===ymis){ list.push({id:data[i][1].toString(),name:data[i][2].toString(),date:data[i][3]?formatDate(data[i][3]):'',cert:data[i][4]?data[i][4].toString():''}); } } }
   return jsonResponse({success:true,other:list});
 }
-// ===== v5.1：活動履歷（服務／活動／訓練班紀錄） =====
 function getLogRecordsList(viewerYmis,isReviewer,allowedSet){
   const sheet=getSheet().getSheetByName(LOG_SHEET_NAME); const logs=[];
   if(sheet){
     const data=sheet.getDataRange().getValues();
     for(let i=1;i<data.length;i++){
       if(!data[i][0]) continue;
-      // v6.0 家長超然（ecportal v4.1.0）：allowedSet 存在時只回傳子女聯集
+      // allowedSet 將家長讀取範圍限制為本團子女聯集。
       if(allowedSet && !allowedSet[String(data[i][2])]) continue;
       // 非領袖（團員）只可讀自己的履歷；領袖／無登入（apikey 載入）讀全部
       if(!isReviewer && viewerYmis && String(data[i][2]||'')!==String(viewerYmis)) continue;
@@ -1982,10 +1844,7 @@ function getLogRecordsList(viewerYmis,isReviewer,allowedSet){
   return logs;
 }
 function handleGetLogRecords(user){
-  // 未升級/未初始化時明確報錯，讓前端顯示升級提示
   if(!getSheet().getSheetByName(LOG_SHEET_NAME)) return jsonResponse({success:false,error:'\u300c'+LOG_SHEET_NAME+'\u300d工作表不存在：請在 Apps Script 執行 initializeSheets() 補建'});
-  // v5.2：領袖（或無登入的 apikey 載入）可讀全部；團員只讀自己的履歷（私隱與進度一致）
-  // reviewers (or no-user apikey loads) see all; members see only their own log records
   const isReviewer=!user || canUserTick(user.role);
   return jsonResponse({success:true,logs:getLogRecordsList(user&&!isReviewer?user.ymis:null, isReviewer)});
 }
@@ -2014,11 +1873,10 @@ function handleSaveLogRecord(records, recorderYmis, recorderName){
     if(!rec.ymis||!rec.title||!rec.date){ results.push({success:false,ymis:rec.ymis,title:rec.title,error:'YMIS、名稱及日期必填'}); return; }
     const rid=String((r&&r.record_id)||'');
     if(rid){
-      // 更新既有紀錄（record_id 不變）
       const data=sheet.getDataRange().getValues();
       for(let i=1;i<data.length;i++){
         if(String(data[i][0])===rid){
-          // v5.2 修復：範圍應為 12 欄（第 2~13 欄），與 setValues 內容欄數相符（原 13 欄會報錯）
+          // 更新第 2–13 欄，共 12 欄；須與 setValues 長度一致。
           sheet.getRange(i+1,2,1,12).setValues([[rec.type,rec.ymis,rec.name,rec.date,rec.title,rec.role,rec.hours,rec.cert_no,rec.detail,sheet.getRange(i+1,11).getValue()||recorderName||recorderYmis,String(data[i][11]||''),now()]]);
           results.push({success:true,record_id:rid}); processed++;
           writeAudit(recorderYmis,'update_log',rec.ymis,rec.type+': '+rec.title+' '+rec.date);
@@ -2064,22 +1922,13 @@ function handleSaveOtherBadge(records){
   return jsonResponse({success:true,processed:c});
 }
 
-// ===== v5.2：活動履歷申報（團員自行申報 → 領袖審批）=====
-// Activity-log claims: members self-declare → leaders approve.
-// 流程：requestLogRecord（kind=new/edit）→ 待批履歷 sheet → reviewLogRequest 批准後寫入／更新「活動履歷」。
-// 修改申報（kind=edit）只限申報人自己的紀錄；批准後以同一 record_id 更新，即「批了要改 → 再申報 → 領袖重批」。
-// Flow: requestLogRecord (kind=new/edit) → "待批履歷" sheet → on approval, reviewLogRequest writes/updates "活動履歷".
-// Edit-claims target the claimant's OWN records only; approval updates in place with the SAME record_id
-// (approved → change needed → claim again → leader re-approves).
 function getLogRequestsList(onlyYmis,allowedSet){
   const sheet=getSheet().getSheetByName(LOG_REQ_SHEET_NAME); const list=[];
   if(sheet){
     const data=sheet.getDataRange().getValues();
     for(let i=1;i<data.length;i++){
       if(!data[i][0] || String(data[i][12])!=='pending') continue;
-      // v6.0 家長超然（ecportal v4.1.0）：allowedSet 存在時只回傳子女聯集
       if(allowedSet && !allowedSet[String(data[i][4])]) continue;
-      // onlyYmis===null：領袖看全部；''：不傳回；否則只看該成員
       if(onlyYmis!==null && onlyYmis!==undefined && onlyYmis!=='' && String(data[i][4])!==String(onlyYmis)) continue;
       list.push({
         request_id:String(data[i][0]), kind:String(data[i][1]||'new'),
@@ -2099,7 +1948,6 @@ function handleRequestLogRecord(body, user){
   if(!sheet) return jsonResponse({success:false,error:'「'+LOG_REQ_SHEET_NAME+'」工作表不存在：請在 Apps Script 執行 initializeSheets() 補建'});
   const rec=sanitizeLogRecord(body.record||{});
   // 只能為自己申報：ymis／姓名一律以登入者為準，不接受偽冒他人
-  // Claim for yourself only: ymis / name are forced from the logged-in user — no impersonation.
   rec.ymis=String(user.ymis); rec.name=safeSheetText(user.name||rec.name,60);
   if(!rec.title||!rec.date) return jsonResponse({success:false,error:'名稱及日期必填'});
   const kind=body.kind==='edit'?'edit':'new';
@@ -2113,9 +1961,9 @@ function handleRequestLogRecord(body, user){
     for(let i=1;i<ld.length;i++){ if(String(ld[i][0])===targetId){ found=ld[i]; break; } }
     if(!found) return jsonResponse({success:false,error:'找不到原紀錄，可能已被刪除，請重新載入'});
     if(String(found[2])!==String(user.ymis)) return jsonResponse({success:false,error:'只可申請修改自己的紀錄'});
-    // 類型跟隨原紀錄，不可經修改申報變更 / Type follows the original record and cannot change via an edit-claim.
+    // 修改申報不可變更原紀錄類型。
     if(LOG_TYPES.indexOf(String(found[1]))>=0) rec.type=String(found[1]);
-    // 同一紀錄同時只可有一個待批修改申報 / Only one pending edit-claim per record at a time.
+    // 同一紀錄同時只可有一個待批修改申報。
     const rd=sheet.getDataRange().getValues();
     for(let i=1;i<rd.length;i++){ if(String(rd[i][2])===targetId && String(rd[i][12])==='pending') return jsonResponse({success:false,error:'此紀錄已有待批修改申報，請等待領袖審批或先取消'}); }
   }
@@ -2126,7 +1974,6 @@ function handleRequestLogRecord(body, user){
 }
 function handleGetLogRequests(user){
   if(!getSheet().getSheetByName(LOG_REQ_SHEET_NAME)) return jsonResponse({success:false,error:'「'+LOG_REQ_SHEET_NAME+'」工作表不存在：請在 Apps Script 執行 initializeSheets() 補建'});
-  // 領袖（can_tick）看全部待批；其他人只看自己的申報 / Reviewers (leaders) see all; others see only their own claims.
   const isReviewer=canUserTick(user.role); // 與進度審批一致：領袖角色即可
   return jsonResponse({success:true,requests:getLogRequestsList(isReviewer?null:user.ymis)});
 }
@@ -2152,7 +1999,7 @@ function handleReviewLogRequest(requestId, decision, note, reviewer){
   if(!lSheet) return jsonResponse({success:false,error:'「'+LOG_SHEET_NAME+'」工作表不存在：請在 Apps Script 執行 initializeSheets() 補建'});
   let recordId=''; let recorder='';
   if(kind==='edit'){
-    // 批准修改：以同一 record_id 更新原位（需領袖重批才生效）/ Approve edit: update in place, SAME record_id.
+    // 批准修改沿用原 record_id。
     const targetId=String(row[2]||'');
     const ld=lSheet.getDataRange().getValues(); let li=-1;
     for(let i=1;i<ld.length;i++){ if(String(ld[i][0])===targetId){ li=i; break; } }
