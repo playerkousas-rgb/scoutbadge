@@ -8,6 +8,6 @@
     "lint": "npm run check",
     "build": "node build.js",
     "dev": "node test/dev-with-mock.js",
-    "test": "node test/proxy.test.js && node test/multi_troop_pipeline.test.js && node test/frontend_routing.test.js && node test/log_claims.test.js && node test/ymis_parse.test.js && node test/central_login.test.js && node test/e2e_http.test.js && node test/e2e_realgas.test.js"
+    "test": "node test/proxy.test.js && node test/multi_troop_pipeline.test.js && node test/frontend_routing.test.js && node test/log_claims.test.js && node test/ymis_parse.test.js && node test/central_login.test.js && node test/e2e_http.test.js && node test/e2e_realgas.test.js && node test/troop_upgrade.test.js"
   }
 }

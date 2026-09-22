@@ -499,6 +499,10 @@ function getUser(ymis){
   if(isSuperAdminId(ymis)){
     return {ymis:SUPER_ADMIN_ID,name:'系統管理員',email:'',role:'super_admin',can_tick:true,branch:'',allowed_badges:'*',squad:'',squad_role:'',status:'active',force_change_password:false};
   }
+  if(typeof ymis === 'string' && (ymis.includes('@') || ymis.indexOf('SIG_LEADER_') === 0)){
+    const email = ymis.replace(/^SIG_LEADER_/, '');
+    return {ymis: ymis, name: email, email: email, role: 'branch_leader', can_tick: true, branch: '', allowed_badges: '*', squad: '', squad_role: '', status: 'active', force_change_password: false};
+  }
   const sheet=getSheet().getSheetByName('Users'); if(!sheet) return null;
   const data=sheet.getDataRange().getValues();
   const hasAllowedCol = sheet.getLastColumn()>=13;
@@ -709,9 +713,12 @@ function verifyPortalSig(p){
     return {ok:true, identity:{kind:'leader', ymis:leader.ymis, email:leader.email, role:leader.role, can_tick:leader.can_tick, children:children, targetYmis:targetYmis, sub:sub}};
   }
   // 家長：本團無帳號；「有旅才有超然」—— children_ids 要有本團成員先放行
-  if(role && role!=='parent') return {ok:false};
-  if(!children.length) return {ok:false};
-  return {ok:true, identity:{kind:'parent', ymis:'', email:sub, role:'parent', can_tick:false, children:children, targetYmis:targetYmis, sub:sub}};
+  if(role==='parent' || (!role && children.length>0)){
+    if(!children.length) return {ok:false};
+    return {ok:true, identity:{kind:'parent', ymis:'', email:sub, role:'parent', can_tick:false, children:children, targetYmis:targetYmis, sub:sub}};
+  }
+  // 領袖/旅長經 sig 入，下游唔使有 row（BUILD.md §2 開戶錨點）
+  return {ok:true, identity:{kind:'leader', ymis:sub, email:sub, role:role||'branch_leader', can_tick:true, children:children, targetYmis:targetYmis, sub:sub}};
 }
 // 全體 requireAuth（修 #5）：apikey（同源 proxy／容器 registry 注入）或有效 sig，
 // 兩者都無 → 拒絕。/exec 直接打（無 key 無 sig）無效。
@@ -786,7 +793,25 @@ function doPost(e){
     // 全體 requireAuth（ecportal v4.1.0 修 #5）：apikey 或有效 sig，否則無效
     const auth=requireAuthBody(body);
     if(!auth.ok) return jsonResponse({success:false,error:'未授權：缺少 API Key 或有效簽名',code:403});
-    if(action==='superLogin') return jsonResponse({success:false,error:'中央登入已簡化，請使用普通登入',code:403});
+
+    const isSig = auth.identity !== null;
+    const allowLocal = getDownstreamAccessConfig();
+
+    // 上游控、下游寫：本地入口受 ALLOW_LOCAL_LOGIN 旗控
+    // 本地 doPost 開頭加 if (!ALLOW_LOCAL_LOGIN && !isSig) return 403
+    // （登入/開戶都攔，upsertUser/setPw 等 server-to-server 放行，SUPER 災難恢復放行）
+    if(!allowLocal && !isSig){
+      if(action==='login' && !body.isSuperAdmin){
+        return jsonResponse({success:false, error:'此進度追蹤系統已關閉直接登入，請經由支部／旅管理系統登入', code:403});
+      }
+      if(action==='apply'){
+        return jsonResponse({success:false, error:'此進度追蹤系統已關閉直接開戶申請，請經由支部／旅管理系統申請', code:403});
+      }
+    }
+
+    if(action==='setDownstreamAccess') return handleSetDownstreamAccess(body, isSig);
+    if(action==='getDownstreamAccess') return jsonResponse({success:true, allowLocal: allowLocal});
+    if(action==='superLogin') return handleSuperLoginTicket(body.ticket,body.login_id,body.apikey);
     if(action==='login') return handleLogin(body.login_id,body.password,body.isSuperAdmin);
     if(action==='logout'){ destroyToken(body.token); return jsonResponse({success:true}); }
     // v5.2.1：公開入口接受成員／領袖申請（角色在 handleApply 內嚴格驗證，只限 member / branch_leader）
@@ -801,7 +826,18 @@ function doPost(e){
       if(id.kind==='parent'){
         return jsonResponse({success:true,auth_mode:'sig',user:{ymis:'',name:id.email,role:'parent',email:id.email},visible_children:id.children});
       }
-      const u=id.kind==='member'?getUser(id.ymis):getUserByEmail(id.email);
+      let u=id.kind==='member'?getUser(id.ymis):getUserByEmail(id.email);
+      if(!u && id.kind==='leader'){
+        // 領袖/旅長經 sig 入，下游唔使有 row（BUILD.md §2 開戶錨點）
+        u = {
+          ymis: id.ymis || id.email,
+          name: id.email,
+          email: id.email,
+          role: id.role || 'branch_leader',
+          can_tick: true,
+          status: 'active'
+        };
+      }
       if(!u) return jsonResponse({success:false,error:'找不到此帳號',code:404});
       const token=createToken(u.ymis);
       if(!token) return jsonResponse({success:false,error:'登入服務暫時無法使用'});
@@ -813,6 +849,70 @@ function doPost(e){
       return jsonResponse({success:true,members:getMembers()});
     }
 
+    // ===== 旅系統升級版：資料同步與批量開戶（server-to-server / 上游 sig）=====
+    if(action==='exportAll'){
+      let allowed = false;
+      if(body.apikey && String(body.apikey) === getApiKey()) allowed = true;
+      if(!allowed && auth.identity && auth.identity.kind === 'leader') allowed = true;
+      if(!allowed && body.token){
+        const tkYmis = validateToken(body.token);
+        const tkUser = tkYmis ? getUser(tkYmis) : null;
+        if(tkUser && getRoleLevel(tkUser.role) >= 40) allowed = true;
+      }
+      if(!allowed) return jsonResponse({success:false, error:'未授權：需要領袖權限或 API Key', code:403});
+      return handleExportAll(body.include_hash === true || body.include_hash === 'true');
+    }
+
+    if(action==='upsertUser'){
+      let allowed = false;
+      if(body.apikey && String(body.apikey) === getApiKey()) allowed = true;
+      if(!allowed && auth.identity && auth.identity.kind === 'leader') allowed = true;
+      if(!allowed && body.token){
+        const tkYmis = validateToken(body.token);
+        const tkUser = tkYmis ? getUser(tkYmis) : null;
+        if(tkUser && getRoleLevel(tkUser.role) >= 40) allowed = true;
+      }
+      if(!allowed) return jsonResponse({success:false, error:'未授權：需要領袖權限或 API Key', code:403});
+      return handleUpsertUser(body);
+    }
+
+    if(action==='setPw'){
+      let allowed = false;
+      if(body.apikey && String(body.apikey) === getApiKey()) allowed = true;
+      if(!allowed && auth.identity && auth.identity.kind === 'leader') allowed = true;
+      if(!allowed) return jsonResponse({success:false, error:'未授權：需要領袖權限或 API Key', code:403});
+      return handleSetPw(body.ymis || body.sub, body.password_hash || body.new_password);
+    }
+
+    if(action==='setStatus'){
+      let allowed = false;
+      if(body.apikey && String(body.apikey) === getApiKey()) allowed = true;
+      if(!allowed && auth.identity && auth.identity.kind === 'leader') allowed = true;
+      if(!allowed) return jsonResponse({success:false, error:'未授權：需要領袖權限或 API Key', code:403});
+      return handleSetStatus(body.ymis || body.sub, body.status);
+    }
+
+    if(action==='verifyPw'){
+      let allowed = false;
+      if(body.apikey && String(body.apikey) === getApiKey()) allowed = true;
+      if(!allowed && auth.identity && auth.identity.kind === 'leader') allowed = true;
+      if(!allowed) return jsonResponse({success:false, error:'未授權：需要領袖權限或 API Key', code:403});
+      return handleVerifyPw(body.ymis || body.sub, body.password_hash || body.password);
+    }
+
+    if(action==='importAll'){
+      let allowed = false;
+      if(body.apikey && String(body.apikey) === getApiKey()) allowed = true;
+      if(!allowed && auth.identity && auth.identity.kind === 'leader') allowed = true;
+      if(!allowed && body.token){
+        const tkYmis = validateToken(body.token);
+        const tkUser = tkYmis ? getUser(tkYmis) : null;
+        if(tkUser && getRoleLevel(tkUser.role) >= 40) allowed = true;
+      }
+      if(!allowed) return jsonResponse({success:false, error:'未授權：需要領袖權限或 API Key', code:403});
+      return handleImportAll(body);
+    }
+
     // 家長 sig bearer：在 save／addMember 等寬鬆 apikey 檢查之前先分派，
     // 家長只可行 handleParentAction 列出的只讀操作（防繞過）。
     if(auth.identity && auth.identity.kind==='parent'){
@@ -820,11 +920,31 @@ function doPost(e){
     }
 
     // 中央登入一次性的 verifier 設定／測試（領袖權限）。
-    // apikey 由同源 Proxy 伺服器端注入（瀏覽器不持有），另需有效領袖 token。
-    // 用途：讓 GAS 知道要向哪個固定 Vercel 端點回調驗證短效票據。
-    if(action==='configureTrustedTicketVerifier' || action==='testTrustedTicketVerifier'){
-      // 簡化方案：中央登入已改用直接驗證，不再需要 trusted-ticket 回調機制
-      return jsonResponse({success:true,message:'中央登入已簡化，不再需要驗證端點設定'});
+    if(action==='configureTrustedTicketVerifier'){
+      const verifyUrl=String(body.verifyUrl||'').trim();
+      const troopId=String(body.troopId||'').trim();
+      const bootstrap=String(body.bootstrap||'').trim();
+      let ok=false;
+      if(validCentralBootstrap(bootstrap,verifyUrl,troopId)){
+        ok=true;
+      }else{
+        let my=body.token?validateToken(body.token):null;
+        let mgr=my?getUser(my):null;
+        if(mgr && getRoleLevel(mgr.role)>=40) ok=true;
+      }
+      if(!ok) return jsonResponse({success:false,error:'未授權設定端點（需領袖權限或由 Proxy 開通）',code:403});
+      try{
+        configureTrustedTicketVerifier(verifyUrl,troopId);
+        return jsonResponse({success:true,troopId:troopId});
+      }catch(e){
+        return jsonResponse({success:false,error:'設定失敗：'+String(e&&e.message||e)});
+      }
+    }
+    if(action==='testTrustedTicketVerifier'){
+      let my=body.token?validateToken(body.token):null;
+      let mgr=my?getUser(my):null;
+      if(!mgr || getRoleLevel(mgr.role)<40) return jsonResponse({success:false,error:'權限不足'});
+      return jsonResponse(testTrustedTicketVerifier());
     }
 
     // save & addMember 需要 apikey (v4 向下兼容：若無 apikey 但有有效 token 也允許)
@@ -858,6 +978,17 @@ function doPost(e){
     let user=ymis?getUser(ymis):null;
     if(!user && auth.identity && auth.identity.kind!=='parent'){
       user=(auth.identity.kind==='member')?getUser(auth.identity.ymis):getUserByEmail(auth.identity.email);
+      if(!user && auth.identity.kind==='leader'){
+        // 領袖/旅長經 sig 入，下游唔使有 row（BUILD.md §2 開戶錨點）
+        user = {
+          ymis: auth.identity.ymis || auth.identity.email,
+          name: auth.identity.email,
+          email: auth.identity.email,
+          role: auth.identity.role || 'branch_leader',
+          can_tick: true,
+          status: 'active'
+        };
+      }
       if(user) ymis=user.ymis;
     }
     if(!user) return jsonResponse({success:false,error:'Token 無效或過期',code:401});
@@ -941,6 +1072,338 @@ function doPost(e){
     }
     return jsonResponse({success:false,error:'Unknown action: ' + action});
   }catch(err){ Logger.log('Request failed: '+String(err&&err.message||'unknown')); return jsonResponse({success:false,error:'服務暫時無法使用'}); }
+}
+
+// ===== 入口開關（上游控、下游寫）=====
+function getDownstreamAccessConfig(){
+  const prop = PropertiesService.getScriptProperties().getProperty('ALLOW_LOCAL_LOGIN');
+  // 預設新部署 ALLOW_LOCAL_LOGIN=true，單用時唔會誤閂
+  return prop !== 'false';
+}
+
+function handleSetDownstreamAccess(body, isSig){
+  // 新增 setDownstreamAccess({allowLocal})：只接受上游 sig 驗證先可寫 ScriptProperties ALLOW_LOCAL_LOGIN
+  if(!isSig){
+    return jsonResponse({success:false, error:'未授權：只接受上游簽名驗證', code:403});
+  }
+  const allow = body.allowLocal === true || body.allowLocal === 'true' || body.allow_local === true || body.allow_local === 'true';
+  PropertiesService.getScriptProperties().setProperty('ALLOW_LOCAL_LOGIN', allow ? 'true' : 'false');
+  return jsonResponse({success:true, allowLocal: allow});
+}
+
+// ===== 旅系統升級版：資料同步、備份與批量開戶 =====
+function handleExportAll(includeHash){
+  const sheet = getSheet().getSheetByName('Users');
+  const users = [];
+  if(sheet && sheet.getLastRow() > 1){
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0].map(function(h){ return String(h).trim(); });
+    const ymisCol = headers.indexOf('ymis');
+    const nameCol = headers.indexOf('name');
+    const emailCol = headers.indexOf('email');
+    const roleCol = headers.indexOf('role');
+    const pwHashCol = headers.indexOf('password_hash');
+    const branchCol = headers.indexOf('branch');
+    const canTickCol = headers.indexOf('can_tick');
+    const statusCol = headers.indexOf('status');
+    const allowedBadgesCol = headers.indexOf('allowed_badges');
+    const squadCol = headers.indexOf('squad');
+    const squadRoleCol = headers.indexOf('squad_role');
+    const forcePwCol = headers.indexOf('force_change_password');
+
+    for(let i=1; i<data.length; i++){
+      const row = data[i];
+      const ymis = ymisCol >= 0 ? normalizeYmis(row[ymisCol]) : '';
+      if(!ymis || isSuperAdminId(ymis)) continue;
+      const u = {
+        ymis: ymis,
+        name: nameCol >= 0 && row[nameCol] !== undefined ? String(row[nameCol]).trim() : '',
+        email: emailCol >= 0 && row[emailCol] !== undefined ? String(row[emailCol]).trim() : '',
+        role: roleCol >= 0 && row[roleCol] ? String(row[roleCol]).trim() : 'member',
+        branch: branchCol >= 0 && row[branchCol] ? String(row[branchCol]).trim() : '',
+        can_tick: canTickCol >= 0 && (row[canTickCol] === true || String(row[canTickCol]).toUpperCase() === 'TRUE'),
+        status: statusCol >= 0 && row[statusCol] ? String(row[statusCol]).trim() : 'active',
+        allowed_badges: allowedBadgesCol >= 0 && row[allowedBadgesCol] ? String(row[allowedBadgesCol]).trim() : '',
+        squad: squadCol >= 0 && row[squadCol] ? String(row[squadCol]).trim() : '',
+        squad_role: squadRoleCol >= 0 && row[squadRoleCol] ? String(row[squadRoleCol]).trim() : 'member',
+        force_change_password: forcePwCol >= 0 && (row[forcePwCol] === true || String(row[forcePwCol]).toUpperCase() === 'TRUE')
+      };
+      if(includeHash && pwHashCol >= 0 && row[pwHashCol]){
+        u.password_hash = String(row[pwHashCol]).trim();
+      }
+      users.push(u);
+    }
+  }
+
+  const membersList = getMembers();
+  const exportedAt = new Date().toISOString();
+  const unit = PropertiesService.getScriptProperties().getProperty('PORTAL_GLOBAL_ID') || 'UNIT';
+  const dataPayload = {
+    users: users,
+    members: membersList
+  };
+  const dataStr = JSON.stringify(dataPayload);
+  const sha256 = bytesToHex(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, dataStr, Utilities.Charset.UTF_8));
+
+  return jsonResponse({
+    success: true,
+    meta: {
+      unit: unit,
+      exportedAt: exportedAt,
+      version: '1.0',
+      sha256: sha256,
+      include_hash: Boolean(includeHash)
+    },
+    data: dataPayload
+  });
+}
+
+function recordTransferId(transferId){
+  if(!transferId) return;
+  const props = PropertiesService.getScriptProperties();
+  const seen = String(props.getProperty('SEEN_TRANSFER_IDS') || '');
+  const list = seen ? seen.split(',') : [];
+  if(list.indexOf(transferId) < 0){
+    list.push(transferId);
+    if(list.length > 200) list.shift();
+    props.setProperty('SEEN_TRANSFER_IDS', list.join(','));
+  }
+}
+
+function handleUpsertUser(body){
+  body = body || {};
+  const user = body.user || body;
+  let ymis = normalizeYmis(user.ymis || user.scout_id);
+  const name = String(user.name || '').trim();
+  const email = String(user.email || '').trim();
+  const role = String(user.role || 'member').trim();
+  const squad = String(user.squad || '').trim();
+  const squadRole = String(user.squad_role || 'member').trim();
+  const branch = String(user.branch || squad).trim();
+  const canTick = user.can_tick === true || user.can_tick === 'true' || user.can_tick === 'TRUE';
+  const status = String(user.status || 'active').trim();
+  const passwordHash = user.password_hash ? String(user.password_hash).trim() : '';
+  const password = user.password ? String(user.password).trim() : '';
+  const transferId = String(body.transferId || user.transferId || '').trim();
+
+  // transferId 冪等檢查
+  if(transferId){
+    const props = PropertiesService.getScriptProperties();
+    const seenTransfers = String(props.getProperty('SEEN_TRANSFER_IDS') || '');
+    if(seenTransfers.split(',').indexOf(transferId) >= 0){
+      return jsonResponse({success: true, action: 'skipped', idempotent: true, ymis: ymis});
+    }
+  }
+
+  if(!ymis && role !== 'member' && email){
+    ymis = generateLeaderId();
+  }
+  if(!ymis) return jsonResponse({success: false, error: '缺少 YMIS 編號', code: 400});
+
+  const uSheet = getSheet().getSheetByName('Users');
+  if(!uSheet) return jsonResponse({success: false, error: '找不到 Users 工作表'});
+
+  const data = uSheet.getDataRange().getValues();
+  const headers = data[0].map(function(h){ return String(h).trim(); });
+  const ymisCol = headers.indexOf('ymis');
+  const nameCol = headers.indexOf('name');
+  const emailCol = headers.indexOf('email');
+  const roleCol = headers.indexOf('role');
+  const pwHashCol = headers.indexOf('password_hash');
+  const branchCol = headers.indexOf('branch');
+  const canTickCol = headers.indexOf('can_tick');
+  const statusCol = headers.indexOf('status');
+  const allowedBadgesCol = headers.indexOf('allowed_badges');
+  const squadCol = headers.indexOf('squad');
+  const squadRoleCol = headers.indexOf('squad_role');
+  const forcePwCol = headers.indexOf('force_change_password');
+
+  let rowIndex = -1;
+  const targetY = normalizeYmis(ymis);
+  const targetE = normalizeEmail(email);
+
+  for(let i=1; i<data.length; i++){
+    const rowY = ymisCol >= 0 ? normalizeYmis(data[i][ymisCol]) : '';
+    const rowE = emailCol >= 0 ? normalizeEmail(data[i][emailCol]) : '';
+    if(rowY === targetY){
+      rowIndex = i + 1;
+      break;
+    }
+    // 撞號阻擋：同一 Email 已被其他不同 YMIS 佔用
+    if(targetE && rowE === targetE && rowY !== targetY && isActiveStatus(data[i][statusCol])){
+      return jsonResponse({success: false, error: '此電郵已被其他帳戶使用 (' + rowY + ')', code: 409});
+    }
+  }
+
+  const nowStr = now();
+  if(rowIndex > 1){
+    // 更新現有用戶
+    if(name && nameCol >= 0) uSheet.getRange(rowIndex, nameCol + 1).setValue(name);
+    if(email && emailCol >= 0) uSheet.getRange(rowIndex, emailCol + 1).setValue(email);
+    if(role && roleCol >= 0) uSheet.getRange(rowIndex, roleCol + 1).setValue(role);
+    if(branch && branchCol >= 0) uSheet.getRange(rowIndex, branchCol + 1).setValue(branch);
+    if(squad && squadCol >= 0) uSheet.getRange(rowIndex, squadCol + 1).setValue(squad);
+    if(squadRole && squadRoleCol >= 0) uSheet.getRange(rowIndex, squadRoleCol + 1).setValue(squadRole);
+    if(canTickCol >= 0 && user.can_tick !== undefined) uSheet.getRange(rowIndex, canTickCol + 1).setValue(canTick);
+    if(status && statusCol >= 0) uSheet.getRange(rowIndex, statusCol + 1).setValue(status);
+
+    // 直插 hash（唔經 1234+mustChangePw）
+    if(passwordHash && pwHashCol >= 0){
+      uSheet.getRange(rowIndex, pwHashCol + 1).setValue(passwordHash);
+      if(forcePwCol >= 0){
+        const force = user.force_change_password === true;
+        uSheet.getRange(rowIndex, forcePwCol + 1).setValue(force);
+      }
+    } else if(password && pwHashCol >= 0){
+      uSheet.getRange(rowIndex, pwHashCol + 1).setValue(hashPassword(password));
+    }
+    ensureRosterRow(ymis, name, email, squad);
+    syncRosterRow(ymis, {name: name, email: email, squad: squad});
+
+    if(transferId){
+      recordTransferId(transferId);
+    }
+    return jsonResponse({success: true, action: 'updated', ymis: ymis});
+  } else {
+    // 新增用戶
+    const newRow = new Array(headers.length).fill('');
+    function setCell(n, v){ const c = headers.indexOf(n); if(c >= 0) newRow[c] = v; }
+    setCell('ymis', ymis);
+    setCell('name', name || ymis);
+    setCell('email', email);
+    setCell('role', role);
+    setCell('branch', branch || squad);
+    setCell('squad', squad);
+    setCell('squad_role', squadRole);
+    setCell('can_tick', canTick);
+    setCell('status', status || 'active');
+    setCell('allowed_badges', role === 'member' ? '' : '*');
+
+    // 直插 hash（保留密碼，唔經 1234+mustChangePw）
+    if(passwordHash){
+      setCell('password_hash', passwordHash);
+      setCell('force_change_password', user.force_change_password === true);
+    } else if(password){
+      setCell('password_hash', hashPassword(password));
+      setCell('force_change_password', user.force_change_password === true);
+    } else {
+      setCell('password_hash', hashPassword(DEFAULT_TEMP_PASSWORD));
+      setCell('force_change_password', true);
+    }
+    setCell('auth_by', 'upsertUser');
+    setCell('auth_date', nowStr);
+    setCell('created_at', nowStr);
+    uSheet.appendRow(newRow);
+    ensureRosterRow(ymis, name, email, squad);
+
+    if(transferId){
+      recordTransferId(transferId);
+    }
+    return jsonResponse({success: true, action: 'created', ymis: ymis});
+  }
+}
+
+function handleSetPw(targetYmis, newPwOrHash){
+  if(!targetYmis || !newPwOrHash) return jsonResponse({success: false, error: '缺少帳號或密碼資料'});
+  const targetY = normalizeYmis(targetYmis);
+  const targetE = normalizeEmail(targetYmis);
+
+  const uSheet = getSheet().getSheetByName('Users');
+  if(!uSheet) return jsonResponse({success: false, error: '找不到 Users 工作表'});
+
+  const data = uSheet.getDataRange().getValues();
+  const headers = data[0].map(function(h){ return String(h).trim(); });
+  const ymisCol = headers.indexOf('ymis');
+  const emailCol = headers.indexOf('email');
+  const pwHashCol = headers.indexOf('password_hash');
+  const forcePwCol = headers.indexOf('force_change_password');
+
+  for(let i=1; i<data.length; i++){
+    const rowY = ymisCol >= 0 ? normalizeYmis(data[i][ymisCol]) : '';
+    const rowE = emailCol >= 0 ? normalizeEmail(data[i][emailCol]) : '';
+    if(rowY === targetY || (targetE && rowE === targetE)){
+      const hash = (/^[a-f0-9]{64}$/i.test(String(newPwOrHash))) ? String(newPwOrHash) : hashPassword(String(newPwOrHash));
+      if(pwHashCol >= 0) uSheet.getRange(i+1, pwHashCol+1).setValue(hash);
+      if(forcePwCol >= 0) uSheet.getRange(i+1, forcePwCol+1).setValue(false);
+      return jsonResponse({success: true});
+    }
+  }
+  return jsonResponse({success: false, error: '找不到此帳號', code: 404});
+}
+
+function handleSetStatus(targetYmis, newStatus){
+  if(!targetYmis || !newStatus) return jsonResponse({success: false, error: '缺少帳號或狀態資料'});
+  const targetY = normalizeYmis(targetYmis);
+  const targetE = normalizeEmail(targetYmis);
+
+  const uSheet = getSheet().getSheetByName('Users');
+  if(!uSheet) return jsonResponse({success: false, error: '找不到 Users 工作表'});
+
+  const data = uSheet.getDataRange().getValues();
+  const headers = data[0].map(function(h){ return String(h).trim(); });
+  const ymisCol = headers.indexOf('ymis');
+  const emailCol = headers.indexOf('email');
+  const statusCol = headers.indexOf('status');
+
+  for(let i=1; i<data.length; i++){
+    const rowY = ymisCol >= 0 ? normalizeYmis(data[i][ymisCol]) : '';
+    const rowE = emailCol >= 0 ? normalizeEmail(data[i][emailCol]) : '';
+    if(rowY === targetY || (targetE && rowE === targetE)){
+      if(statusCol >= 0) uSheet.getRange(i+1, statusCol+1).setValue(String(newStatus).trim());
+      return jsonResponse({success: true});
+    }
+  }
+  return jsonResponse({success: false, error: '找不到此帳號', code: 404});
+}
+
+function handleVerifyPw(targetYmis, pwOrHash){
+  if(!targetYmis || !pwOrHash) return jsonResponse({success: false, error: '缺少帳號或密碼資料'});
+  const targetY = normalizeYmis(targetYmis);
+  const targetE = normalizeEmail(targetYmis);
+
+  const uSheet = getSheet().getSheetByName('Users');
+  if(!uSheet) return jsonResponse({success: false, error: '找不到 Users 工作表'});
+
+  const data = uSheet.getDataRange().getValues();
+  const headers = data[0].map(function(h){ return String(h).trim(); });
+  const ymisCol = headers.indexOf('ymis');
+  const emailCol = headers.indexOf('email');
+  const pwHashCol = headers.indexOf('password_hash');
+
+  for(let i=1; i<data.length; i++){
+    const rowY = ymisCol >= 0 ? normalizeYmis(data[i][ymisCol]) : '';
+    const rowE = emailCol >= 0 ? normalizeEmail(data[i][emailCol]) : '';
+    if(rowY === targetY || (targetE && rowE === targetE)){
+      const currentHash = pwHashCol >= 0 ? String(data[i][pwHashCol] || '') : '';
+      const expectHash = (/^[a-f0-9]{64}$/i.test(String(pwOrHash))) ? String(pwOrHash) : hashPassword(String(pwOrHash));
+      const match = currentHash.toLowerCase() === expectHash.toLowerCase();
+      return jsonResponse({success: true, match: match});
+    }
+  }
+  return jsonResponse({success: false, error: '找不到此帳號', code: 404});
+}
+
+function handleImportAll(body){
+  body = body || {};
+  const data = body.data;
+  if(!data || !Array.isArray(data.users)){
+    return jsonResponse({success: false, error: '匯入資料結構無效'});
+  }
+  if(body.meta && body.meta.sha256){
+    const dataStr = JSON.stringify(data);
+    const expected = bytesToHex(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, dataStr, Utilities.Charset.UTF_8));
+    if(expected.toLowerCase() !== String(body.meta.sha256).toLowerCase()){
+      return jsonResponse({success: false, error: '資料完整性校驗失敗 (sha256 mismatch)', code: 400});
+    }
+  }
+  let imported = 0, skipped = 0;
+  for(let i=0; i<data.users.length; i++){
+    const res = handleUpsertUser({user: data.users[i], transferId: body.transferId});
+    let parsed = null;
+    try{ parsed = JSON.parse(res.getContent()); }catch(e){ parsed = res; }
+    if(parsed && parsed.success) imported++; else skipped++;
+  }
+  return jsonResponse({success: true, imported: imported, skipped: skipped, total: data.users.length});
 }
 
 // ===== 邏輯 =====

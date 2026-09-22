@@ -983,7 +983,7 @@ zh:{
   tick_grant:'授權勾選', tick_granted:'已授權勾選', tick_revoked:'已收回權限',
   upd_fail:'更新失敗', upd_fail_colon:'更新失敗：', error_colon:'錯誤：',
   user_search_ph:'搜尋姓名/ YMIS/ Email', users_add_btn:'➕ 新增成員', users_report_btn:'⬇️ 小隊報表', users_audit_btn:'🧾 操作紀錄',
-  users_hist_btn:'✅ 審批歷史', users_csv_btn:'📥 匯入 CSV',
+  users_hist_btn:'✅ 審批歷史', users_csv_btn:'📥 匯入 CSV', users_export_json_btn:'📦 匯出 JSON',
   wearing_guide:'徽章佩戴指引 (2024-04-01起)', wearing_url:'童軍支部資料',
   wearing_points_html:'<b>佩戴重點（2024新指引）：</b><br>• 和平使者章佩戴左胸袋中央，取代會員章<br>• 急救章統一左袖上方AYP下方<br>• 拯溺布章佩戴左袖上方中央<br>• 世界童軍獎章最多右袖平行4枚<br>• 童軍支部徽章須按現行制服及佩戴指引佩戴',
   bulk_no_valid:'沒有有效資料（成員 YMIS 須為10位數字；領袖須填姓名＋電郵）', bulk_done_fmt:'批量開戶完成：成功 {0} 筆，略過 {1} 筆',
@@ -1334,7 +1334,7 @@ en:{
   tick_grant:'Grant tick right', tick_granted:'Tick right granted', tick_revoked:'Tick right revoked',
   upd_fail:'Update failed', upd_fail_colon:'Update failed: ', error_colon:'Error: ',
   user_search_ph:'Search name / YMIS / email', users_add_btn:'➕ Add member', users_report_btn:'⬇️ Patrol report', users_audit_btn:'🧾 Audit log',
-  users_hist_btn:'✅ Approval history', users_csv_btn:'📥 Import CSV',
+  users_hist_btn:'✅ Approval history', users_csv_btn:'📥 Import CSV', users_export_json_btn:'📦 Export JSON',
   wearing_guide:'Badge Wearing Guide (from 2024-04-01)', wearing_url:'Scout Section Resources',
   wearing_points_html:'<b>Wearing highlights (2024 guide):</b><br>• Messengers of Peace badge is worn at the centre of the left chest pocket, replacing the Membership Badge<br>• First Aid badge: top of left sleeve, below AYP<br>• Lifesaver cloth badge: centre of upper left sleeve<br>• Up to 4 World Scout badges in a row on the right sleeve<br>• Scout Section badges must follow the current uniform and wearing guidelines',
   bulk_no_valid:'No valid data (YMIS must be 10 digits)', bulk_done_fmt:'Bulk onboarding done: {0} succeeded, {1} skipped',
@@ -3682,7 +3682,7 @@ async function loadUsers(){
         </div>`;
       }
 
-      let h=roleExplain+systemSettingHtml+centralAuthHtml+mockTool+`<div class="filter-bar"><button class="btn btn-sm btn-warning" onclick="openBulkOnboardModal()">${t('users_bulk_btn')}</button><button class="btn btn-sm btn-primary" onclick="addMemberFromApp()">${t('users_add_btn')}</button><button class="btn btn-sm btn-secondary" onclick="downloadSquadReport()">${t('users_report_btn')}</button><button class="btn btn-sm btn-outline" onclick="loadAuditHistory()">${t('users_audit_btn')}</button><button class="btn btn-sm btn-outline" onclick="loadApprovalHistory()">${t('users_hist_btn')}</button><label class="btn btn-sm btn-secondary">${t('users_csv_btn')}<input type="file" accept=".csv" onchange="importMembersFull(this.files[0])" style="display:none"></label><input type="text" id="userSearch" placeholder="${t('user_search_ph')}" oninput="filterUsers()" style="flex:1"></div><div id="userList">`;
+      let h=roleExplain+systemSettingHtml+centralAuthHtml+mockTool+`<div class="filter-bar"><button class="btn btn-sm btn-warning" onclick="openBulkOnboardModal()">${t('users_bulk_btn')}</button><button class="btn btn-sm btn-primary" onclick="addMemberFromApp()">${t('users_add_btn')}</button><button class="btn btn-sm btn-secondary" onclick="downloadSquadReport()">${t('users_report_btn')}</button><button class="btn btn-sm btn-outline" onclick="loadAuditHistory()">${t('users_audit_btn')}</button><button class="btn btn-sm btn-outline" onclick="loadApprovalHistory()">${t('users_hist_btn')}</button><label class="btn btn-sm btn-secondary">${t('users_csv_btn')}<input type="file" accept=".csv" onchange="importMembersFull(this.files[0])" style="display:none"></label><button class="btn btn-sm btn-secondary" onclick="exportMembersJson()">${t('users_export_json_btn')}</button><input type="text" id="userSearch" placeholder="${t('user_search_ph')}" oninput="filterUsers()" style="flex:1"></div><div id="userList">`;
       // v5.3.0：團長全團只可一位 —— 預先找出在職團長；有人嘗試升第二位時由 updateUserRole 彈提示阻擋（唔直接 disabled，令人知點解唔得）
       const gslHolder=(d.users||[]).find(u=>u.role==='group_leader')||null;
       const gslCount=(d.users||[]).filter(u=>u.role==='group_leader').length;
@@ -3697,6 +3697,34 @@ async function loadUsers(){
       c.innerHTML=h;
     }else c.innerHTML=`<p style="color:var(--red)">${t('load_fail')}：${d.error}</p>`;
   }catch(e){ c.innerHTML=`<p style="color:var(--red)">${t('error_colon')}${e.message}</p>`; }
+}
+async function exportMembersJson(){
+  const includeHash = confirm('匯出成員 JSON：\n\n按「確定」包含密碼雜湊（供上游支部匯入，保留舊密碼直插）\n按「取消」則剝除密碼欄（純名冊備份）');
+  const overlay = document.getElementById('savingOverlay');
+  if(overlay) overlay.classList.add('active');
+  const txt = document.getElementById('savingText');
+  if(txt) txt.textContent = '正在產生 JSON 匯出檔案...';
+  try {
+    const res = await apiRequest('exportAll', { token: currentToken, include_hash: includeHash });
+    if(overlay) overlay.classList.remove('active');
+    if(res && res.success){
+      const blob = new Blob([JSON.stringify(res, null, 2)], { type: 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'scoutbadge-export-' + (currentTroopId || 'unit') + (includeHash ? '-with-hash' : '') + '.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      showToast('✅ 已匯出 ' + (res.data && res.data.users ? res.data.users.length : 0) + ' 位成員資料' + (includeHash ? '（含密碼雜湊）' : ''), 'success');
+    } else {
+      showToast('❌ 匯出失敗：' + (res && res.error ? res.error : '未知錯誤'), 'error');
+    }
+  } catch(e) {
+    if(overlay) overlay.classList.remove('active');
+    showToast('❌ 匯出失敗：' + e.message, 'error');
+  }
 }
 async function resetMemberPassword(ymis){
   const entered=prompt(t('reset_pw_prompt'),'');

@@ -112,7 +112,56 @@ class MockGas {
     this._record(url.pathname + url.search, 'POST');
     const action = body.action;
 
+    if (action === 'setDownstreamAccess') {
+      const isSig = Boolean(body.sig && body.sub && body.exp);
+      if (!isSig) return this._json(res, 200, { success: false, code: 403, error: '未授權：只接受上游簽名驗證' });
+      this.allowLocal = body.allowLocal === true || body.allowLocal === 'true';
+      return this._json(res, 200, { success: true, allowLocal: this.allowLocal });
+    }
+
+    if (action === 'getDownstreamAccess') {
+      return this._json(res, 200, { success: true, allowLocal: this.allowLocal !== false });
+    }
+
+    if (action === 'exportAll') {
+      const users = [...this.users.values()].map(u => {
+        const copy = { ...u };
+        if (!body.include_hash) delete copy.password;
+        return copy;
+      });
+      return this._json(res, 200, {
+        success: true,
+        meta: { unit: this.name, exportedAt: new Date().toISOString(), version: '1.0', sha256: 'mocksha', include_hash: Boolean(body.include_hash) },
+        data: { users, members: users }
+      });
+    }
+
+    if (action === 'upsertUser') {
+      const u = body.user || body;
+      const ymis = String(u.ymis || u.scout_id || '');
+      this.users.set(ymis, { ymis, name: u.name || ymis, role: u.role || 'member', password: u.password || '1234' });
+      return this._json(res, 200, { success: true, action: 'created', ymis });
+    }
+
+    if (action === 'setPw') {
+      const u = this.users.get(body.ymis || body.sub);
+      if (u) u.password = body.password_hash || body.new_password;
+      return this._json(res, 200, { success: Boolean(u) });
+    }
+
+    if (action === 'setStatus') {
+      return this._json(res, 200, { success: true });
+    }
+
+    if (action === 'verifyPw') {
+      const u = this.users.get(body.ymis || body.sub);
+      return this._json(res, 200, { success: Boolean(u), match: u ? (u.password === (body.password_hash || body.password)) : false });
+    }
+
     if (action === 'login') {
+      if (this.allowLocal === false && !body.isSuperAdmin) {
+        return this._json(res, 200, { success: false, code: 403, error: '此進度追蹤系統已關閉直接登入，請經由支部／旅管理系統登入' });
+      }
       const lid = String(body.login_id || '');
       const pw = String(body.password || '');
       let user = null;

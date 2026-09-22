@@ -266,11 +266,18 @@ module.exports = async function handler(req, res) {
         return fail(res, 401, '登入失敗');
       }
 
-      // 簡化方案：Vercel 直接驗證密碼，加 flag 話畀 Apps Script 知
-      // 不再需要 trusted-ticket 回調，因此不需要 script.external_request
-      forwardPayload = sanitizeForwardPayload(payload, troopConfig);
-      forwardPayload.isSuperAdmin = true;
-      forwardPayload.login_id = centralSubjectId;
+      forwardPayload = {
+        action: 'superLogin',
+        login_id: centralSubjectId,
+        apikey: troopConfig.apikey,
+        isSuperAdmin: true,
+        ticket: createSuperTicket({
+          troopId: troopConfig.id,
+          backend: troopConfig.backend,
+          apikey: troopConfig.apikey,
+          loginId: centralSubjectId
+        })
+      };
     } else {
       forwardPayload = sanitizeForwardPayload(payload, troopConfig);
       // The verifier bootstrap always targets the routed troop itself; the
@@ -302,9 +309,50 @@ module.exports = async function handler(req, res) {
       return fail(res, 502, '後端服務暫時無法使用，請稍後再試');
     }
 
+    if (central && isVerifierUnconfigured(result)) {
+      const verifyUrl = centralVerifierUrl(req);
+      if (verifyUrl) {
+        const bootstrap = createCentralBootstrap({
+          verifyUrl,
+          troopId: troopConfig.id,
+          apikey: troopConfig.apikey
+        });
+        const bootRes = await postUpstream(troopConfig.backend, {
+          action: 'configureTrustedTicketVerifier',
+          troopId: troopConfig.id,
+          verifyUrl,
+          bootstrap,
+          apikey: troopConfig.apikey
+        });
+        let bootResult = null;
+        try { bootResult = JSON.parse(await bootRes.text()); } catch (_) {}
+        if (bootResult && bootResult.success) {
+          forwardPayload.ticket = createSuperTicket({
+            troopId: troopConfig.id,
+            backend: troopConfig.backend,
+            apikey: troopConfig.apikey,
+            loginId: centralSubjectId
+          });
+          upstream = await postUpstream(troopConfig.backend, forwardPayload);
+          raw = await upstream.text();
+          try { result = JSON.parse(raw); } catch (_) {}
+        } else {
+          centralBootstrapFailed = true;
+        }
+      }
+    }
+
     if (central) {
       if (!result || result.success !== true || typeof result.token !== 'string' || !result.token) {
-        loginRateLimit.failed(req);
+        if (centralBootstrapFailed) {
+          logResult({ troopId, action, status: 401, startedAt, success: false, central, centralFail: 'bootstrap_failed' });
+          return fail(res, 401, CENTRAL_BOOTSTRAP_FAIL);
+        }
+        if (isVerifierUnconfigured(result)) {
+          logResult({ troopId, action, status: 409, startedAt, success: false, central, centralFail: 'verifier_unconfigured' });
+          return fail(res, 409, result.error || '中央登入尚未設定');
+        }
+        const upstreamError = explainCentralUpstreamFailure(result && result.error);
         logResult({
           troopId,
           action,
@@ -312,9 +360,16 @@ module.exports = async function handler(req, res) {
           startedAt,
           success: false,
           central,
-          centralFail: 'password'
+          centralFail: 'setup'
         });
-        return fail(res, 401, '登入失敗');
+        const httpStatus = (result && result.code && result.code >= 400 && result.code < 600)
+          ? result.code
+          : 401;
+        return res.status(httpStatus).json({
+          success: false,
+          error: upstreamError || '登入失敗',
+          code: result && result.code
+        });
       }
       loginRateLimit.succeeded(req);
       result = {
