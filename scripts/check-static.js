@@ -18,7 +18,14 @@ scripts.forEach((source, index) => {
   }
 });
 
-const appScript = fs.readFileSync(path.join(root, 'apps-script', 'Code.gs'), 'utf8');
-new Function(appScript); // Syntax check only; GAS globals are not executed.
+const appScriptFiles = ['apps-script/Code.gs', 'assets/batch-onboard/Code.gs'];
+for (const file of appScriptFiles) {
+  const source = fs.readFileSync(path.join(root, file), 'utf8');
+  try {
+    new Function(source); // Syntax check only; GAS globals are not executed.
+  } catch (error) {
+    throw new Error(`${file}: ${error.message}`);
+  }
+}
 
-console.log(`Static syntax check passed (${scripts.length} browser script block(s) + Apps Script)`);
+console.log(`Static syntax check passed (${scripts.length} browser script block(s) + ${appScriptFiles.length} Apps Script files)`);
