@@ -3,7 +3,6 @@
 const assert = require('assert');
 const proxyHandler = require('../api/proxy');
 const troopsHandler = require('../api/troops');
-const verifyTicketHandler = require('../api/verify-super-ticket');
 const { getTroopConfig, getRegistry, getPortalConfig } = require('../lib/registry');
 const { unwrapBrowserSession } = require('../lib/super-auth');
 const loginRateLimit = require('../lib/login-rate-limit');
@@ -96,13 +95,15 @@ async function run() {
   assert.strictEqual(upstreamCalls, 1);
   console.log('  [PASS] missing, empty, and short settings are rejected without GAS; ordinary login is unaffected');
 
-  console.log('\n4. Correct four-character key uses a short-lived ticket and encrypted troop-bound browser session');
+  console.log('\n4. Correct four-character key uses one-way authentication and encrypted troop-bound browser session');
   process.env.SUPER_KEY = '0007';
   upstreamCalls = 0;
   global.fetch = async (url, options) => {
     upstreamCalls += 1;
     const body = JSON.parse(options.body);
     assert.strictEqual(body.action, 'superLogin');
+    assert.strictEqual(body.isSuperAdmin, true);
+    assert.strictEqual(body.ticket, undefined);
     assert.strictEqual(body.login_id, 'central-test-id');
     assert.strictEqual(body.password, undefined);
     assert.strictEqual(body.apikey, 'server-key-a');
@@ -129,26 +130,18 @@ async function run() {
   assert.strictEqual(wrongTroop.valid, false);
   console.log('  [PASS] four-character string with leading zero succeeds only on full match; session is encrypted and troop-bound');
 
-  console.log('\n5. Verification endpoint accepts only the matching opaque ticket audience');
-  // Issue a new ticket through proxy so it is available to verifier without exposing it in client responses.
-  let capturedTicket = '';
+  console.log('\n5. Browser authorization fields cannot reach GAS');
   global.fetch = async (_url, options) => {
     const body = JSON.parse(options.body);
-    capturedTicket = body.ticket;
-    return { status: 200, text: async () => JSON.stringify({ success: true, token: 'gas-ticket-check', user: { role: 'super_admin' } }) };
+    assert.strictEqual(body.isSuperAdmin, undefined);
+    assert.strictEqual(body.ticket, undefined);
+    assert.strictEqual(body.bootstrap, undefined);
+    assert.strictEqual(body.apikey, 'server-key-a');
+    return { status: 200, text: async () => JSON.stringify({success:false}) };
   };
-  await callProxy({ troopId: '0082', action: 'login', login_id: 'central-test-id', password: '0007' });
-  const verifyRes = {
-    statusCode: 0,
-    setHeader(){},
-    end(raw){ this.body = JSON.parse(raw); }
-  };
-  verifyTicketHandler({ method: 'POST', body: { ticket: capturedTicket, troopId: '0082', backendHash: require('../lib/super-auth').backendHash('https://script.google.com/macros/s/TROOP_A/exec'), loginId: 'central-test-id' } }, verifyRes);
-  assert.deepStrictEqual(verifyRes.body, { valid: true });
-  const badVerifyRes = { statusCode: 0, setHeader(){}, end(raw){ this.body = JSON.parse(raw); } };
-  verifyTicketHandler({ method: 'POST', body: { ticket: capturedTicket, troopId: '82', backendHash: require('../lib/super-auth').backendHash('https://script.google.com/macros/s/TROOP_B/exec'), loginId: 'central-test-id' } }, badVerifyRes);
-  assert.deepStrictEqual(badVerifyRes.body, { valid: false });
-  console.log('  [PASS] ticket verifier checks fixed troop and backend audience');
+  await callProxy({troopId:'0082', action:'login', login_id:'1234567890', password:'wrong', isSuperAdmin:true, ticket:'forged', bootstrap:'forged', apikey:'browser-key'});
+  const blocked = await callProxy({troopId:'0082', action:'superLogin', login_id:'central-test-id', isSuperAdmin:true});
+  assert.strictEqual(blocked.statusCode, 403);
 
   console.log('\n6. Logs exclude sensitive values');
   const logged = [];

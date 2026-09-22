@@ -82,7 +82,7 @@ installEnv();
 // ---------- Load Code.gs into global scope ----------
 const code = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'Code.gs'), 'utf8');
 // run inside this context: define functions globally
-const fn = new Function('global', code + '\n;return {handleLogin, handleRequestLogRecord, handleGetLogRequests, handleReviewLogRequest, handleCancelLogRequest, handleGetLogRecords, handleSaveLogRecord, getMembers, getAllUsers, getUser, getUserByEmail, validateToken, canUserTick, initializeSheets, handleChangePassword, handleResetPassword, handleApply, handleAddUser, handleAddMember, handleReviewApplication, handleBulkAddUsers, uniquenessError, normalizeYmis, doPost, doGet, getLogRequestsList: typeof getLogRequestsList!=="undefined"?getLogRequestsList:null, getApiKey, handleSuperLoginTicket, handleChangePassword};');
+const fn = new Function('global', code + '\n;return {handleLogin, handleRequestLogRecord, handleGetLogRequests, handleReviewLogRequest, handleCancelLogRequest, handleGetLogRecords, handleSaveLogRecord, getMembers, getAllUsers, getUser, getUserByEmail, validateToken, canUserTick, initializeSheets, handleChangePassword, handleResetPassword, handleApply, handleAddUser, handleAddMember, handleReviewApplication, handleBulkAddUsers, uniquenessError, normalizeYmis, doPost, doGet, getLogRequestsList: typeof getLogRequestsList!=="undefined"?getLogRequestsList:null, getApiKey, handleSuperLogin, handleChangePassword};');
 const api = fn(global);
 
 // ---------- Seed sheets ----------
@@ -235,7 +235,7 @@ const loadRes = (function(){
 })();
 check('load 回應含 logRequestsSupported=true + logRequests', loadRes.logRequestsSupported === true && Array.isArray(loadRes.logRequests), JSON.stringify({s:loadRes.logRequestsSupported, n:(loadRes.logRequests||[]).length}));
 
-console.log('\n【B】中央票據登入：GAS 不接受舊密碼入口');
+console.log('\n【B】中央單向登入：GAS 不接受舊密碼入口');
 const centralIdMatch=code.match(/const SUPER_ADMIN_ID = '([^']+)'/);
 const centralId=centralIdMatch&&centralIdMatch[1];
 const directCentral=out(api.handleLogin(centralId,'not-used'));
@@ -243,9 +243,9 @@ check('中央身份不能直接以 GAS 密碼入口登入', directCentral.succes
 global.__scriptProperties.CENTRAL_AUTH_VERIFY_URL='https://verifier.example.test/api/verify-super-ticket';
 global.__scriptProperties.CENTRAL_AUTH_TROOP_ID='0082';
 global.__scriptProperties.CENTRAL_AUTH_BACKEND_HASH='a'.repeat(64);
-global.UrlFetchApp={fetch(){ return {getResponseCode(){return 200;},getContentText(){return JSON.stringify({valid:true});}}; }};
-const ticketLogin=out(api.handleSuperLoginTicket('opaque-ticket',centralId,api.getApiKey()));
-check('驗票成功才建立中央 session', ticketLogin.success===true && ticketLogin.user.role==='super_admin' && !!ticketLogin.token, JSON.stringify(ticketLogin));
+global.UrlFetchApp={fetch(){ throw new Error('GAS must not call back'); }};
+const ticketLogin=out(api.handleSuperLogin(centralId,api.getApiKey(),true));
+check('伺服器授權成功才建立中央 session', ticketLogin.success===true && ticketLogin.user.role==='super_admin' && !!ticketLogin.token, JSON.stringify(ticketLogin));
 check('新中央 session 使用受限 token 格式', String(ticketLogin.token||'').startsWith('sa_') && api.validateToken(ticketLogin.token)===centralId, JSON.stringify(ticketLogin));
 sheets['Tokens'].appendRow(['legacy-central-token',centralId,'','2999-01-01']);
 check('舊 GAS 直接登入遺留 token 被撤銷', api.validateToken('legacy-central-token')===null);

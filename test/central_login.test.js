@@ -1,22 +1,6 @@
 'use strict';
 
-/*
- * 中央登入（sheep）故障診斷 e2e —— 打真 apps-script/Code.gs：
- *   dev server → /api/proxy → http /exec（vm 內執行原碼）→ /api/verify-super-ticket 回調
- *
- * 目的：中央登入失敗時，管理員要睇到「邊一關衰」同「下一步做咩」，
- * 而唔係一個無差別嘅「登入失敗」。呢個檔同時鎖死兩個舊 bug：
- *   1. 「測試連線」之前淨係睇 HTTP status，4xx／雜湊唔一致都會報成功；
- *   2. 設定壞咗時，重試 5 次會被 rate limit 鎖死 15 分鐘（修唔到設定）。
- *
- * 覆蓋：
- *   - 未設定 verifier → 409＋可行動提示
- *   - 設定正確 → 測試連線報 detail，sheep 登入成功（含大小寫／空白／舊別名）
- *   - 後端網址唔一致 → 測試連線講明「唔一致」，登入被拒但唔會鎖死
- *   - 舊版後端（無 superLogin）→ proxy 轉譯成「尚未更新」
- *   - SUPER_KEY 前後空白（Vercel 貼上常見）→ 照樣登入得
- *   - 密碼真係錯 → 仍然 5 次後 429
- */
+// Real Code.gs HTTP regression: Vercel -> GAS only, no outbound GAS requests.
 
 const assert = require('assert');
 const crypto = require('crypto');
@@ -154,6 +138,8 @@ async function waitForServer() {
 
 async function run() {
   const gas = makeGas({ apiKey: KEY, execUrl: EXEC_URL });
+  let callbacks = 0;
+  gas.sandbox.UrlFetchApp = { fetch() { callbacks++; throw new Error('External requests forbidden'); } };
   gas.sandbox.initializeSheets();
   seed(gas);
   const gasServer = await gasHttpServer(gas);
@@ -202,19 +188,20 @@ async function run() {
     assert.strictEqual(diagBefore.storedHashTail, '');
     assert(typeof diagBefore.hint === 'string' && diagBefore.hint.length > 0);
 
-    // ---- 2. 未設定 verifier：GAS 要講得出關卡，Proxy 要識自己開通 ----
-    // 2a. GAS 合約：未設定時回 409 ＋ 可行動提示
-    const direct = await gasDirect({ action: 'superLogin', apikey: KEY, login_id: 'sheep', ticket: 'x' });
-    assert.strictEqual(direct.success, false, JSON.stringify(direct));
-    assert.strictEqual(direct.code, 409);
-    assert(String(direct.error).indexOf('尚未設定') >= 0, direct.error);
-    assert(String(direct.error).indexOf('成員管理') >= 0, direct.error);
-    // 2b. 經 Proxy：密碼啱 → 自動幫旅團開通（唔使預先有領袖 session）
+    // No verifier config or external-request permission is needed.
+    const validBody = { action: 'superLogin', apikey: KEY, login_id: 'sheep', isSuperAdmin: true };
+    for (const patch of [{apikey: ''}, {apikey: 'wrong'}, {login_id: '1234567890'}, {isSuperAdmin: false}, {isSuperAdmin: 'true'}, {isSuperAdmin: null}]) {
+      const denied = await gasDirect({...validBody, ...patch});
+      assert.strictEqual(denied.success, false, JSON.stringify(patch));
+      assert(!denied.token);
+    }
+    assert.strictEqual((await gasDirect(validBody)).success, true);
+    assert.strictEqual((await gasDirect({action:'login', apikey:KEY, login_id:'sheep', password:'anything', isSuperAdmin:true})).success, false);
     const first = await proxy({ troopId: '0082', action: 'login', login_id: 'sheep', password: SUPER_PASSWORD });
     assert.strictEqual(first.status, 200, JSON.stringify(first.data));
-    assert.strictEqual(first.data.success, true, JSON.stringify(first.data));
     assert.strictEqual(first.data.user.role, 'super_admin');
-    ok('未設定 verifier：GAS 回 409＋提示；Proxy 用 SUPER_KEY 自動開通（解決雞生蛋）');
+    assert.strictEqual(gas.props.has('CENTRAL_AUTH_VERIFY_URL'), false, 'No automatic callback bootstrap');
+    ok('純單向登入：無 verifier 設定仍可登入；API_KEY、超管身份及 boolean 旗標必須全部正確');
 
     // ---- 2b+. 兩邊簽名互通回歸：Vercel（Node crypto）簽嘅開通許可真係要畀 GAS 驗到 ----
     // 回歸 #23：hmacHex 之前誤傳 'SHA_256' 做 value、真正嘅 key 被丟棄，
@@ -231,30 +218,6 @@ async function run() {
     );
     ok('兩邊簽名互通：Node crypto 簽嘅開通許可畀真 Code.gs 驗到；hmacHex 同 Node 一致');
 
-    // 2d. 開通之後，診斷要顯示 configured ＋ 後端一致
-    const diagAfter = gas.sandbox.diagnoseCentralLogin();
-    assert.strictEqual(diagAfter.configured, true, JSON.stringify(diagAfter));
-    assert.strictEqual(diagAfter.centralTroopId, '0082');
-    assert.strictEqual(diagAfter.hashMatches, true, JSON.stringify(diagAfter));
-    assert.strictEqual(diagAfter.storedHashTail.length, 8);
-    assert(String(diagAfter.verifyUrlTail).indexOf('super-ticket') >= 0, diagAfter.verifyUrlTail);
-    assert(String(diagAfter.serviceUrlTail).indexOf('/exec') >= 0, diagAfter.serviceUrlTail);
-    ok('只讀診斷 diagnoseCentralLogin：開通前後都講得出狀態（後端 hash 一唔一致）');
-
-    // ---- 2c. 偽造 bootstrap：無 apikey 簽唔到，仍然要領袖權限 ----
-    const forged = await gasDirect({
-      action: 'configureTrustedTicketVerifier',
-      apikey: KEY,
-      verifyUrl: 'https://evil.example/api/verify-super-ticket',
-      troopId: '0082',
-      bootstrap: '99999999999.deadbeef'
-    });
-    assert.strictEqual(forged.success, false, JSON.stringify(forged));
-    assert(String(forged.error).indexOf('需領袖權限') >= 0, JSON.stringify(forged));
-    const stillOurs = await gasDirect({ action: 'testTrustedTicketVerifier', apikey: KEY, token: (await proxy({ troopId: '0082', action: 'login', login_id: '1234567890', password: 'PassA!234567' })).data.token });
-    assert.strictEqual(stillOurs.success, true, '偽造 bootstrap 唔可以改到設定：' + JSON.stringify(stillOurs));
-    ok('偽造 bootstrap 被拒：只有 Proxy（持有 apikey）先簽到開通許可');
-
     // ---- 3. 設定正確 → 測試連線要有 detail，唔係淨係 HTTP status ----
     const leader = await proxy({ troopId: '0082', action: 'login', login_id: '1234567890', password: 'PassA!234567' });
     assert.strictEqual(leader.data.success, true, JSON.stringify(leader.data));
@@ -263,10 +226,10 @@ async function run() {
     const test = await proxy({ troopId: '0082', action: 'testTrustedTicketVerifier', token: leader.data.token });
     assert.strictEqual(test.data.success, true, JSON.stringify(test.data));
     assert.strictEqual(test.data.status, 200);
-    assert(String(test.data.detail || '').indexOf('後端一致') >= 0, '成功時要有可讀 detail：' + JSON.stringify(test.data));
-    ok('設定正確：測試連線回報「旅團已登記、後端一致」＋HTTP 200');
+    assert(String(test.data.detail || '').indexOf('無需外部回調') >= 0, '成功時要有可讀 detail：' + JSON.stringify(test.data));
+    ok('相容診斷：明確回報純單向模式，沒有聲稱已驗證 Vercel 登記');
 
-    // ---- 4. 中央登入全循環（真 Code.gs 回調）----
+    // ---- 4. 中央登入全循環（真 Code.gs 單向）----
     for (const id of ['sheep', 'Sheep', '  sheep  ', 'sheep@scoutbadge.local']) {
       const r = await proxy({ troopId: '0082', action: 'login', login_id: id, password: SUPER_PASSWORD });
       assert.strictEqual(r.status, 200, `${id}: ${JSON.stringify(r.data)}`);
@@ -294,23 +257,15 @@ async function run() {
     assert(probeText.indexOf('127.0.0.1') < 0 && probeText.indexOf(KEY) < 0, 'probe 唔可以洩漏後端網址或 API Key');
     ok('驗證端點自我檢查：只回 troop_known／backend_matches，無後端網址亦無 Key');
 
-    // ---- 6. 後端網址唔一致（Vercel 登記多咗斜線）→ 要測得到、講得出、唔好鎖死 ----
-    const cfg99 = await proxy({ troopId: '0099', action: 'configureTrustedTicketVerifier', verifyUrl: `${BASE}/api/verify-super-ticket`, token: leader.data.token });
-    assert.strictEqual(cfg99.data.success, true, JSON.stringify(cfg99.data));
-    const test99 = await proxy({ troopId: '0099', action: 'testTrustedTicketVerifier', token: leader.data.token });
-    assert.strictEqual(test99.data.success, false, '雜湊唔一致時「測試連線」不可以報成功：' + JSON.stringify(test99.data));
-    assert(String(test99.data.error).indexOf('唔一致') >= 0, test99.data.error);
-    assert(String(test99.data.error).indexOf('TROOP_0099_BACKEND') >= 0, test99.data.error);
-    const bad99 = await proxy({ troopId: '0099', action: 'login', login_id: 'sheep', password: SUPER_PASSWORD });
-    assert.strictEqual(bad99.status, 401);
-    assert(String(bad99.data.error).indexOf('票據被拒') >= 0, bad99.data.error);
-    // 修設定期間重試唔可以被 rate limit 鎖死
+    // Stale callback configuration cannot affect one-way authentication.
+    gas.props.set('CENTRAL_AUTH_VERIFY_URL', 'https://unreachable.invalid/verify');
+    gas.props.set('CENTRAL_AUTH_BACKEND_HASH', '0'.repeat(64));
     for (let i = 0; i < 7; i++) {
       const again = await proxy({ troopId: '0099', action: 'login', login_id: 'sheep', password: SUPER_PASSWORD });
-      assert.strictEqual(again.status, 401, '設定問題唔可以升級做 429：' + JSON.stringify(again.data));
-      assert(String(again.data.error).indexOf('票據被拒') >= 0);
+      assert.strictEqual(again.status, 200, JSON.stringify(again.data));
     }
-    ok('後端網址唔一致：測試連線報「唔一致」＋指名 TROOP_0099_BACKEND；重試 7 次都唔會被鎖死');
+    assert.strictEqual(callbacks, 0, 'GAS must never call an external verifier');
+    ok('過期／不一致的舊回調設定不影響純單向登入；外部請求次數為零');
 
     // ---- 7. 舊版後端（冇 superLogin）→ 轉譯成可行動提示 ----
     const old = await proxy({ troopId: '0077', action: 'login', login_id: 'sheep', password: SUPER_PASSWORD });
@@ -321,7 +276,7 @@ async function run() {
 
     // ---- 8. 識回 409 但唔支援自動開通（Code.gs 冇部署新版本）→ 要講明「部署新版本」----
     const legacy = await proxy({ troopId: '0066', action: 'login', login_id: 'sheep', password: SUPER_PASSWORD });
-    assert.strictEqual(legacy.status, 401);
+    assert.strictEqual(legacy.status, 409);
     assert(String(legacy.data.error).indexOf('管理部署作業') >= 0, legacy.data.error);
     assert(String(legacy.data.error).indexOf('新版本') >= 0, legacy.data.error);
     ok('未部署新版本：提示去「部署 → 管理部署作業」建立新版本（貼 Code.gs 唔等於 deploy）');

@@ -5,8 +5,6 @@ const {
   centralSubject,
   passwordMatches,
   superConfigured,
-  createCentralBootstrap,
-  createSuperTicket,
   createBrowserSession,
   unwrapBrowserSession
 } = require('../lib/super-auth');
@@ -56,6 +54,9 @@ function sanitizeForwardPayload(payload, troopConfig) {
   delete forward.apikey;
   delete forward.apiKey;
   delete forward.portalOrigin;
+  delete forward.isSuperAdmin;
+  delete forward.ticket;
+  delete forward.bootstrap;
   // The API key is always added here, never taken from the browser.
   forward.apikey = troopConfig.apikey;
   return forward;
@@ -80,11 +81,6 @@ function isVerifierUnconfigured(result) {
   return Boolean(result) &&
     (result.reason === 'central_verifier_not_configured' || result.code === 409);
 }
-
-// Pasting Code.gs into the editor is not enough: the /exec URL keeps serving
-// the version that was deployed. Say that out loud instead of pointing at a
-// leader session the administrator may not have.
-const CENTRAL_BOOTSTRAP_FAIL = '中央登入尚未設定，自動開通又失敗：請喺 Apps Script「部署 → 管理部署作業」為既有 Web App「建立新版本」（覆寫 Code.gs 之後一定要部署新版本，/exec 先行到新 code）；或者以領袖登入 →「成員管理 → 中央登入設定」手動設定。';
 
 // Reads go to Apps Script as a GET with the server-side key on the query
 // string; writes and every other action are POSTed as before.
@@ -129,24 +125,6 @@ async function postUpstream(backend, payload) {
   } finally {
     clearTimeout(timeout);
   }
-}
-
-// Where the troop's Apps Script should call back. Prefer the explicit
-// deployment variable; otherwise use the host this request was served from
-// (Vercel routes on Host, so a forged header does not reach this deployment).
-function centralVerifierUrl(req) {
-  const headers = (req && req.headers) || {};
-  const configured = String(process.env.SCOUTBADGE_VERIFY_URL || '').trim();
-  if (configured) return /^https:\/\//i.test(configured) ? configured : '';
-  const host = String(headers['x-forwarded-host'] || headers.host || '')
-    .split(',')[0]
-    .trim();
-  if (!host || !/^[A-Za-z0-9.-]+(:\d+)?$/.test(host)) return '';
-  const loopback = /^(127\.0\.0\.1|localhost)(:|$)/i.test(host);
-  const proto = loopback && process.env.SCOUTBADGE_PROXY_TEST === '1' && process.env.VERCEL !== '1'
-    ? 'http'
-    : 'https';
-  return `${proto}://${host}/api/verify-super-ticket`;
 }
 
 // Fixed server-side destination for the "new troop deployment" registration
@@ -227,7 +205,6 @@ module.exports = async function handler(req, res) {
   let troopId = '';
   let central = false;
   let centralSubjectId = null;
-  let centralBootstrapFailed = false;
 
   try {
     const payload = parsePayload(req.body);
@@ -270,13 +247,7 @@ module.exports = async function handler(req, res) {
         action: 'superLogin',
         login_id: centralSubjectId,
         apikey: troopConfig.apikey,
-        isSuperAdmin: true,
-        ticket: createSuperTicket({
-          troopId: troopConfig.id,
-          backend: troopConfig.backend,
-          apikey: troopConfig.apikey,
-          loginId: centralSubjectId
-        })
+        isSuperAdmin: true
       };
     } else {
       forwardPayload = sanitizeForwardPayload(payload, troopConfig);
@@ -309,48 +280,11 @@ module.exports = async function handler(req, res) {
       return fail(res, 502, '後端服務暫時無法使用，請稍後再試');
     }
 
-    if (central && isVerifierUnconfigured(result)) {
-      const verifyUrl = centralVerifierUrl(req);
-      if (verifyUrl) {
-        const bootstrap = createCentralBootstrap({
-          verifyUrl,
-          troopId: troopConfig.id,
-          apikey: troopConfig.apikey
-        });
-        const bootRes = await postUpstream(troopConfig.backend, {
-          action: 'configureTrustedTicketVerifier',
-          troopId: troopConfig.id,
-          verifyUrl,
-          bootstrap,
-          apikey: troopConfig.apikey
-        });
-        let bootResult = null;
-        try { bootResult = JSON.parse(await bootRes.text()); } catch (_) {}
-        if (bootResult && bootResult.success) {
-          forwardPayload.ticket = createSuperTicket({
-            troopId: troopConfig.id,
-            backend: troopConfig.backend,
-            apikey: troopConfig.apikey,
-            loginId: centralSubjectId
-          });
-          upstream = await postUpstream(troopConfig.backend, forwardPayload);
-          raw = await upstream.text();
-          try { result = JSON.parse(raw); } catch (_) {}
-        } else {
-          centralBootstrapFailed = true;
-        }
-      }
-    }
-
     if (central) {
       if (!result || result.success !== true || typeof result.token !== 'string' || !result.token) {
-        if (centralBootstrapFailed) {
-          logResult({ troopId, action, status: 401, startedAt, success: false, central, centralFail: 'bootstrap_failed' });
-          return fail(res, 401, CENTRAL_BOOTSTRAP_FAIL);
-        }
         if (isVerifierUnconfigured(result)) {
           logResult({ troopId, action, status: 409, startedAt, success: false, central, centralFail: 'verifier_unconfigured' });
-          return fail(res, 409, result.error || '中央登入尚未設定');
+          return fail(res, 409, '旅團後端仍使用舊版回調驗證：請覆寫 apps-script/Code.gs，再到「部署 → 管理部署作業」為既有 Web App 建立新版本。');
         }
         const upstreamError = explainCentralUpstreamFailure(result && result.error);
         logResult({

@@ -46,13 +46,13 @@ ScoutBadge 係底層**支部進度追蹤系統（leaf）**，可被上層容器�
 
 ```bash
 npm run check   # 語法檢查（含 index.html 與 Code.gs）
-npm test        # 單元 + 真實 HTTP 端到端（含 mock GAS 旅團、中央登入回調全循環）
+npm test        # 單元 + 真實 HTTP 端到端（含 mock GAS 旅團、中央登入純單向全循環）
 npm run dev     # 本機預覽：mock 旅團 0082 + 開發伺服器（預設 port 3000）
 npm run build   # 產生 public/
 node server.js  # 只有開發伺服器（不帶 mock）
 ```
 
-`npm test` 的最後一步（`test/e2e_http.test.js`）會啟動真實 dev server 與兩個 mock GAS 旅團，走完整 HTTP 流程：旅團清單、登入、讀取／寫入、跨旅團隔離、中央登入（verifier 設定 → 票據簽發 → GAS 回調驗證 → 封裝 session）、新旅團接入申請。改動 Proxy、Registry 或 Code.gs 的 API 層後，以它作為部署前的最後一道門。
+`npm test` 中的 `test/e2e_http.test.js`會啟動真實 dev server 與兩個 mock GAS 旅團，走完整 HTTP 流程：旅團清單、登入、讀取／寫入、跨旅團隔離、中央登入（Vercel 核對 SUPER_KEY → 以本團 API_KEY 及 isSuperAdmin: true 單向呼叫 GAS → 封裝 session）、新旅團接入申請。改動 Proxy、Registry 或 Code.gs 的 API 層後，以它作為部署前的最後一道門。
 
 開發伺服器會綁定 `0.0.0.0`。部署範圍、依賴與圖片原則見 [DEPLOYMENT_HYGIENE.md](DEPLOYMENT_HYGIENE.md)。
 
@@ -74,3 +74,11 @@ Vercel 的 Output Directory 是 `public/`，由 `npm run build`（`build.js`）�
 - https://scoutsinfohub.org.hk/scout-training-scheme
 - https://scoutsinfohub.org.hk/ScoutTrainingScheme/FullVersion-zh.pdf
 - https://www.scout.org.hk/uploads/tc/circulars/23262/p013-26.pdf
+
+### 中央登入：純單向部署
+
+中央登入不需要 GAS 反向連線、驗證端點設定或 `script.external_request` 授權。Vercel 核對 `SUPER_KEY` 後，只向已登記旅團後端發送 `superLogin`；GAS 必須同時核對非空本團 `API_KEY`、保留超管身份及嚴格 boolean `isSuperAdmin === true` 才發行 session。瀏覽器不能直接呼叫 Proxy 的 `superLogin` 或控制授權旗標。API_KEY 是伺服器授權憑證，不可公開。
+
+更新時須同時部署 Vercel 程式碼，並將 `apps-script/Code.gs` 覆寫到 GAS，在「部署 → 管理部署作業」編輯既有 Web App、建立新版本，保留原 `/exec` URL。舊回調版 GAS 不能僅靠更新 Vercel 修好，也不會以 fallback 繞過驗證。
+
+舊版中央登入設定／驗證端點 API 暫留相容用途，但不參與新登入流程；「模式說明」（舊稱「測試連線」）只回報純單向模式，不代表已檢查 Vercel 旅團登記或後端一致性。
