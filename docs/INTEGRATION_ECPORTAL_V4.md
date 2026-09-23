@@ -15,15 +15,16 @@ ScoutBadge 有**三個同時並存嘅進入方式**，上層「食」入唔會�
 
 | 入口 | 身份 | 認證方式 | 說明 |
 |---|---|---|---|
-| 1. 本團密碼登入 | 成員／領袖 | 本地 `Users` 密碼 | 預設新部署啟用（`ALLOW_LOCAL_LOGIN=true`）。可由上層透過 sig 調用 `setDownstreamAccess` 統一控管。 |
+| 1. 本團密碼登入 | 成員／領袖 | 本地 `Users` 密碼 | 預設新部署啟用（`ALLOW_LOCAL_LOGIN` 未設定＝開啟）。可由上層透過 sig 調用 `setDownstreamAccess` 或 `setLocalLogin` 統一控管。 |
 | 2. 上層 sig | 成員／領袖 | 信任鏈 `sig`（免檢） | 上層容器用本團 API Key 簽名，leaf 驗簽後放行。領袖經 sig 入下游無 row 亦可放行並具領袖權限。 |
 | 3. 家長 sig | 家長 | 信任鏈 `sig`（免檢） | 家長只看**自己子女（聯集）**，只讀。 |
 
 > **入口開關（上游控、下游寫）設計**：
-> - **單獨使用不受影響**：新部署預設 `ALLOW_LOCAL_LOGIN = true`，進度追蹤平台獨立使用時完全正常。
-> - **進度前端無關閉按鈕**：進度前端介面不設「關閉入口」掣，避免單獨使用時誤鎖本團。
-> - **上游集中控制**：若旅團全面接入上層支部／總系統，上層可調用 `setDownstreamAccess({ allowLocal: false })`（必須附帶有效 upstream `sig`，純 apikey 拒絕）關閉本地入口。
-> - **關閉後攔截範圍**：關閉後本地密碼登入（`action: 'login'`）與帳號申請（`action: 'apply'`）均回傳 403 攔截。上層 `sig` 免檢登入、Server-to-Server 管理操作（如 `upsertUser`、`setPw` 等）及 SUPER 災難恢復緊急登入依然放行。
+> - **單獨使用不受影響**：`ALLOW_LOCAL_LOGIN` **未設定＝開啟**，進度追蹤平台獨立使用時完全正常（`initializeSheets()` 唔會自動寫值）。
+> - **進度前端無關閉按鈕**：進度前端介面不設「關閉入口」掣，避免單獨使用時誤鎖本團；掣只在上游選單（「🚪 下游直接入口」）或本機 Sheet 選單操作。
+> - **上游集中控制**：上層可經**本規格嘅 `sig`** 調用 `setLocalLogin`（新制，見 Git 內 `operations/TROOP_LINK_UPGRADE.md`：維運文件，不部署到網站），或沿用舊制 `setDownstreamAccess({ allowLocal: false })`（必須附帶有效 upstream `sig`，純 apikey 拒絕）關閉本地入口。
+> - **掣值 fail closed**：只有 `1/true/yes/on/open` 視為開啟，其餘任何值（`false/0/no/off`、串錯字）＝閂口；未設定＝開啟。
+> - **關閉後攔截範圍**：關閉後**本地入口一律拒**（`login`、`apply`、`GET load`／`getLoginMode`、apikey 直接 `save`、用戶 token 操作、舊 Portal `portalLogin`），一律回 `{success:false, upstream_only:true, error:"…只接受上游簽名（sig）請求…"}`。**只有**上游 `sig` 請求、SUPER 災難恢復緊急登入（中央登入與閘門脫鉤）及舊入口掣 `get/setDownstreamAccess`（自身再驗 portal sig）照常放行。
 
 ---
 
@@ -103,7 +104,9 @@ sig     = HMAC-SHA256( apiKey, message )   // 小寫 hex
 { "action":"getRegistrySafe", "apikey":"..." }  →  { "success":true, "members":[...] }
 ```
 
-### `setDownstreamAccess` / `getDownstreamAccess`（入口開關）
+### `setDownstreamAccess` / `getDownstreamAccess`（舊制入口開關）
+> 新制（旅系統 sig）：`setLocalLogin`／`getLinkState`，見 Git 內 `operations/TROOP_LINK_UPGRADE.md`（維運文件，只留 Git、不部署）。
+> 兩制寫同一個掣 `ALLOW_LOCAL_LOGIN`；兩個入口掣係閂口後唯一仍放行的舊制 action（自身再驗 sig）。
 - `setDownstreamAccess` **嚴格要求上游 sig**（純 apikey 或無效 sig 均回 403 拒絕）。
   ```json
   { "action":"setDownstreamAccess", "allowLocal":false, "childId":"...", "sub":"...", "scope":"...", "exp":..., "sig":"..." }
@@ -122,6 +125,7 @@ sig     = HMAC-SHA256( apiKey, message )   // 小寫 hex
 **只接受 API Key 或 sig**。支援上游轉移使用者，直接插入既有密碼雜湊，使用者照舊密碼登入，毋須重設或強制 `1234 + mustChangePw`。
 - 支援 `transferId`：若同一 `transferId` 重複傳入，視為冪等成功放行。
 - 防衝突：自動檢查 YMIS 與 Email 唯一性，避免與既有不同帳戶相撞。
+- **經旅系統 sig 推送嘅鏡像（`upsertUser`）及選單「📥 匯入 JSON」嘅寫入更嚴格**：只收 64 位 hex `password_hash`；帶明文 `password`、假 hash、新帳戶冇 hash 一律拒；冇帶 hash 時保留原密碼。詳見 Git 內 `operations/TROOP_LINK_UPGRADE.md`（維運文件，不部署）。
 
 ### `setPw` / `verifyPw` / `setStatus`（伺服器對伺服器帳號維護）
 - `setPw`：上游直接更新成員密碼雜湊。
@@ -163,9 +167,14 @@ sig     = HMAC-SHA256( apiKey, message )   // 小寫 hex
   覆蓋 v4.1.0 合約：requireAuth、三種 sig 身份、家長子女聯集收縮、403、
   篡改／過期／錯 key、`getRegistrySafe`、normId、**三點進入並存**、中央登入全循環（15 項）。
 - `test/troop_upgrade.test.js` — **進度追蹤旅系統升級版回歸測試**（10 項），
-  覆蓋前端無關閉按鈕、預設新部署 `ALLOW_LOCAL_LOGIN=true`、`setDownstreamAccess` 驗簽防護、
-  閂口後本地 403 與上層 sig 放行、上游領袖免 local row、`exportAll` JSON 吐出校驗、
-  `upsertUser` 直插密碼與 transferId 冪等、`setPw`/`verifyPw`/`setStatus`，以及重開後免 1234 登入。
+  覆蓋前端無關閉按鈕、掣未設定＝開啟、`setDownstreamAccess` 驗簽防護、
+  閂口後本地入口一律拒（舊 Portal sig 亦拒）而中央登入（A）照放行、上游領袖免 local row、
+  `exportAll` JSON 吐出校驗、`upsertUser` 直插密碼與 transferId 冪等、
+  `setPw`/`verifyPw`/`setStatus`，以及重開後免 1234 登入。
+- `test/troop_link.test.js` — **旅系統（旅 > 團 > 進度）上下游接駁守護測試**（10 項，`npm run test:link`），
+  載入真實 `Code.gs` 起上下游兩節點經假網路對打：掣值表（fail closed）、`sig` 數學與防護
+  （錯 key／竄改／時窗／重放／混合傳送／白名單）、登記下游、開戶鏡像、匯出匯入搬數、
+  `importUsers` 批量、標籤消毒、ABCD 不入工作表、GS 無版號。
 
 > 重要：v4.1.0 合約必須對**真 Code.gs** 做 e2e，唔可以只用 mock backend
 > （`test/mock-gas.js` 係假後端，只供快速 proxy 測試；ecportal 歷史證明

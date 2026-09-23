@@ -34,6 +34,16 @@ ScoutBadge 係底層**支部進度追蹤系統（leaf）**，可被上層容器�
 - 中央登入（`sheep`）失敗排查：[docs/TROUBLESHOOT_82.md](docs/TROUBLESHOOT_82.md)「中央登入（sheep）失敗」
 - 合約 e2e 對真 `apps-script/Code.gs` 執行（`test/e2e_realgas.test.js`），已納入 `npm test`
 
+## 旅系統接駁（旅 > 團 > 進度）
+
+同一份 `apps-script/Code.gs` 部署在每一層。上游在 Sheet 選單「🔗 旅系統 → ➕ 登記下游（URL + SHEET KEY）」
+登記下游後，就可以經 `sig`（HMAC-SHA256，根密鑰＝下游 SHEET KEY）讀寫下游；下游 Script Properties 的
+`ALLOW_LOCAL_LOGIN` 未設定＝開啟（現有旅團零影響），一旦閂口，下游只收上游 `sig`。
+同一選單另有「📤 匯出 JSON（含 hash）／📥 匯入 JSON（`upsertUser` 直插 hash）」，用嚟把舊進度嘅密碼 hash 搬去新支部。
+
+- 完整規格、接入步驟、掣值表、action 白名單：[operations/TROOP_LINK_UPGRADE.md](operations/TROOP_LINK_UPGRADE.md)（維運文件，只留 Git，不部署）
+- 守護測試：`npm run test:link`（10 項，載入真實 `Code.gs` 起上下游兩節點對打）
+
 ## 升級既有旅團
 
 更新既有 Apps Script 時，覆蓋 `apps-script/Code.gs`，然後必須在 Apps Script「部署 →

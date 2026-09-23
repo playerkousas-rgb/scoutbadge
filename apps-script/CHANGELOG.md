@@ -3,6 +3,26 @@
 版號、歷史更新及開發背景集中保留在 Git，不放入可下載的 GS 或用戶提示。
 本文件不納入網站部署：`build.js` 只發布本目錄的 `Code.gs`，`.vercelignore` 亦排除其餘檔案。
 
+## 2026-09-23：旅系統上下游接駁（旅 > 團 > 進度）
+
+- 新增「旅系統：上下游接駁」及「旅系統：Sheet 選單」兩節：上游登記下游 `DOWNSTREAM_<id>_*`（只存 Script Properties）後，
+  經 `sig`（`sigKey = HMAC-SHA256("scoutbadge-troop-sig-v1", 下游 SHEET KEY)`，`canonical = action\n ts\n nonce\n sha256(rawBody)`）讀寫下游；
+  兩組簽名（query ＋ body）同時送，時窗 ±5 分鐘、nonce 一次性、body ≤ 900 KB、常數時間比較。
+- 直接入口掣 `ALLOW_LOCAL_LOGIN`：未設定＝開啟（現有旅團零影響）；只有 `1/true/yes/on/open` 係開啟，其餘任何值＝閂口（fail closed）。
+  閂口後本地入口一律拒（舊 Portal sig 亦拒），只收上游 `sig`；中央登入（`superLogin`）與舊入口掣
+  `get/setDownstreamAccess` 例外放行。
+- `sig` action 白名單：12 讀 ＋ 19 寫；`login`／`apply`／`logout`／`changePassword`／`updateConfig`／`requestLogRecord`／`cancelLogRequest`／`portalLogin` 永不接受。
+- 開戶：`createAccountForDownstream`（上游開戶 → 讀回 hash → `sig` 打下游 `upsertUser`，兩邊同一 hash）；鏡像／匯入用嚴格的
+  `linkUpsertUser`（只收 64 位 hex hash，明文密碼拒，冇帶 hash 保留原密碼，冪等）。
+- 吐 JSON：`exportUsersJson()` 寫私人 Drive 檔 `scoutbadge-users-<yyyyMMdd-HHmmss>.json`（Drive 失敗 fallback 去 Logger），
+  只寫 Drive／Logger，绝不寫入工作表；`importUsersFromText`／`importUsersFromDrive` 逐個直插 hash（上限 2000 筆）。
+- 選單「🔗 旅系統」：匯出／匯入 JSON、本機接駁狀態、顯示 BACKEND＋APIKEY（交 ADMIN）、登記／移除下游、測試連線（sig）、
+  為下游開戶（揀團）、下游及本機兩個直接入口掣。
+- 舊有 ecportal 合約（`portalLogin`、`childId|sub|scope|exp` sig、`exportAll`／寬鬆 `upsertUser`、`setPw`／`verifyPw`／`setStatus`、
+  `get/setDownstreamAccess`）全部保留，行為只在閂口後改變（本地入口拒）。
+- 前端 `index.html`、`api/`、`lib/` 零改動；新增守護測試 `test/troop_link.test.js`（10 項，`npm run test:link`）。
+- 規格／版號唯一記錄：`operations/TROOP_LINK_UPGRADE.md`（維運文件，只留 Git，不部署）。
+
 ## 2026-09-22：GS 瘦身（不變更業務邏輯）
 
 - 主後端移除歷史版號、裝飾分隔線、重複中英文說明、已搬移程式的舊註解，以及僅重述程式碼的註解。

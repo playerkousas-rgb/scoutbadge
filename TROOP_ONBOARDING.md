@@ -22,18 +22,27 @@ TROOP_0082_APIKEY=Apps Script 既有 API Key
 
 後端 URL 與 API Key 僅由 Vercel 函式使用，不能放進前端程式、靜態 JSON、網址參數或 Git。重新部署後，首頁會從 `/api/troops` 取得只含編號與名稱的清單。
 
-## C. 回歸檢查
+## C. 旅系統接駁（可選）
+
+如果這個旅團會被上層（旅／團管理系統）接入，同一份 `Code.gs` 就是上游節點：Sheet 選單
+「🔗 旅系統 → ➕ 登記下游（URL + SHEET KEY）」→「📡 測試下游連線（sig）」→（搬完舊數後）
+「🚪 下游直接入口 → 🔒 閂口」。上游只讀取 Script Properties 內的登記資料，不會寫入任何工作表。
+
+完整規格、掣值表（`ALLOW_LOCAL_LOGIN` 未設定＝開啟）與接入步驟見
+[operations/TROOP_LINK_UPGRADE.md](operations/TROOP_LINK_UPGRADE.md)（維運文件，只留 Git，不部署）。
+
+## D. 回歸檢查
 
 1. 首頁只顯示已完整設定的旅團卡片。
 2. 選取旅團後，以既有一般成員及領袖帳號登入。
 3. 驗證讀取、進度寫入、帳戶申請與審批仍指向該旅團的既有資料。
 4. 確認跨旅團切換後，先前登入狀態不會被重用。
 
-## D. MOCK 測試
+## E. MOCK 測試
 
 MOCK 資料保留在 `data/mock_members.json` 與相關範例檔；只寫入瀏覽器快取，不會直接寫入正式 Sheet。
 
-## E. 主系統 Portal
+## F. 主系統 Portal
 
 Portal 卡片可使用不帶後端憑證的連結，例如：
 
@@ -43,7 +52,7 @@ Portal 卡片可使用不帶後端憑證的連結，例如：
 
 連結會選取已登記的旅團並帶入嵌入模式；網址中的身分與角色只可作登入表單預填，不能建立 session 或授權。正式免登入整合必須使用主系統後端簽發、可驗證且短效的票據；不可把 URL／來源／角色參數當作身份驗證。
 
-## F. 中央登入（系統管理員帳號）
+## G. 中央登入（系統管理員帳號）
 
 系統管理員（super_admin）的密碼存在 Vercel 的 `SUPER_KEY`，不存入旅團 Sheet。
 **設定 `SUPER_KEY` 就夠**：以中央帳號 `sheep` 登入時，若該旅團的 Apps Script 尚未

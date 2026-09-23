@@ -36,6 +36,9 @@ VERCEL_ENV_SETUP.md
 DEPLOYMENT_HYGIENE.md
 scripts
 
+# Operational runbooks (Git-only): troop-link spec kept out of the deployed site
+operations
+
 # Development-only files
 .env
 .env.*
