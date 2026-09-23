@@ -8,9 +8,9 @@
  * 1. 單用進度時無「關入口」掣，唔會誤閂（前端靜態檢查）
  * 2. 預設 ALLOW_LOCAL_LOGIN=true，單用時唔會誤閂
  * 3. setDownstreamAccess 只接受上游 sig 驗證，apikey 或無 sig 均回 403
- * 4. 團掛進度後（ALLOW_LOCAL_LOGIN=false），進度本地登入回 403，開戶申請回 403
- * 5. 閂口後，上層 sig（成員／領袖）照常放行；SUPER 災難恢復照常放行
- * 6. 領袖／旅長經 sig 入，下游唔使有 row（BUILD.md §2 開戶錨點）
+ * 4. 團掛進度後（ALLOW_LOCAL_LOGIN=false），進度本地登入及開戶申請一律拒（upstream_only）
+ * 5. 閂口後，舊 Portal sig 通道一律拒（改由旅系統 sig 讀寫）；中央登入（A）照常放行
+ * 6. 重開直接入口後，領袖／旅長經舊 Portal sig 入，下游唔使有 row（BUILD.md §2 開戶錨點）
  * 7. exportAll 預設剝密碼；include_hash=true 吐出 password_hash 及 sha256
  * 8. upsertUser 直插 hash，舊密碼照用（唔經 1234+mustChangePw），transferId 冪等 + 撞號阻擋
  * 9. setPw、setStatus、verifyPw 伺服器端同步功能正常
@@ -126,19 +126,19 @@ async function run() {
   console.log('  [PASS] setDownstreamAccess 拒絕純 apikey／偽造 sig，只接受有效上游 sig 寫旗');
 
   // ========================================================
-  // 4. 閂口後：本地入口回 403（登入／開戶都攔）
+  // 4. 閂口後：本地入口一律拒絕，只回「只接受上游簽名（sig）」
   // ========================================================
-  console.log('\n4. 閂口後本地入口攔截（回 403）');
-  // 4a. 成員本地密碼登入 → 403
+  console.log('\n4. 閂口後本地入口攔截（只接受上游 sig）');
+  // 4a. 成員本地密碼登入 → 拒
   const blockedLogin = gas.post({ action: 'login', login_id: '1234560001', password: 'OldPassword123', apikey: KEY });
   assert.strictEqual(blockedLogin.success, false);
-  assert.strictEqual(blockedLogin.code, 403, '閂口後本地密碼登入應回 403');
-  assert(blockedLogin.error.includes('關閉直接登入'), '錯誤訊息應清楚說明已關閉直接登入');
+  assert.strictEqual(blockedLogin.upstream_only, true, '閂口後本地密碼登入應回 upstream_only');
+  assert(blockedLogin.error.includes('只接受上游簽名（sig）'), '錯誤訊息應說明只接受上游簽名（sig）');
 
-  // 4b. 領袖本地密碼登入 → 403
+  // 4b. 領袖本地密碼登入 → 拒
   const blockedLeaderLogin = gas.post({ action: 'login', login_id: 'leader@example.org', password: 'LeaderPassword456', apikey: KEY });
   assert.strictEqual(blockedLeaderLogin.success, false);
-  assert.strictEqual(blockedLeaderLogin.code, 403, '閂口後領袖本地密碼登入應回 403');
+  assert.strictEqual(blockedLeaderLogin.upstream_only, true, '閂口後領袖本地密碼登入應回 upstream_only');
 
   // 4c. 本地註冊開戶申請 → 403
   const blockedApply = gas.post({
@@ -150,30 +150,41 @@ async function run() {
     requested_role: 'member'
   });
   assert.strictEqual(blockedApply.success, false);
-  assert.strictEqual(blockedApply.code, 403, '閂口後本地開戶申請應回 403');
-  assert(blockedApply.error.includes('關閉直接開戶申請'), '錯誤訊息應清楚說明已關閉開戶申請');
-  console.log('  [PASS] 閂口後本地密碼登入及開戶申請均被攔截回 403');
+  assert.strictEqual(blockedApply.upstream_only, true, '閂口後本地開戶申請應回 upstream_only');
+  assert(blockedApply.error.includes('只接受上游簽名（sig）'), '錯誤訊息應說明只接受上游簽名（sig）');
+  console.log('  [PASS] 閂口後本地密碼登入及開戶申請均被攔截（只回上游 sig）');
 
   // ========================================================
-  // 5. 閂口後：上層 sig 與 SUPER 災難恢復放行
+  // 5. 閂口後：舊 Portal 通道一律拒（改由旅系統 sig 代勞），中央登入（A）照舊
   // ========================================================
-  console.log('\n5. 閂口後上層 sig 與 SUPER 放行');
-  // 5a. 成員上層 sig portalLogin → 成功
+  console.log('\n5. 閂口後舊 Portal 通道拒、中央登入（A）放行');
+  // 5a. 舊 Portal sig（portalLogin／一般讀取）→ 拒（只收旅系統 sig；見 test/troop_link.test.js）
   const memberSig = signSig({ sub: '1234560001', role: 'member' });
   const pLogin = gas.post({ action: 'portalLogin', ...memberSig });
-  assert.strictEqual(pLogin.success, true, '上層 sig portalLogin 應放行');
-  assert.strictEqual(pLogin.user.ymis, '1234560001');
+  assert.strictEqual(pLogin.success, false, '閂口後舊 Portal sig portalLogin 應被拒');
+  assert.strictEqual(pLogin.upstream_only, true);
+  const portalRead = gas.post({ action: 'getMembers', ...memberSig });
+  assert.strictEqual(portalRead.success, false, '閂口後舊 Portal sig 讀取亦應被拒');
+  assert.strictEqual(portalRead.upstream_only, true);
 
-  // 5b. SUPER 災難恢復登入（isSuperAdmin）→ 放行
+  // 5b. 中央登入（A）→ 唔受旅系統閘門影響：唔會回 upstream_only（即係路由得到，
+  //     唔係被當成本地入口拒），但已經只認 Vercel 封嘅短效票（回打驗票）。
   const superLogin = gas.post({ action: 'superLogin', login_id: 'sheep', isSuperAdmin: true, apikey: KEY });
-  assert.strictEqual(superLogin.success, true, 'SUPER 災難恢復應放行');
-  assert.strictEqual(superLogin.user.role, 'super_admin');
-  console.log('  [PASS] 上層 sig 與 SUPER 災難恢復在閂口後均正常放行');
+  assert.strictEqual(superLogin.upstream_only, undefined, '中央登入唔應該當成本地入口被閂');
+  assert.strictEqual(superLogin.success, false, '舊版單向 superLogin（只憑 API_KEY）已經停用');
+  assert.strictEqual(superLogin.code, 401);
+  assert.strictEqual((superLogin.error || '').indexOf('只接受上游簽名'), -1);
+  console.log('  [PASS] 閂口後舊 Portal 通道被拒；中央登入照路由，但只認票（單向授權已停用）');
 
   // ========================================================
-  // 6. 領袖／旅長經 sig 入，下游唔使有 row（BUILD.md §2 開戶錨點）
+  // 6. 重開本機直接入口（舊 Portal sig setDownstreamAccess）→ 上游領袖經 sig 入，
+  //    下游唔使有 row（BUILD.md §2 開戶錨點）亦具備領袖權限
   // ========================================================
-  console.log('\n6. 上游領袖經 sig 入，下游無 row 亦可放行並具備領袖權限');
+  console.log('\n6. 重開直接入口後，上游領袖經 sig 入，下游無 row 亦可放行並具備領袖權限');
+  const reopenForPortal = gas.post({ action: 'setDownstreamAccess', ...signSig({ sub: 'troop_admin@example.org', role: 'admin' }), allowLocal: true });
+  assert.strictEqual(reopenForPortal.success, true, '舊 Portal sig 應可重開直接入口');
+  assert.strictEqual(gas.post({ action: 'getDownstreamAccess', apikey: KEY }).allowLocal, true);
+
   const upstreamLeaderEmail = 'external_gsl@troop0082.org';
   // 確定 Users 表無此人
   assert.strictEqual(gas.sandbox.getUserByEmail(upstreamLeaderEmail), null, '下游名冊應無此上游領袖');
@@ -188,6 +199,7 @@ async function run() {
   const gslUsers = gas.post({ action: 'getAllUsers', token: gslLogin.token, apikey: KEY });
   assert.strictEqual(gslUsers.success, true, '上游領袖應具備領袖操作權限: ' + JSON.stringify(gslUsers));
   console.log('  [PASS] 上游領袖經 sig 入下游無 row 亦能成功登入並獲得領袖權限');
+  // 之後 7–9 節的舊 apikey／token 通道測試都需要打開的直接入口（閂口後 apikey 唔再等於授權）。
 
   // ========================================================
   // 7. exportAll：備份與 JSON 吐出（含 hash）

@@ -95,24 +95,29 @@ async function run() {
   assert.strictEqual(upstreamCalls, 1);
   console.log('  [PASS] missing, empty, and short settings are rejected without GAS; ordinary login is unaffected');
 
-  console.log('\n4. Correct four-character key uses one-way authentication and encrypted troop-bound browser session');
+  console.log('\n4. Correct four-character key mints a sealed ticket and returns an encrypted troop-bound browser session');
   process.env.SUPER_KEY = '0007';
   upstreamCalls = 0;
+  let ticketSeen = '';
   global.fetch = async (url, options) => {
     upstreamCalls += 1;
     const body = JSON.parse(options.body);
     assert.strictEqual(body.action, 'superLogin');
-    assert.strictEqual(body.isSuperAdmin, true);
+    assert.strictEqual(body.isSuperAdmin, undefined, 'the one-way flag is gone');
     assert.strictEqual(body.ticket, undefined);
     assert.strictEqual(body.login_id, 'central-test-id');
-    assert.strictEqual(body.password, undefined);
+    assert.strictEqual(body.password, undefined, 'the password never leaves the proxy');
     assert.strictEqual(body.apikey, 'server-key-a');
-    return { status: 200, text: async () => JSON.stringify({ success: true, token: 'gas-session-token', user: { role: 'super_admin' } }) };
+    // The proxy mints the ticket; a browser-supplied one is never reused.
+    assert(/^sbt1\./.test(String(body.super_ticket)), 'sealed ticket expected: ' + body.super_ticket);
+    assert.notStrictEqual(body.super_ticket, 'forged');
+    ticketSeen = body.super_ticket;
+    return { status: 200, text: async () => JSON.stringify({ success: true, token: 'gas-session-token', central: 'callback', user: { role: 'super_admin' } }) };
   };
   local = await callProxy({ troopId: '0082', action: 'login', login_id: 'central-test-id', password: 'wrong' });
   assert.strictEqual(local.statusCode, 401);
   assert.strictEqual(upstreamCalls, 0);
-  local = await callProxy({ troopId: '0082', action: 'login', login_id: 'central-test-id', password: '0007' });
+  local = await callProxy({ troopId: '0082', action: 'login', login_id: 'central-test-id', password: '0007', super_ticket: 'forged' });
   assert.strictEqual(local.statusCode, 200);
   assert.strictEqual(upstreamCalls, 1);
   assert(local.body.token.startsWith('sbs1.'));
@@ -128,7 +133,28 @@ async function run() {
     apikey: 'server-key-b'
   });
   assert.strictEqual(wrongTroop.valid, false);
-  console.log('  [PASS] four-character string with leading zero succeeds only on full match; session is encrypted and troop-bound');
+  assert(ticketSeen.startsWith('sbt1.'), 'the ticket the leaf receives is the sealed one');
+  console.log('  [PASS] four-character string with leading zero succeeds only on full match; a sealed ticket is minted and the session is encrypted and troop-bound');
+
+  console.log('\n4b. A leaf that cannot redeem a ticket is reported as a backend that needs a redeploy');
+  global.fetch = async () => ({
+    status: 200,
+    text: async () => JSON.stringify({ success: false, error: '登入失敗', code: 401 })
+  });
+  const staleLeaf = await callProxy({ troopId: '0082', action: 'login', login_id: 'central-test-id', password: '0007' });
+  assert.strictEqual(staleLeaf.statusCode, 409, JSON.stringify(staleLeaf.body));
+  assert(String(staleLeaf.body.error).indexOf('回打驗票') >= 0, staleLeaf.body.error);
+  console.log('  [PASS] an untagged 401 from the leaf becomes an actionable 「後端未更新」 409');
+
+  console.log('\n4c. A leaf whose verifier is unreachable fails closed with the leaf\'s own reason');
+  global.fetch = async () => ({
+    status: 200,
+    text: async () => JSON.stringify({ success: false, error: '中央登入驗票失敗：連唔到端點', code: 503, reason: 'central_verify_unreachable', central: 'callback' })
+  });
+  const unreachable = await callProxy({ troopId: '0082', action: 'login', login_id: 'central-test-id', password: '0007' });
+  assert.strictEqual(unreachable.statusCode, 503, JSON.stringify(unreachable.body));
+  assert(String(unreachable.body.error).indexOf('驗票失敗') >= 0, unreachable.body.error);
+  console.log('  [PASS] verifier unreachable → 503 fail closed, no silent fallback');
 
   console.log('\n5. Browser authorization fields cannot reach GAS');
   global.fetch = async (_url, options) => {

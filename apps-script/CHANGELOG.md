@@ -3,6 +3,55 @@
 版號、歷史更新及開發背景集中保留在 Git，不放入可下載的 GS 或用戶提示。
 本文件不納入網站部署：`build.js` 只發布本目錄的 `Code.gs`，`.vercelignore` 亦排除其餘檔案。
 
+## 2026-09-23：中央登入（A）改成回打驗票（對齊 VS／RS）
+
+- **安全升級**：舊版「純單向授權」只憑本團 `API_KEY` ＋ `isSuperAdmin: true` 就叫 GS 發中央 session；
+  即係任何持有 D（Sheet 選單睇得到、會交 ADMIN／截圖流傳）嘅人都開得到中央帳號。
+  現在改成 VS／RS 同款：**Vercel 核對 `SUPER_KEY` → 封一張 1 分鐘短效票 → GS 回打固定端點驗票 → 驗過先發 token**。
+  信任錨由「本團 API_KEY」改成「Vercel 嘅 `SUPER_KEY`」。
+- GS 新增常數 `SUPER_VERIFY_URL`（預設本部署域名 + `/api/verify-super-ticket`，自架要改一行）、
+  `verifyCentralTicket()`（回打＋單次使用）、`superVerifyUrl()`（**只准 loopback 覆寫**，防止有人把票連 API Key 送去自己部機）。
+- `handleSuperLogin()` 改成只認票：冇票／爛票／過期／重放／錯後端／錯 KEY／錯身份 → 401；
+  驗票端點連唔到 → 503 **fail closed**（唔會回退單向授權）。回應增加 `central:"callback"` 標記。
+- 呢條鏈嘅回應永不包含密碼：Vercel 唔會把密碼送去後端，票內只有 `troopId`／`backendHash`／身份／到期時間。
+- 同一張票只可換一次 token（`CacheService` 記 `sha256(ticket)` 120 秒 > 票壽命 60 秒）。
+- 「測試連線」`testTrustedTicketVerifier()` 改成真探測：`GET` 端點要回 405，再用本機 API Key ＋ `/exec` 雜湊探測，
+  回報 `troop_known`／`key_ok`／`backend_matches`（只回 booleans，唔回後端網址）。
+- 舊「中央登入設定」`configureTrustedTicketVerifier` 收窄成本地 loopback 覆寫（線上端點係常數，改唔到）；
+  **自動開通（bootstrap）機制整個移除**（`validCentralBootstrap`／`CENTRAL_BOOTSTRAP_MAX_TTL`／
+  Vercel `SCOUTBADGE_VERIFY_URL` 全部唔再用），冇咗雞生蛋同簽名唔一致（#23）兩個失敗家族。
+- 首次仍然要人手授權一次 `script.external_request`（Apps Script 對外請求權限），呢個係回打模式唯一一次性人手步驟。
+- Vercel 側：`api/proxy.js` 改為封票＋唔再接受舊版單向旗標；`api/verify-super-ticket.js` 由票內 `troopId` 查 registry
+  （葉端毋須任何設定）＋比對 `apikey`／`backendHash`／`loginId`＋body ≤ 8 KB＋每 IP 額度；
+  `lib/super-auth.js` 票封套改用 `SUPER_KEY`（payload 帶 troop 身份）、TTL 60 秒；新增 `lib/verify-rate-limit.js`。
+- 測試：`test/central_login.test.js` 10 → 12 項（真票換 token、單次使用、錯後端／錯 KEY／錯身份／改 byte 全拒、
+  常數優先、端點連唔到 503 fail closed）；`test/e2e_http.test.js` 25 → 27 項（mock GAS 真回打）；
+  `test/proxy.test.js` 加封票／未更新後端 409／端點 503 三組；`test/log_claims.test.js`／`test/troop_upgrade.test.js`／
+  `test/troop_link.test.js` 中央登入段落改成「只認票、唔會回 `upstream_only`」。
+- 規格／版號唯一記錄更新：`operations/TROOP_LINK_UPGRADE.md` 第 12 節（VS／RS 逐項對照、失敗模式、未做清單）。
+- 前端 `index.html` 零改動（舊「中央登入設定」介面保留，顯示端點係常數嘅訊息；要清屬另一輪前端工作）。
+
+## 2026-09-23：旅系統上下游接駁（旅 > 團 > 進度）
+
+- 新增「旅系統：上下游接駁」及「旅系統：Sheet 選單」兩節：上游登記下游 `DOWNSTREAM_<id>_*`（只存 Script Properties）後，
+  經 `sig`（`sigKey = HMAC-SHA256("scoutbadge-troop-sig-v1", 下游 SHEET KEY)`，`canonical = action\n ts\n nonce\n sha256(rawBody)`）讀寫下游；
+  兩組簽名（query ＋ body）同時送，時窗 ±5 分鐘、nonce 一次性、body ≤ 900 KB、常數時間比較。
+- 直接入口掣 `ALLOW_LOCAL_LOGIN`：未設定＝開啟（現有旅團零影響）；只有 `1/true/yes/on/open` 係開啟，其餘任何值＝閂口（fail closed）。
+  閂口後本地入口一律拒（舊 Portal sig 亦拒），只收上游 `sig`；中央登入（`superLogin`）與舊入口掣
+  `get/setDownstreamAccess` 例外放行。
+- `sig` action 白名單：12 讀 ＋ 19 寫；`login`／`apply`／`logout`／`changePassword`／`updateConfig`／`requestLogRecord`／`cancelLogRequest`／`portalLogin` 永不接受。
+- 開戶：`createAccountForDownstream`（上游開戶 → 讀回 hash → `sig` 打下游 `upsertUser`，兩邊同一 hash）；鏡像／匯入用嚴格的
+  `linkUpsertUser`（只收 64 位 hex hash，明文密碼拒，冇帶 hash 保留原密碼，冪等）。
+- 吐 JSON：`exportUsersJson()` 寫私人 Drive 檔 `scoutbadge-users-<yyyyMMdd-HHmmss>.json`（Drive 失敗 fallback 去 Logger）；
+  匯入（`importUsersFromDrive()`）零失敗即自動把該檔移入 Drive 垃圾桶（可還原 30 天，操作紀錄只記檔案 ID），**有失敗筆數就保留檔案**；
+  只寫 Drive／Logger，绝不寫入工作表；`importUsersFromText`／`importUsersFromDrive` 逐個直插 hash（上限 2000 筆）。
+- 選單「🔗 旅系統」：匯出／匯入 JSON、本機接駁狀態、顯示 BACKEND＋APIKEY（交 ADMIN）、登記／移除下游、測試連線（sig）、
+  為下游開戶（揀團）、下游及本機兩個直接入口掣。
+- 舊有 ecportal 合約（`portalLogin`、`childId|sub|scope|exp` sig、`exportAll`／寬鬆 `upsertUser`、`setPw`／`verifyPw`／`setStatus`、
+  `get/setDownstreamAccess`）全部保留，行為只在閂口後改變（本地入口拒）。
+- 前端 `index.html`、`api/`、`lib/` 零改動；新增守護測試 `test/troop_link.test.js`（10 項，`npm run test:link`）。
+- 規格／版號唯一記錄：`operations/TROOP_LINK_UPGRADE.md`（維運文件，只留 Git，不部署）。
+
 ## 2026-09-22：GS 瘦身（不變更業務邏輯）
 
 - 主後端移除歷史版號、裝飾分隔線、重複中英文說明、已搬移程式的舊註解，以及僅重述程式碼的註解。

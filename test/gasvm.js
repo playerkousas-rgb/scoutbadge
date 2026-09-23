@@ -78,6 +78,7 @@ function makeSheet(name, headers) {
 function makeGas({ apiKey = null, execUrl = 'http://127.0.0.1:0/exec' } = {}) {
   const sheets = new Map();
   const props = new Map();
+  const cache = new Map();
   if (apiKey) props.set('API_KEY', apiKey);
 
   const ss = {
@@ -130,8 +131,15 @@ function makeGas({ apiKey = null, execUrl = 'http://127.0.0.1:0/exec' } = {}) {
     },
     DigestAlgorithm: { SHA_256: 'SHA-256' },
     Charset: { UTF_8: 'UTF-8' },
-    Logger: { log: () => {} },
+    Logger: { log: (...a) => { if (process.env.GASVM_DEBUG) console.error('[gasvm]', ...a); } },
     LockService: { getScriptLock: () => ({ tryLock: () => true, waitLock: () => true, releaseLock: () => {} }) },
+    CacheService: {
+      getScriptCache: () => ({
+        get: (k) => (cache.has(k) ? cache.get(k) : null),
+        put: (k, v) => { cache.set(k, String(v)); },
+        remove: (k) => { cache.delete(k); }
+      })
+    },
     ScriptApp: { getService: () => ({ getUrl: () => execUrl }) },
     UrlFetchApp: {
       // GAS 語義：同步回傳 {getResponseCode, getContentText}。
