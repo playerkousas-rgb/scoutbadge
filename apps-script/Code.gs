@@ -2,6 +2,8 @@
 // 旅系統（旅 > 團 > 進度）：上游登記下游 URL 及 SHEET KEY，經 sig 讀寫下游；
 //   下游 ALLOW_LOCAL_LOGIN 閂口後只收 sig；選單「🔗 旅系統」提供匯出 JSON（含 hash）／
 //   匯入 JSON（upsertUser）／登記下游／測連線／為下游開戶／兩個直接入口掣。
+// 中央登入（A）：Vercel 驗 SUPER_KEY → 封一張短效票 → GAS 回打固定端點 SUPER_VERIFY_URL 驗票 → 先發 token；
+//   舊版單向 superLogin（只憑本團 API_KEY）已停用，回打失敗一律 fail closed。
 // 初始化：只有全新後端或缺少工作表才執行 initializeSheets()；升級既有部署不要重跑。
 // 版號只記錄在 operations/TROOP_LINK_UPGRADE.md，程式內不留版號註解。
 
@@ -583,7 +585,11 @@ function destroyToken(token){
 }
 
 const PORTAL_SIG_MAX_TTL = 3600;
-const CENTRAL_BOOTSTRAP_MAX_TTL = 600;
+// 中央登入（A）回打驗票端點：固定常數（VS／RS 同款）。
+// 自架部署要改成自己個正式 Vercel 域名；唔可以由請求／前端指定，只准 loopback 覆寫做本地測試。
+const SUPER_VERIFY_URL = 'https://scoutbadge.vercel.app/api/verify-super-ticket';
+// 同一張票只可以換一次 token：SHA-256(ticket) → CacheService，秒數要長過票本身嘅壽命（60 秒）。
+const CENTRAL_TICKET_CACHE_SEC = 120;
 function normId(s){
   const v=String(s||'').trim().toUpperCase();
   const m=v.match(/^(\d+)([A-Z]?)$/);
@@ -1251,7 +1257,7 @@ function doPost(e){
 
     if(action==='setDownstreamAccess') return handleSetDownstreamAccess(body, isSig);
     if(action==='getDownstreamAccess') return jsonResponse({success:true, allowLocal: localLoginAllowed()});
-    if(action==='superLogin') return handleSuperLogin(body.login_id,body.apikey,body.isSuperAdmin);
+    if(action==='superLogin') return handleSuperLogin(body.login_id,body.super_ticket);
     if(action==='login') return handleLogin(body.login_id,body.password);
     if(action==='logout'){ destroyToken(body.token); return jsonResponse({success:true}); }
     if(action==='apply') return handleApply(body.ymis,body.name,body.email,body.requested_role||'member',body.branch);
@@ -1353,22 +1359,16 @@ function doPost(e){
       return handleParentAction(action, body, auth.identity);
     }
 
+    // 舊管理介面的相容入口：線上端點已經係常數，呢個 action 只剩「本地測試覆寫」用途。
     if(action==='configureTrustedTicketVerifier'){
+      const my=body.token?validateToken(body.token):null;
+      const mgr=my?getUser(my):null;
+      if(!mgr || getRoleLevel(mgr.role)<40) return jsonResponse({success:false,error:'未授權設定端點（需領袖權限）',code:403});
       const verifyUrl=String(body.verifyUrl||'').trim();
       const troopId=String(body.troopId||'').trim();
-      const bootstrap=String(body.bootstrap||'').trim();
-      let ok=false;
-      if(validCentralBootstrap(bootstrap,verifyUrl,troopId)){
-        ok=true;
-      }else{
-        let my=body.token?validateToken(body.token):null;
-        let mgr=my?getUser(my):null;
-        if(mgr && getRoleLevel(mgr.role)>=40) ok=true;
-      }
-      if(!ok) return jsonResponse({success:false,error:'未授權設定端點（需領袖權限或由 Proxy 開通）',code:403});
       try{
-        configureTrustedTicketVerifier(verifyUrl,troopId);
-        return jsonResponse({success:true,troopId:troopId});
+        const saved=configureTrustedTicketVerifier(verifyUrl,troopId);
+        return jsonResponse({success:true,troopId:String(saved.troopId||troopId||''),verify_url_in_use:superVerifyUrl(),loopback_override:saved.loopback});
       }catch(e){
         return jsonResponse({success:false,error:'設定失敗：'+String(e&&e.message||e)});
       }
@@ -1814,83 +1814,156 @@ function handleImportAll(body){
   return jsonResponse({success: true, imported: imported, skipped: skipped, total: data.users.length});
 }
 
-function trustedTicketConfig(){
+// ---- 中央登入（A）：回打驗票（VS／RS 同款）----
+// GAS 收到 action=superLogin 帶 super_ticket → 回打固定端點驗票 → 驗過先發 token。
+// 驗票端點用常數，永不接受請求／前端指定：否則有人可以叫本後端把票連本團 API Key 送去自己部機，
+// 再拿住張有效票去開中央 session。票由 Vercel 用 SUPER_KEY 封（AES-GCM），綁旅團編號、
+// 後端 /exec 雜湊同身份；同一張票只可換一次 token（CacheService，長過票嘅壽命）。
+function isLoopbackVerifyUrl(u){
+  return /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/|$)/i.test(String(u||'').trim());
+}
+function superVerifyUrl(){
+  // 線上一定用常數；只接受 loopback 覆寫（本地 e2e／開發）。
   const props=PropertiesService.getScriptProperties();
-  const verifyUrl=String(props.getProperty('CENTRAL_AUTH_VERIFY_URL')||'').trim();
-  const troopId=String(props.getProperty('CENTRAL_AUTH_TROOP_ID')||'').trim();
-  const backendHash=String(props.getProperty('CENTRAL_AUTH_BACKEND_HASH')||'').trim();
-  if(!isAllowedVerifierUrl(verifyUrl) || !troopId || !/^[a-f0-9]{64}$/i.test(backendHash)) return null;
-  return {verifyUrl:verifyUrl,troopId:troopId,backendHash:backendHash};
+  const override=String(props.getProperty('CENTRAL_AUTH_VERIFY_URL')||'').trim();
+  return isLoopbackVerifyUrl(override)?override:SUPER_VERIFY_URL;
 }
-// 驗證端點必須 https（防中間人）；唯 localhost／127.0.0.1 允許 http（本地開發／e2e）
-function isAllowedVerifierUrl(u){
-  return /^https:\/\//i.test(u) || /^http:\/\/(127\.0\.0\.1|localhost)(:|\/|$)/i.test(u);
+function centralVerifyHint(){
+  return '請確認 Code.gs 嘅 SUPER_VERIFY_URL 常數係本部署域名、Vercel 已部署，以及 Apps Script 已授權「外部請求（script.external_request）」。';
 }
-function configureTrustedTicketVerifier(verifyUrl,troopId){
-  verifyUrl=String(verifyUrl||'').trim();
-  troopId=String(troopId||'').trim();
-  const serviceUrl=String(ScriptApp.getService().getUrl()||'').trim();
-  if(!isAllowedVerifierUrl(verifyUrl) || !troopId || !isAllowedVerifierUrl(serviceUrl)) throw new Error('設定資料無效');
-  PropertiesService.getScriptProperties().setProperties({
-    CENTRAL_AUTH_VERIFY_URL:verifyUrl,
-    CENTRAL_AUTH_TROOP_ID:troopId,
-    CENTRAL_AUTH_BACKEND_HASH:hashPassword(serviceUrl)
-  },false);
-  return {success:true,troopId:troopId};
+function verifyCentralTicket(ticket,loginId){
+  if(typeof ticket!=='string' || ticket.length<8 || ticket.length>4096) return {ok:false,reason:'ticket_format'};
+  const lock=LockService.getScriptLock();
+  if(!lock.tryLock(10000)) return {ok:false,reason:'busy'};
+  try{
+    const cache=CacheService.getScriptCache();
+    const cacheKey='super-ticket:'+sha256Hex(ticket);
+    if(cache.get(cacheKey)) return {ok:false,reason:'replayed'};
+    let serviceUrl='';
+    try{ serviceUrl=String(ScriptApp.getService().getUrl()||''); }catch(e){ serviceUrl=''; }
+    const response=UrlFetchApp.fetch(superVerifyUrl(),{
+      method:'post', contentType:'application/json', muteHttpExceptions:true, followRedirects:true,
+      payload:JSON.stringify({
+        ticket:ticket,
+        apikey:getApiKey(),
+        backendHash:sha256Hex(serviceUrl),
+        loginId:String(loginId||'').trim()
+      })
+    });
+    const code=response.getResponseCode();
+    if(code!==200) return {ok:false,reason:'verify_http',infra:true,detail:'驗票端點回應 HTTP '+code};
+    let parsed=null;
+    try{ parsed=JSON.parse(response.getContentText()); }catch(e){ parsed=null; }
+    if(!parsed || typeof parsed!=='object') return {ok:false,reason:'verify_bad_json',infra:true,detail:'驗票端點回應唔係 JSON'};
+    if(parsed.valid!==true) return {ok:false,reason:'verify_invalid'};
+    cache.put(cacheKey,'1',CENTRAL_TICKET_CACHE_SEC);
+    return {ok:true};
+  }catch(e){
+    return {ok:false,reason:'verify_unreachable',infra:true,detail:String((e&&e.message)||e)};
+  }finally{
+    try{ lock.releaseLock(); }catch(e){}
+  }
 }
-// 相容舊 bootstrap：以本團 apikey 驗證短效許可。
-function validCentralBootstrap(bootstrap,verifyUrl,troopId){
-  if(!bootstrap || !verifyUrl || !troopId) return false;
-  const parts=String(bootstrap).split('.');
-  if(parts.length!==2) return false;
-  const exp=Number(parts[0]);
-  if(!isFinite(exp) || exp<=0) return false;
-  const nowS=Math.floor(Date.now()/1000);
-  if(exp < nowS-60 || exp > nowS+CENTRAL_BOOTSTRAP_MAX_TTL) return false; // 過期或遙遠未來
-  const sig=String(parts[1]||'').trim().toLowerCase();
-  if(!sig || sig.length>512) return false;
-  const expect=hmacHex(getApiKey(), String(verifyUrl)+'|'+String(troopId)+'|'+parts[0]);
-  if(expect.length!==sig.length) return false;
-  let diff=0;
-  for(let i=0;i<sig.length;i++){ diff |= (expect.charCodeAt(i)^sig.charCodeAt(i)); }
-  return diff===0;
-}
-// 舊版管理介面的相容入口：只回報本端模式，並未探測 Vercel 登記資料。
+// 領袖選單／舊管理介面嘅「測試連線」：真係探測一次，唔再回假 200。
+// 1) GET 端點應該回 405（只收 POST）＝端點在生；2) 用本機 API Key 探測旅團登記及後端一致性。
 function testTrustedTicketVerifier(){
-  return {success:true,status:200,mode:'one_way',detail:'中央登入採純單向驗證，無需外部回調；此操作不檢查 Vercel 旅團登記或後端網址一致性。'};
-}
-// 編輯器診斷只讀；getUrl() 可能回傳 /dev，需核對部署 URL 尾段。
-function diagnoseCentralLogin(){
-  const cfg=trustedTicketConfig();
+  const url=superVerifyUrl();
   let serviceUrl='';
   try{ serviceUrl=String(ScriptApp.getService().getUrl()||''); }catch(e){ serviceUrl=''; }
-  const currentHash=hashPassword(serviceUrl);
+  const out={success:false,mode:'callback',verify_url_in_use:url,verify_url_tail:String(url).slice(-28),service_url_tail:serviceUrl.slice(-14),steps:[]};
+  let code=0;
+  try{
+    const ping=UrlFetchApp.fetch(url,{method:'get',muteHttpExceptions:true,followRedirects:true});
+    code=ping.getResponseCode();
+    out.status=code;
+    out.steps.push('GET '+code);
+  }catch(e){
+    out.error='連唔到驗票端點：'+String((e&&e.message)||e)+'（'+centralVerifyHint()+'）';
+    return out;
+  }
+  if(code!==405){
+    out.error='驗票端點回應異常（HTTP '+code+'）：'+centralVerifyHint();
+    return out;
+  }
+  try{
+    const probe=UrlFetchApp.fetch(url,{
+      method:'post', contentType:'application/json', muteHttpExceptions:true, followRedirects:true,
+      payload:JSON.stringify({ticket:'test',apikey:getApiKey(),backendHash:sha256Hex(serviceUrl)})
+    });
+    let parsed=null;
+    try{ parsed=JSON.parse(probe.getContentText()); }catch(e){ parsed=null; }
+    if(!parsed){ out.error='探測回應唔係 JSON：'+centralVerifyHint(); return out; }
+    out.probe={troop_known:parsed.troop_known===true,troop_id:String(parsed.troop_id||''),key_ok:parsed.key_ok===true,backend_matches:parsed.backend_matches===true};
+    out.steps.push('probe troop_known='+out.probe.troop_known+'、key_ok='+out.probe.key_ok+'、backend_matches='+out.probe.backend_matches);
+    out.success=out.probe.troop_known && out.probe.key_ok && out.probe.backend_matches;
+    out.detail=out.success
+      ? '旅團已登記、後端一致，中央登入回打驗票可用。'
+      : (out.probe.troop_known
+        ? '本機 API Key 唔等於 Vercel 嘅 TROOP_{編號}_APIKEY（key_ok=false）。'
+        : 'Vercel 未見本機 API Key：請檢查 TROOP_{編號}_NAME／_BACKEND／_APIKEY 三項。');
+    if(!out.success && out.probe.troop_known && out.probe.key_ok && !out.probe.backend_matches){
+      out.detail='後端唔一致：Vercel 嘅 TROOP_{編號}_BACKEND 要同本 Sheet「部署 → 管理部署作業」嗰條 /exec URL 完全一樣。';
+    }
+  }catch(e){
+    out.error='探測失敗：'+String((e&&e.message)||e);
+  }
+  return out;
+}
+// 編輯器診斷只讀（唔對外發請求）；getUrl() 可能回傳 /dev，要核對部署 URL 尾段。
+function diagnoseCentralLogin(){
+  let serviceUrl='';
+  try{ serviceUrl=String(ScriptApp.getService().getUrl()||''); }catch(e){ serviceUrl=''; }
+  const verifyUrl=superVerifyUrl();
   const out={
-    configured: !!cfg,
-    centralTroopId: cfg?String(cfg.troopId):'',
-    verifyUrlTail: cfg?String(cfg.verifyUrl).slice(-14):'',
-    serviceUrlTail: serviceUrl?String(serviceUrl).slice(-14):'',
-    storedHashTail: cfg?String(cfg.backendHash).slice(0,8):'',
-    currentHashTail: serviceUrl?String(currentHash).slice(0,8):'',
-    hashMatches: cfg?(String(cfg.backendHash)===currentHash):false,
-    hint: cfg
-      ? '對照 serviceUrlTail 同 Vercel 嘅 TROOP_{ID}_BACKEND 條尾（要同一個 /exec）；hashMatches=false 即係兩邊唔一致。'
-      : '純單向中央登入不需要驗證端點；請確認 Vercel SUPER_KEY 及本團 BACKEND／APIKEY。'
+    mode:'callback',
+    verifyUrlTail:verifyUrl.slice(-28),
+    verifyUrlIsConstant:verifyUrl===SUPER_VERIFY_URL,
+    serviceUrlTail:serviceUrl.slice(-14),
+    backendHashTail:sha256Hex(serviceUrl).slice(0,8),
+    hint:'中央登入靠回打驗票：GAS（本 Sheet）→ '+verifyUrl+'。'
+      +'Vercel 嘅 TROOP_{編號}_BACKEND 條尾要同 serviceUrlTail 一樣（同一個 /exec）；'
+      +'第一次用之前要在 Apps Script 執行一次 testTrustedTicketVerifier 授權外部請求。'
   };
   Logger.log('中央登入診斷：'+JSON.stringify(out));
   return out;
 }
-// Vercel 驗證 SUPER_KEY 後，使用本團伺服器 API_KEY 單向授權。
-// isSuperAdmin 不是秘密；必須同時核對非空 API_KEY 及保留身份。
-function handleSuperLogin(loginId,apiKey,isSuperAdmin){
-  const expectedKey=String(getApiKey()||'');
-  if(isSuperAdmin!==true || !isSuperAdminId(loginId) || !expectedKey || String(apiKey||'')!==expectedKey){
-    return jsonResponse({success:false,error:'登入失敗',code:401});
+// 相容舊管理介面：線上端點已固定為常數，只准寫 loopback 覆寫（本地測試）。
+function configureTrustedTicketVerifier(verifyUrl,troopId){
+  verifyUrl=String(verifyUrl||'').trim();
+  troopId=String(troopId||'').trim();
+  const props=PropertiesService.getScriptProperties();
+  if(isLoopbackVerifyUrl(verifyUrl)){
+    props.setProperty('CENTRAL_AUTH_VERIFY_URL',verifyUrl);
+    if(troopId) props.setProperty('CENTRAL_AUTH_TROOP_ID',troopId);
+    return {success:true,troopId:troopId,loopback:true};
   }
-  const user=getUser(SUPER_ADMIN_ID);
+  if(verifyUrl===SUPER_VERIFY_URL || verifyUrl===''){
+    props.deleteProperty('CENTRAL_AUTH_VERIFY_URL');
+    if(troopId) props.setProperty('CENTRAL_AUTH_TROOP_ID',troopId);
+    return {success:true,troopId:troopId,loopback:false};
+  }
+  throw new Error('線上驗票端點已經係 Code.gs 常數（'+SUPER_VERIFY_URL+'），唔可以由前端改；只有 127.0.0.1／localhost 可以做本地測試覆寫');
+}
+// 中央身份最後登入時間只存 Script Properties（唔寫入工作表，唔影響任何 Schema）。
+function setSuperAdminLastLogin(){
+  try{ PropertiesService.getScriptProperties().setProperty('SUPER_ADMIN_LAST_LOGIN',now()); }catch(e){}
+}
+// 中央登入一定要有 Vercel 封嘅短效票（回打驗票）；API Key 同 isSuperAdmin 旗標已經唔再足夠。
+function handleSuperLogin(loginId,superTicket){
+  if(!isSuperAdminId(loginId)){
+    return jsonResponse({success:false,error:'登入失敗',code:401,central:'callback'});
+  }
+  const checked=verifyCentralTicket(superTicket,loginId);
+  if(!checked.ok){
+    if(checked.infra){
+      return jsonResponse({success:false,error:'中央登入驗票失敗：'+String(checked.detail||'')+'（'+centralVerifyHint()+'）',code:503,reason:'central_verify_unreachable',central:'callback'});
+    }
+    return jsonResponse({success:false,error:'登入失敗',code:401,central:'callback'});
+  }
   const token=createToken(SUPER_ADMIN_ID);
-  if(!token) return jsonResponse({success:false,error:'登入服務暫時無法使用'});
-  return jsonResponse({success:true,token:token,user:user});
+  if(!token) return jsonResponse({success:false,error:'登入服務暫時無法使用',central:'callback'});
+  setSuperAdminLastLogin();
+  return jsonResponse({success:true,token:token,user:getUser(SUPER_ADMIN_ID),central:'callback'});
 }
 function handleLogin(loginId,password){
   if(!loginId||!password) return jsonResponse({success:false,error:'請填寫帳號和密碼'});

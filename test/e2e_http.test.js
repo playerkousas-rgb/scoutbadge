@@ -12,9 +12,9 @@
  *   - method / input guards
  *   - member & leader login, load (GET + injected apikey), save
  *   - cross-troop token isolation
- *   - central (super) login: full bootstrap loop
- *       leader token → configureTrustedTicketVerifier → testTrustedTicketVerifier
- *       → proxy signs ticket → GAS calls back /api/verify-super-ticket → sealed session
+ *   - central (super) login: callback loop
+ *       proxy seals ticket → leaf calls back /api/verify-super-ticket → sealed session
+ *       (+ verifier config guards, probe, and the endpoint's own guards)
  *   - submitContact registration (fixed server-side admin inbox, unregistered troop OK;
  *     503 when SCOUTBADGE_ADMIN_API is unset)
  *
@@ -99,6 +99,9 @@ async function run() {
   const mockA = await startMockGas({
     port: MOCK_A_PORT, name: '旅團A', apikey: 'KEY_A',
     execUrl: `http://127.0.0.1:${MOCK_A_PORT}/exec`,
+    // A deployed leaf has the verifier endpoint built in; locally it is the
+    // loopback override the tests may also set through the legacy action.
+    verifyUrl: `${BASE}/api/verify-super-ticket`,
     users: [
       { ymis: '1234567890', name: '陳大文', email: 'leader@example.org', role: 'group_leader', password: 'PassA!234567' },
       { ymis: '1234560001', name: '成員甲', email: 'member@example.org', role: 'member', password: 'MemberA!234' },
@@ -221,14 +224,14 @@ async function run() {
     assert(Array.isArray(users.data.users) && users.data.users.length >= 3);
     ok('leader login + getAllUsers');
 
-    // --- central login bootstrap ---
-    // The proxy opens the troop itself once the central password matched, so
-    // the SUPER_KEY holder is never blocked behind a leader session they may
-    // not have (a new troop has none).
-    const preBootstrap = await proxy(BASE, { troopId: '0082', action: 'login', login_id: 'S1', password: 'test-super-key-42' });
-    assert(preBootstrap.status === 200 && preBootstrap.data.success === true, 'central login must self-bootstrap: ' + JSON.stringify(preBootstrap.data));
-    assert(preBootstrap.data.token.startsWith('sbs1.'));
-    ok('central login opens the troop itself before any leader configured it');
+    // --- central login: sealed ticket + callback ---
+    // The proxy opens the troop itself once the central password matched: what
+    // travels downstream is only a sealed ticket, never the password, and the
+    // leaf has to redeem it by calling this deployment's verifier.
+    const preLeader = await proxy(BASE, { troopId: '0082', action: 'login', login_id: 'S1', password: 'test-super-key-42' });
+    assert(preLeader.status === 200 && preLeader.data.success === true, 'central login must redeem a ticket: ' + JSON.stringify(preLeader.data));
+    assert(preLeader.data.token.startsWith('sbs1.'));
+    ok('central login: proxy seals ticket, mock leaf calls back, sealed session returned');
 
     const memberConfigure = await proxy(BASE, {
       troopId: '0082', action: 'configureTrustedTicketVerifier',
@@ -237,6 +240,13 @@ async function run() {
     assert.strictEqual(memberConfigure.data.success, false, 'members must not configure the verifier');
     ok('member cannot configure the verifier');
 
+    const httpsConfigure = await proxy(BASE, {
+      troopId: '0082', action: 'configureTrustedTicketVerifier',
+      verifyUrl: 'https://evil.example.com/api/verify-super-ticket', token: leaderToken
+    });
+    assert.strictEqual(httpsConfigure.data.success, false, 'a non-loopback endpoint must never be stored');
+    ok('https verifier endpoint refused (the live endpoint is a Code.gs constant)');
+
     const configure = await proxy(BASE, {
       troopId: '0082', action: 'configureTrustedTicketVerifier',
       verifyUrl: `${BASE}/api/verify-super-ticket`, token: leaderToken
@@ -244,11 +254,15 @@ async function run() {
     assert.strictEqual(configure.status, 200, JSON.stringify(configure.data));
     assert.strictEqual(configure.data.success, true);
     assert.strictEqual(configure.data.troopId, '0082', 'GAS must receive the routed troop id');
-    ok('leader configures the verifier (troopId carried through the proxy)');
+    assert.strictEqual(configure.data.loopback_override, true);
+    ok('leader sets the loopback verifier override (troopId carried through the proxy)');
 
     const testCfg = await proxy(BASE, { troopId: '0082', action: 'testTrustedTicketVerifier', token: leaderToken });
     assert.strictEqual(testCfg.data.success, true, JSON.stringify(testCfg.data));
-    ok('testTrustedTicketVerifier confirms the callback loop');
+    assert.strictEqual(testCfg.data.mode, 'callback');
+    assert.strictEqual(testCfg.data.status, 405, 'a live verifier answers GET with 405');
+    assert.strictEqual(testCfg.data.probe.backend_matches, true);
+    ok('testTrustedTicketVerifier probes the endpoint for real (registry + backend match)');
 
     const superLogin = await proxy(BASE, { troopId: '0082', action: 'login', login_id: 'S1', password: 'test-super-key-42' });
     assert.strictEqual(superLogin.status, 200, JSON.stringify(superLogin.data));
@@ -256,16 +270,16 @@ async function run() {
     assert.strictEqual(superLogin.data.user.role, 'super_admin');
     // The browser token is an opaque sealed session, not the raw GAS token.
     assert(superLogin.data.token.startsWith('sbs1.'), 'central session must be a sealed sbs1 envelope');
-    ok('central login: proxy signs ticket, GAS verifies via callback, sealed session returned');
+    ok('central login: ticket redeemed once, sealed session returned');
+
+    const superWrongPw = await proxy(BASE, { troopId: '0082', action: 'login', login_id: 'S1', password: 'nope' });
+    assert.strictEqual(superWrongPw.status, 401);
+    ok('central login with wrong key → 401, no upstream call');
 
     const superLoad = await proxy(BASE, { troopId: '0082', action: 'load', token: superLogin.data.token });
     assert.strictEqual(superLoad.status, 200);
     assert.strictEqual(superLoad.data.success, true);
     ok('sealed central session unwraps and routes to the right troop');
-
-    const superWrongPw = await proxy(BASE, { troopId: '0082', action: 'login', login_id: 'S1', password: 'nope' });
-    assert.strictEqual(superWrongPw.status, 401);
-    ok('central login with wrong key → 401, no upstream call');
 
     // --- verify-super-ticket direct guards ---
     const v1 = await fetch(`${BASE}/api/verify-super-ticket`, {
@@ -276,6 +290,28 @@ async function run() {
     const v1d = await v1.json();
     assert.strictEqual(v1d.valid, false);
     ok('verify-super-ticket rejects forged ticket');
+
+    // The probe only answers once the caller presents a registered troop key,
+    // and it never confirms a backend URL to someone who cannot.
+    const v3 = await fetch(`${BASE}/api/verify-super-ticket`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticket: 'test', apikey: 'NOT-A-REGISTERED-KEY', backendHash: 'x' })
+    });
+    const v3d = await v3.json();
+    assert.strictEqual(v3d.troop_known, false, 'an unregistered key must not be found');
+    assert.strictEqual(v3d.backend_matches, false);
+
+    const v4 = await fetch(`${BASE}/api/verify-super-ticket`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticket: 'test', troopId: '0082', apikey: 'WRONG-KEY', backendHash: 'x' })
+    });
+    const v4d = await v4.json();
+    assert.strictEqual(v4d.troop_known, true);
+    assert.strictEqual(v4d.key_ok, false, 'a known troop with the wrong key must not confirm anything');
+    assert.strictEqual(v4d.backend_matches, false);
+    ok('verifier probe: wrong or unregistered keys learn nothing');
 
     const v2 = await fetch(`${BASE}/api/verify-super-ticket`, { method: 'GET' });
     assert.strictEqual(v2.status, 405);

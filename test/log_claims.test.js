@@ -70,6 +70,8 @@ function installEnv() {
   global.ContentService = { createTextOutput: o => { global.__lastOut = JSON.parse(o); return { _content: o, getContent(){ return this._content; }, setMimeType(){ return this; } }; }, MimeType: { JSON: 'JSON' } };
   global.ScriptApp = { getService(){ return { getUrl(){ return 'https://script.example/exec'; } }; } };
   global.UrlFetchApp = { fetch(){ throw new Error('not configured in this test'); } };
+  global.LockService = { getScriptLock(){ return { tryLock(){ return true; }, waitLock(){ return true; }, releaseLock(){} }; } };
+  global.CacheService = { getScriptCache(){ return { get(){ return null; }, put(){}, remove(){} }; } };
   global.Logger = { log(){} };
   // hashPassword in Code.gs expects Utilities.computeDigest byte array → hex
   global.Utilities.computeDigest = function(algo, str){
@@ -235,17 +237,25 @@ const loadRes = (function(){
 })();
 check('load 回應含 logRequestsSupported=true + logRequests', loadRes.logRequestsSupported === true && Array.isArray(loadRes.logRequests), JSON.stringify({s:loadRes.logRequestsSupported, n:(loadRes.logRequests||[]).length}));
 
-console.log('\n【B】中央單向登入：GAS 不接受舊密碼入口');
+console.log('\n【B】中央登入：只認回打驗票（舊密碼／舊單向授權入口都唔接受）');
 const centralIdMatch=code.match(/const SUPER_ADMIN_ID = '([^']+)'/);
 const centralId=centralIdMatch&&centralIdMatch[1];
 const directCentral=out(api.handleLogin(centralId,'not-used'));
 check('中央身份不能直接以 GAS 密碼入口登入', directCentral.success===false && /登入/.test(directCentral.error||''), JSON.stringify(directCentral));
-global.__scriptProperties.CENTRAL_AUTH_VERIFY_URL='https://verifier.example.test/api/verify-super-ticket';
-global.__scriptProperties.CENTRAL_AUTH_TROOP_ID='0082';
-global.__scriptProperties.CENTRAL_AUTH_BACKEND_HASH='a'.repeat(64);
-global.UrlFetchApp={fetch(){ throw new Error('GAS must not call back'); }};
-const ticketLogin=out(api.handleSuperLogin(centralId,api.getApiKey(),true));
-check('伺服器授權成功才建立中央 session', ticketLogin.success===true && ticketLogin.user.role==='super_admin' && !!ticketLogin.token, JSON.stringify(ticketLogin));
+global.__scriptProperties.CENTRAL_AUTH_VERIFY_URL='http://127.0.0.1:9/api/verify-super-ticket';
+// 1) 冇票（舊版單向授權 exactly 咁做）→ 401，而且完全唔會對外發請求。
+let callbacks=0;
+global.UrlFetchApp={fetch(){ callbacks++; throw new Error('GAS must not call back without a ticket'); }};
+const noTicket=out(api.handleSuperLogin(centralId,''));
+check('冇票唔會建立中央 session（舊單向授權已停用、亦唔會回打）', noTicket.success===false && noTicket.code===401 && !noTicket.token && callbacks===0, JSON.stringify(noTicket));
+// 2) 有票但驗票端點連唔到 → 503 fail closed（唔會偷偷放行）。
+global.UrlFetchApp={fetch(){ callbacks++; throw new Error('verifier down'); }};
+const staleTick=out(api.handleSuperLogin(centralId,'sbt1.fake.envelope.tag'));
+check('驗票端點連唔到＝fail closed（503，冇 token）', staleTick.success===false && staleTick.code===503 && staleTick.reason==='central_verify_unreachable' && !staleTick.token && callbacks===1, JSON.stringify(staleTick));
+// 3) 端點話 valid → 才建立受限中央 session（sa_ token）。
+global.UrlFetchApp={fetch(){ callbacks++; return { getResponseCode(){ return 200; }, getContentText(){ return JSON.stringify({valid:true}); } }; }};
+const ticketLogin=out(api.handleSuperLogin(centralId,'sbt1.fake.envelope.tag'));
+check('回打驗票通過才建立中央 session', ticketLogin.success===true && ticketLogin.user.role==='super_admin' && !!ticketLogin.token && callbacks===2, JSON.stringify(ticketLogin));
 check('新中央 session 使用受限 token 格式', String(ticketLogin.token||'').startsWith('sa_') && api.validateToken(ticketLogin.token)===centralId, JSON.stringify(ticketLogin));
 sheets['Tokens'].appendRow(['legacy-central-token',centralId,'','2999-01-01']);
 check('舊 GAS 直接登入遺留 token 被撤銷', api.validateToken('legacy-central-token')===null);

@@ -29,7 +29,7 @@ function parseBody(req) {
 }
 
 class MockGas {
-  constructor({ name, apikey, users, execUrl }) {
+  constructor({ name, apikey, users, execUrl, verifyUrl }) {
     this.name = name;
     this.apikey = apikey;
     this.execUrl = execUrl || 'http://127.0.0.1:0/exec';
@@ -38,8 +38,64 @@ class MockGas {
     for (const u of users) this.users.set(u.ymis, { ...u, status: 'active' });
     this.requests = [];
     this.calls = [];
-    // Mirrors the GAS script properties set by configureTrustedTicketVerifier.
-    this.authProps = null; // { verifyUrl, troopId, backendHash }
+    // Loopback verifier override, exactly like the Code.gs Script Property a
+    // local test sets; the live endpoint is a constant inside Code.gs.
+    this.verifyUrl = String(verifyUrl || '');
+    this.usedTickets = new Set();
+  }
+
+  _sha256Hex(text) {
+    return require('crypto').createHash('sha256').update(String(text), 'utf8').digest('hex');
+  }
+
+  // Mirrors Code.gs verifyCentralTicket(): one callback per login, tickets are
+  // single use (the same ticket replayed is refused).
+  async _redeemTicket(ticket, loginId) {
+    if (typeof ticket !== 'string' || ticket.length < 8 || ticket.length > 4096) return { ok: false };
+    const used = this._sha256Hex(ticket);
+    if (this.usedTickets.has(used)) return { ok: false };
+    if (!this.verifyUrl) return { ok: false, infra: true, detail: '未設定驗票端點（本地測試要 loopback 覆寫）' };
+    try {
+      const response = await fetch(this.verifyUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ticket,
+          apikey: this.apikey,
+          backendHash: this._sha256Hex(this.execUrl),
+          loginId: String(loginId || '')
+        })
+      });
+      if (response.status !== 200) return { ok: false, infra: true, detail: '驗票端點回應 HTTP ' + response.status };
+      const data = await response.json();
+      if (!data || data.valid !== true) return { ok: false };
+      this.usedTickets.add(used);
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, infra: true, detail: String((error && error.message) || error) };
+    }
+  }
+
+  async _probeVerifier() {
+    if (!this.verifyUrl) return { success: false, mode: 'callback', error: '未設定驗票端點（本地測試要 loopback 覆寫）' };
+    try {
+      const ping = await fetch(this.verifyUrl, { method: 'GET' });
+      const probe = await fetch(this.verifyUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket: 'test', apikey: this.apikey, backendHash: this._sha256Hex(this.execUrl) })
+      });
+      const parsed = await probe.json();
+      const ok = parsed && parsed.troop_known === true && parsed.key_ok === true && parsed.backend_matches === true;
+      return {
+        success: Boolean(ok), mode: 'callback', status: ping.status,
+        verify_url_in_use: this.verifyUrl,
+        probe: parsed || null,
+        detail: ok ? '旅團已登記、後端一致，中央登入回打驗票可用。' : '旅團登記或後端網址唔一致'
+      };
+    } catch (error) {
+      return { success: false, mode: 'callback', error: '連唔到驗票端點：' + String((error && error.message) || error) };
+    }
   }
 
   _record(url, method) {
@@ -63,23 +119,6 @@ class MockGas {
 
   _validate(token) {
     return typeof token === 'string' && this.tokens.has(token) ? this.tokens.get(token) : null;
-  }
-
-  _validBootstrap(bootstrap, verifyUrl, troopId) {
-    if (!bootstrap || !verifyUrl || !troopId) return false;
-    const parts = String(bootstrap).split('.');
-    if (parts.length !== 2) return false;
-    const exp = Number(parts[0]);
-    if (!Number.isFinite(exp) || exp <= 0) return false;
-    const nowS = Math.floor(Date.now() / 1000);
-    if (exp < nowS - 60 || exp > nowS + 600) return false;
-    const crypto = require('crypto');
-    const expected = crypto.createHmac('sha256', this.apikey)
-      .update(`${String(verifyUrl)}|${String(troopId)}|${parts[0]}`, 'utf8')
-      .digest('hex');
-    const left = Buffer.from(expected, 'utf8');
-    const right = Buffer.from(String(parts[1] || '').trim().toLowerCase(), 'utf8');
-    return left.length === right.length && crypto.timingSafeEqual(left, right);
   }
 
   handleGet(url, res) {
@@ -183,46 +222,46 @@ class MockGas {
       return this._json(res, 200, { success: true });
     }
 
-    // Central-login verifier bootstrap (mirrors Code.gs: apikey + leader token).
+    // Central-login verifier configuration (mirrors Code.gs: a leader token,
+    // and only a loopback endpoint may be stored — the live one is a constant).
     if (action === 'configureTrustedTicketVerifier' || action === 'testTrustedTicketVerifier') {
       if (!body.apikey || body.apikey !== this.apikey) {
         return this._json(res, 200, { success: false, error: '未授權' });
       }
-      // Mirrors Code.gs: either a leader token, or the short-lived bootstrap
-      // the proxy signs with this troop's own API key (only issued after the
-      // central password matched). A browser has no API key and cannot forge it.
-      const bootOk = this._validBootstrap(body.bootstrap, body.verifyUrl, body.troopId);
       const cfgYmis = this._validate(body.token);
-      const cfgUser = bootOk ? { role: 'admin' } : (cfgYmis ? this.users.get(cfgYmis) : null);
+      const cfgUser = cfgYmis ? this.users.get(cfgYmis) : null;
       const roleLevel = { member: 0, branch_leader: 40, group_leader: 60, admin: 80, super_admin: 100 }[cfgUser ? cfgUser.role : ''] || 0;
       if (!cfgUser || roleLevel < 40) return this._json(res, 200, { success: false, error: '需領袖權限' });
       if (action === 'configureTrustedTicketVerifier') {
         const verifyUrl = String(body.verifyUrl || '').trim();
         const troopId = String(body.troopId || '').trim();
-        if (!/^https?:\/\//i.test(verifyUrl) || !troopId) return this._json(res, 200, { success: false, error: '設定資料無效' });
-        const crypto = require('crypto');
-        this.authProps = {
-          verifyUrl,
-          troopId,
-          backendHash: crypto.createHash('sha256').update(this.execUrl).digest('hex')
-        };
-        return this._json(res, 200, { success: true, troopId });
+        if (!/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/|$)/i.test(verifyUrl)) {
+          return this._json(res, 200, { success: false, error: '線上驗票端點已固定為 Code.gs 常數；只有 loopback 可作本地覆寫' });
+        }
+        this.verifyUrl = verifyUrl;
+        return this._json(res, 200, { success: true, troopId, loopback_override: true, verify_url_in_use: verifyUrl });
       }
-      return this._json(res, 200, { success: true, status: 200, mode: 'one_way', detail: '中央登入採純單向驗證，無需外部回調；未檢查 Vercel 登記。' });
+      return this._json(res, 200, await this._probeVerifier());
     }
 
-    // One-way server-authenticated central login, matching Code.gs.
+    // Central login: Vercel's sealed ticket must be redeemed by a real callback
+    // to the verifier. The troop API key alone is no longer enough.
     if (action === 'superLogin') {
       const superUser = [...this.users.values()].find((u) => u.role === 'super_admin');
       if (!superUser || String(body.login_id) !== superUser.ymis) {
-        return this._json(res, 200, { success: false, error: '登入失敗' });
+        return this._json(res, 200, { success: false, error: '登入失敗', code: 401, central: 'callback' });
       }
-      if (String(body.apikey) !== this.apikey) return this._json(res, 200, { success: false, error: '登入失敗' });
-      if (body.isSuperAdmin !== true) return this._json(res, 200, { success: false, error: '登入失敗' });
+      const checked = await this._redeemTicket(String(body.super_ticket || ''), superUser.ymis);
+      if (!checked.ok) {
+        return this._json(res, 200, checked.infra
+          ? { success: false, error: '中央登入驗票失敗：' + String(checked.detail || ''), code: 503, reason: 'central_verify_unreachable', central: 'callback' }
+          : { success: false, error: '登入失敗', code: 401, central: 'callback' });
+      }
       const token = this._tokenFor(superUser.ymis);
       return this._json(res, 200, {
         success: true,
         token,
+        central: 'callback',
         user: { ymis: superUser.ymis, name: superUser.name, email: superUser.email, role: superUser.role }
       });
     }

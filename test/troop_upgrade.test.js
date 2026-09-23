@@ -167,11 +167,14 @@ async function run() {
   assert.strictEqual(portalRead.success, false, '閂口後舊 Portal sig 讀取亦應被拒');
   assert.strictEqual(portalRead.upstream_only, true);
 
-  // 5b. SUPER 災難恢復登入（isSuperAdmin）→ 放行（與旅系統閘門脫鉤）
+  // 5b. 中央登入（A）→ 唔受旅系統閘門影響：唔會回 upstream_only（即係路由得到，
+  //     唔係被當成本地入口拒），但已經只認 Vercel 封嘅短效票（回打驗票）。
   const superLogin = gas.post({ action: 'superLogin', login_id: 'sheep', isSuperAdmin: true, apikey: KEY });
-  assert.strictEqual(superLogin.success, true, 'SUPER 災難恢復應放行');
-  assert.strictEqual(superLogin.user.role, 'super_admin');
-  console.log('  [PASS] 閂口後舊 Portal 通道被拒，中央登入（A）仍正常放行');
+  assert.strictEqual(superLogin.upstream_only, undefined, '中央登入唔應該當成本地入口被閂');
+  assert.strictEqual(superLogin.success, false, '舊版單向 superLogin（只憑 API_KEY）已經停用');
+  assert.strictEqual(superLogin.code, 401);
+  assert.strictEqual((superLogin.error || '').indexOf('只接受上游簽名'), -1);
+  console.log('  [PASS] 閂口後舊 Portal 通道被拒；中央登入照路由，但只認票（單向授權已停用）');
 
   // ========================================================
   // 6. 重開本機直接入口（舊 Portal sig setDownstreamAccess）→ 上游領袖經 sig 入，

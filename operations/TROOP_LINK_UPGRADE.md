@@ -4,7 +4,9 @@
 >
 > **本檔＝ScoutBadge 呢一輪升級嘅規格／版號唯一記錄**：程式碼內唔寫 `// vX.X` 註解，版號只留本檔（第 9 節）。本檔同時係其他支部照抄嘅依據（對齊 vsbadge `operations/TROOP_LINK_UPGRADE.md`（PR #19）、roverbadge `docs/TROOP_UPGRADE_2026.md`（PR #23／#24））。
 >
-> **本輪改動範圍**：`apps-script/Code.gs`（新增旅系統兩節＋`doGet`／`doPost` 路由＋初始化提示）、`test/troop_link.test.js`（新增 10 項守護）、`package.json`（`test` 加入新測試、新增 `test:link`）、`.vercelignore`（排除 `operations/`）、`README.md`／`docs/INTEGRATION_ECPORTAL_V4.md`／`apps-script/CHANGELOG.md`（文字更新）、本檔。**前端 `index.html` 及 `api/` 一字未改**。
+> **本輪改動範圍（第一次出貨）**：`apps-script/Code.gs`（新增旅系統兩節＋`doGet`／`doPost` 路由＋初始化提示）、`test/troop_link.test.js`（新增 10 項守護）、`package.json`（`test` 加入新測試、新增 `test:link`）、`.vercelignore`（排除 `operations/`）、`README.md`／`docs/INTEGRATION_ECPORTAL_V4.md`／`apps-script/CHANGELOG.md`（文字更新）、本檔。**前端 `index.html` 及 `api/` 一字未改**。
+>
+> **2026-09-23 修訂（第 12 節）：中央登入（A）由「純單向」改回 VS／RS 嘅「回打驗票」**。為咗呢條登入鏈，`api/proxy.js`、`api/verify-super-ticket.js`、`lib/super-auth.js` 有改動（第 7 節原本嗰句「唔改 A／`api/`」只適用於旅系統接駁，唔再適用於中央登入鏈）；**前端 `index.html` 仍然一字未改**。
 
 ---
 
@@ -106,7 +108,7 @@ sig       = hex( HMAC-SHA256( canonical, sigKey ) )
 
 - 旅系統 sig 鏈＝**單向**（上游 → 下游），下游同步回一個結果：`{success, data}` 或 `{success:false, error}`。「📡 測試下游連線（sig）」、開戶、匯入、閂口全部靠呢個**同步回傳**先知道成唔成功；失敗要明講（例：「上游已開戶，但下游寫入失敗」），唔可以靜靜地兩邊唔一致。
 - **旅系統冇非同步回調**：冇 callback endpoint、下游唔會主動回打上游；亦冇定時器／`onEdit` 觸發器（全倉掃 `callback|postMessage|newTrigger|onEdit` 零命中）。
-- 「中央登入回打」係另一條鏈（登入鏈，唔屬旅系統）：vsbadge／roverbadge 已經改成「GAS 收到 `login` 帶 `super_ticket` → 回打固定端點 `<app>/api/super` 驗票 → 驗過先發 token」並實測成功。**ScoutBadge 現時係零回打版**（Vercel 驗 `SUPER_KEY` → `action=superLogin` 單向授權），對齊屬**本輪範圍外**：見第 8 節「不改 A／不改 `api/`」及第 11 節「已知邊界」。本輪不動中央登入，只確保**閂口後中央登入（A）照樣放行**（與旅系統閘門脫鉤）。
+- 「中央登入回打」係另一條鏈（登入鏈，唔屬旅系統）：VS／RS 嘅做法係「GAS 收到中央登入請求帶 `super_ticket` → 回打固定端點驗票 → 驗過先發 token」。**ScoutBadge 已經對齊（2026-09-23 修訂，見第 12 節）**：葉端 `action=superLogin` 只認 Vercel 用 `SUPER_KEY` 封嘅短效票，冇票（包括舊版單向授權）一律 401 fail closed。旅系統嗰條鏈仍然係單向 sig＋同步回傳，兩條鏈完全獨立。
 
 ---
 
@@ -128,7 +130,7 @@ sig       = hex( HMAC-SHA256( canonical, sigKey ) )
 | 舊 Portal sig（`portalLogin`、`childId|sub|scope|exp`） | 照舊 | **拒** |
 | 用戶 token 操作 | 照舊 | **拒** |
 | 上游 `sig` 請求（本規格） | **接受** | **接受** |
-| 中央登入（A，`superLogin`） | 接受 | **接受**（與旅系統閘門脫鉤） |
+| 中央登入（A，`superLogin`） | 接受（**只認 Vercel 封嘅短效票**；冇票＝401） | **接受**（與旅系統閘門脫鉤，同樣只認票） |
 | 舊入口掣 `getDownstreamAccess`／`setDownstreamAccess` | 接受 | **接受**（唯二例外；兩者都要先通過 `requireAuthBody`，`setDownstreamAccess` 另要有效 portal sig，否則 403） |
 
 - 閂口係可逆：下游選單「🔓 開啟」，或上游以 `sig` 打 `setLocalLogin(allow=true)`，或舊 Portal 以 sig 打 `setDownstreamAccess(allowLocal=true)`。
@@ -175,9 +177,9 @@ sig       = hex( HMAC-SHA256( canonical, sigKey ) )
 ## 7. 唔做
 
 - ❌ 不在 SHEET 寫 ABCD（有測試守）
-- ❌ 不改 A（`SUPER_KEY` 相關邏輯、`api/` 超管路徑全部原封不動）
-- ❌ 旅系統不設回調（第 3.2 節第 2 條；同步回傳唔算回調）
-- ❌ 不改前端 `index.html`、不改 `api/`（`sig` 係 GAS→GAS，唔經 Vercel proxy，所以 proxy 白名單唔使加）
+- ❌ **旅系統接駁**唔改 A、唔改 `api/`（`sig` 係 GAS→GAS，唔經 Vercel proxy，所以 proxy 唔使加白名單）
+- ❌ 旅系統不設回調（第 3.2 節第 2 條；同步回傳唔算回調）——**中央登入鏈嘅「回打」係另一條鏈**，2026-09-23 起已對齊 VS／RS（第 12 節）
+- ❌ 不改前端 `index.html`
 - ❌ 不改現有工作表 schema、不清資料、現有部署唔使重跑 `initializeSheets()`
 - ❌ 進度追蹤唔加通告／圖書館／推送／訂閱邏輯（通告／訂閱只屬管理層嘅通告模組）
 - ❌ 下游唔自行開成員戶口、唔反寫上游（身份錨點在該團支部）
@@ -266,5 +268,63 @@ npm run build      # 產生 public/（部署內容）
 
 - **跨 repo 直連唔支援**：上游同下游要同一個 repo（`<purpose>` 同 sig 格式各 repo 一套）。本 repo 係 `scoutbadge-troop-sig-v1` ＋ `action\n ts\n nonce\n sha256(rawBody)`。
 - **ScoutBadge 自己仲有一條舊 Portal sig**（`childId|sub|scope|exp`，ecportal 合約）**同時存在**：兩條簽名鏈互不相通，但都係同一個 leaf 嘅入口；閂口後兩條本地鏈都停，只剩本規格嘅 `scoutbadge-troop-sig-v1`。
-- **中央登入回打**：ScoutBadge 現時零回打（`superLogin` 單向授權），未改成 VS／RS 嘅「GAS 回打固定端點 `<app>/api/super` 驗票」。原因：本輪明確唔改 A／`api/`（第 7 節）。日後要對齊就需要同時改 GAS 同 `api/`，屬另一輪工作。
+- **中央登入回打**：已於 2026-09-23 對齊 VS／RS（第 12 節）；ScoutBadge 沿用自己嘅固定端點路徑 `/api/verify-super-ticket`（VS／RS 係 `/api/super`），機制一樣。
 - 舊 API（`exportAll`、`upsertUser`（寬鬆版）、`setPw`／`verifyPw`／`setStatus`、`getDownstreamAccess`／`setDownstreamAccess`）**保留**，保障 ecportal 合約唔會斷；但閂口後只有後兩者（`get/setDownstreamAccess`）例外放行，其餘一律要經 sig。
+
+---
+
+## 12. 中央登入（A）回打驗票 — 2026-09-23 修訂
+
+**一句話**：以前 Vercel 核對 `SUPER_KEY` 之後，只憑「本團 `API_KEY` ＋ `isSuperAdmin: true`」就可以叫 GAS 發中央 session（單向授權）；現在改成 VS／RS 同款 —— Vercel 封一張 **1 分鐘短效票**，GAS **回打固定端點驗票**，驗過先發 token。**本團 `API_KEY` 單獨唔再足夠**。
+
+### 12.1 為咩要改（安全理由，唔係口味）
+
+| | 舊：單向授權 | 新：回打驗票 |
+|---|---|---|
+| 信任錨 | 本團 `API_KEY`（D） | Vercel 嘅 `SUPER_KEY` |
+| 誰有能力開中央 session | 任何持有 D 嘅人——D 會顯示喺 Sheet 選單、會交 ADMIN、會經截圖／聊天流傳 | 只有拎到 `SUPER_KEY` 嘅 Vercel 部署可以封票；D 單獨冇用 |
+| 票被重用 | 唔存在票，冇單次性 | 同一張票只可換一次 token（GAS `CacheService` 記 120 秒，票壽命 60 秒） |
+| 票被搬去第個旅團 | 唔適用 | 票綁死 `troopId` ＋ 後端 `/exec` 雜湊 ＋ 身份（`sheep`）；GCM tag 改一個 byte 即爆 |
+
+### 12.2 機制（同 VS／RS 逐項對照）
+
+| 步驟 | ScoutBadge | VS／RS |
+|---|---|---|
+| 端點 | GS 常數 `SUPER_VERIFY_URL = https://<本部署域名>/api/verify-super-ticket` | 常數 `<app>/api/super` |
+| 端點可否由請求／前端指定 | **永不**（`superVerifyUrl()` 只接受 `127.0.0.1`／`localhost` 覆寫，其餘一律用常數） | 永不（常數） |
+| 票 | AES-256-GCM，key ＝ `HMAC-SHA256(SUPER_KEY, "scoutbadge:super-ticket")`；payload 帶 `subject`／`troopId`／`apikey`／`backendHash`／`expiresAt`（60 秒） | 同款（key 只用 `SUPER_KEY`，payload 帶 `troopId`／`backend`／`apikey`，TTL 60 秒） |
+| 葉端動作 | `action=superLogin` ＋ `super_ticket`；`handleSuperLogin()` 驗票成功才 `createToken(SUPER_ADMIN_ID)`（`sa_` 前綴受限 token） | `action=login` ＋ `super_ticket`；同一套 |
+| 回打內容 | `{ticket, apikey: 本團 API_KEY, backendHash: sha256(本機 /exec), loginId}` | `{ticket, apikey, backend}` |
+| 端點回應 | 只回 `{valid: true|false}`（唔回密碼、唔回 session、唔解釋失敗原因） | 只回 `{ok: true|false}` |
+| 端點側檢查 | 票內 `troopId` 要喺 registry、`ticket.apikey` 要等於該團 `_APIKEY`、`ticket.backendHash` 要等於該團 `_BACKEND` 雜湊、來電者講嘅 `apikey`／`backendHash`／`loginId` 要同票一致 | registry／apikey／backend 三項一致 |
+| 單次使用 | `CacheService` key ＝ `sha256(ticket)`，120 秒（> 票壽命） | `CacheService` 120 秒 |
+| 失敗 | **fail closed**：冇票／爛票／錯後端／錯 KEY ／重放 → 401；端點連唔到 → 503（**唔會**回退單向授權） | 同款 |
+| 舊版後端 | Vercel 見到回應冇 `central:"callback"` 標記 → 409「後端仍未支援中央登入回打驗票…去『部署 → 管理部署作業』建立新版本」 | — |
+
+### 12.3 「測試連線」同診斷
+
+- 選單／舊管理介面嘅「測試連線」＝ `testTrustedTicketVerifier()`：① `GET` 端點要回 **405**（只收 POST，證明端點在生）；② 用本機 `API_KEY` ＋ 本機 `/exec` 雜湊做 probe，回 `troop_known`／`key_ok`／`backend_matches`（只回 booleans，唔回後端網址）。三個都 true 才叫可用。
+- `diagnoseCentralLogin()` 只讀（唔發請求）：印出用緊邊個端點、本機 `/exec` 尾段同雜湊頭 8 位。
+- **首次一定要人手授權一次 `script.external_request`**（Apps Script 對外請求權限）：喺編輯器執行一次 `testTrustedTicketVerifier`，按授權對話框；之後正式登入就唔會再問。呢個係回打模式唯一嘅一次性人手步驟（亦係以前「失敗」多數嘅真正原因）。
+- 舊「中央登入設定」介面（`configureTrustedTicketVerifier`）保留但**收窄**：線上端點係常數，只准 `127.0.0.1`／`localhost` 做本地測試覆寫，其他一律拒（訊息會講明改 Code.gs 常數）。`index.html` 未改，所以個掣仍然在，但按落去會直接顯示嗰句訊息。**自動開通（bootstrap）機制已完全移除**——常數唔需要開通，亦無「雞生蛋」問題。
+
+### 12.4 本修訂改動嘅檔案
+
+| 檔案 | 改動 |
+|---|---|
+| `apps-script/Code.gs` | `SUPER_VERIFY_URL` 常數 ＋ `superVerifyUrl()`（只准 loopback 覆寫）、`verifyCentralTicket()`（回打＋單次使用）、`handleSuperLogin()` 改成只認票、`testTrustedTicketVerifier()` 改成真探測、`diagnoseCentralLogin()` 更新、`configureTrustedTicketVerifier()` 收窄；刪 `validCentralBootstrap()`／`CENTRAL_BOOTSTRAP_MAX_TTL` |
+| `api/proxy.js` | 中央登入改成封票（`createSuperTicket`）＋ `action=superLogin` ＋ `super_ticket`；失敗分三種：冇 `central` 標記＝409 未更新、`central_verify_unreachable`＝503、其餘＝401；密碼永不出 proxy |
+| `api/verify-super-ticket.js` | 由票內 `troopId` 查 registry（葉端毋須任何設定）、比對 `apikey`／`backendHash`／`loginId`、probe 加 `key_ok`／`troop_id`、body ≤ 8 KB、每 IP 額度 |
+| `lib/super-auth.js` | 票封套 key 改為只用 `SUPER_KEY`（payload 帶 troop 身份）；`verifySuperTicket()` 逐個 claim 比對；TTL 60 秒；刪 `createCentralBootstrap()` |
+| `lib/verify-rate-limit.js` | 新增（`/api/verify-super-ticket` 每 IP 5 分鐘 60 次；per-instance best effort） |
+| `test/central_login.test.js` | 由 10 項改到 12 項：舊單向授權停用、真票換 token、重放／錯後端／錯 KEY／錯身份／改 byte 全拒、常數優先、驗票端點 503 fail closed |
+| `test/proxy.test.js` | 第 4 節改成「封票＋sealed session」，新增 4b（未更新後端 409）／4c（端點連唔到 503） |
+| `test/e2e_http.test.js`／`test/mock-gas.js` | mock GAS 真回打 `/api/verify-super-ticket`（27 項）；https 覆寫被拒 |
+| `test/log_claims.test.js`／`test/troop_upgrade.test.js`／`test/troop_link.test.js` | 中央登入段落改成「只認票、唔會回 `upstream_only`」 |
+| `test/gasvm.js` | 補 `CacheService`／`LockService` stub；`GASVM_DEBUG=1` 可開 gasvm log |
+
+### 12.5 未做（要真機驗收）
+
+- 真 GAS ＋ 真 Vercel 嘅回打（本機全綠只證明邏輯；**302 轉址、`script.external_request` 授權、Vercel 冷啟動、Script Properties 配額**要喺測試旅團跑一次）。
+- `SUPER_VERIFY_URL` 常數要對返實際部署域名（自架／自訂域名要改 Code.gs 一行）。
+- 舊「中央登入設定」介面（`index.html`）未清——要清就係另一輪（前端）。

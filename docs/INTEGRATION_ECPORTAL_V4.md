@@ -24,7 +24,7 @@ ScoutBadge 有**三個同時並存嘅進入方式**，上層「食」入唔會�
 > - **進度前端無關閉按鈕**：進度前端介面不設「關閉入口」掣，避免單獨使用時誤鎖本團；掣只在上游選單（「🚪 下游直接入口」）或本機 Sheet 選單操作。
 > - **上游集中控制**：上層可經**本規格嘅 `sig`** 調用 `setLocalLogin`（新制，見 Git 內 `operations/TROOP_LINK_UPGRADE.md`：維運文件，不部署到網站），或沿用舊制 `setDownstreamAccess({ allowLocal: false })`（必須附帶有效 upstream `sig`，純 apikey 拒絕）關閉本地入口。
 > - **掣值 fail closed**：只有 `1/true/yes/on/open` 視為開啟，其餘任何值（`false/0/no/off`、串錯字）＝閂口；未設定＝開啟。
-> - **關閉後攔截範圍**：關閉後**本地入口一律拒**（`login`、`apply`、`GET load`／`getLoginMode`、apikey 直接 `save`、用戶 token 操作、舊 Portal `portalLogin`），一律回 `{success:false, upstream_only:true, error:"…只接受上游簽名（sig）請求…"}`。**只有**上游 `sig` 請求、SUPER 災難恢復緊急登入（中央登入與閘門脫鉤）及舊入口掣 `get/setDownstreamAccess`（自身再驗 portal sig）照常放行。
+> - **關閉後攔截範圍**：關閉後**本地入口一律拒**（`login`、`apply`、`GET load`／`getLoginMode`、apikey 直接 `save`、用戶 token 操作、舊 Portal `portalLogin`），一律回 `{success:false, upstream_only:true, error:"…只接受上游簽名（sig）請求…"}`。**只有**上游 `sig` 請求、中央登入（與閘門脫鉤，而且只認 Vercel 封嘅短效票：`action=superLogin` ＋ `super_ticket` 回打驗票）及舊入口掣 `get/setDownstreamAccess`（自身再驗 portal sig）照常放行。
 
 ---
 
@@ -61,9 +61,12 @@ sig     = HMAC-SHA256( apiKey, message )   // 小寫 hex
 | EMAIL（家長） | **家長** | `role==='parent'`（空視同 parent）；`children_ids` 必須至少一個**喺本團**；只可讀子女聯集 |
 
 - **SUPER id（`sheep`／`L+數字` 中央身份）唔接受** sig —— 中央登入走另外嘅
-  trusted-ticket 路徑（見 `README`／`api/verify-super-ticket.js`）。
-  中央登入失敗時，失敗關卡（未設定 verifier／旅團未登記／後端網址唔一致／
-  後端未更新）會變成可行動嘅提示，對照表見 `docs/TROUBLESHOOT_82.md`。
+  **回打驗票**路徑：Vercel 核對 `SUPER_KEY` 後封一張 1 分鐘短效票
+  （`api/verify-super-ticket.js` 驗票，`lib/super-auth.js` 封／開票），
+  GAS 回打 `SUPER_VERIFY_URL` 常數端點驗過先發 session（見 `README`）。
+  中央登入失敗時，失敗關卡（端點連唔到／未授權 `script.external_request`／
+  旅團未登記／KEY 唔一致／後端網址唔一致／後端未更新）會變成可行動嘅提示，
+  對照表見 `docs/TROUBLESHOOT_82.md`。
 - 家長**只讀**：`handleParentAction` 只放行 `load`／`getOtherBadges`／
   `getServiceRecords`／`getMembers`（全部 server-side 收縮到子女聯集）；
   其他 action（寫入、審批、改密碼…）一律 `code:403`。
@@ -165,10 +168,10 @@ sig     = HMAC-SHA256( apiKey, message )   // 小寫 hex
 - `test/e2e_http.test.js` — 真 dev server＋proxy＋mock GAS（25 項）。
 - `test/e2e_realgas.test.js` — **打真 `apps-script/Code.gs`**（vm shim 執行原碼），
   覆蓋 v4.1.0 合約：requireAuth、三種 sig 身份、家長子女聯集收縮、403、
-  篡改／過期／錯 key、`getRegistrySafe`、normId、**三點進入並存**、中央登入全循環（15 項）。
+  篡改／過期／錯 key、`getRegistrySafe`、normId、**三點進入並存**、中央登入回打全循環（15 項）。
 - `test/troop_upgrade.test.js` — **進度追蹤旅系統升級版回歸測試**（10 項），
   覆蓋前端無關閉按鈕、掣未設定＝開啟、`setDownstreamAccess` 驗簽防護、
-  閂口後本地入口一律拒（舊 Portal sig 亦拒）而中央登入（A）照放行、上游領袖免 local row、
+  閂口後本地入口一律拒（舊 Portal sig 亦拒）而中央登入（A）照路由（只認票）、上游領袖免 local row、
   `exportAll` JSON 吐出校驗、`upsertUser` 直插密碼與 transferId 冪等、
   `setPw`/`verifyPw`/`setStatus`，以及重開後免 1234 登入。
 - `test/troop_link.test.js` — **旅系統（旅 > 團 > 進度）上下游接駁守護測試**（10 項，`npm run test:link`），

@@ -55,28 +55,37 @@ Portal 卡片可使用不帶後端憑證的連結，例如：
 ## G. 中央登入（系統管理員帳號）
 
 系統管理員（super_admin）的密碼存在 Vercel 的 `SUPER_KEY`，不存入旅團 Sheet。
-**設定 `SUPER_KEY` 就夠**：以中央帳號 `sheep` 登入時，若該旅團的 Apps Script 尚未
-設定驗證端點，Proxy 會在密碼驗證通過後自動幫它開通（以本團 API Key 簽發的 5 分鐘
-短效許可；瀏覽器沒有 API Key，無法偽造），所以不再需要先以領袖身份登入做設定
-（舊版的雞生蛋問題）。若部署網址無法自動推斷，可另設
-`SCOUTBADGE_VERIFY_URL=https://你的域名/api/verify-super-ticket`。
 
-需要手動設定或檢查時（例如懷疑後端網址不一致）：
+**流程＝Vercel 封票 → GAS 回打驗票**：以中央帳號 `sheep` 登入時，Vercel 核對 `SUPER_KEY` 後
+會封一張 1 分鐘短效票（唔會把密碼送去後端），GAS 收到之後回打固定端點
+`SUPER_VERIFY_URL`（`apps-script/Code.gs` 常數，預設本部署域名 + `/api/verify-super-ticket`）
+驗票，驗過先發 session。**本團 `API_KEY` 單獨係開唔到中央 session 嘅**（舊版單向授權已停用）。
 
-1. 以領袖（童軍團長或以上）登入系統。
-2. 進入「成員管理」頁 →「🔑 中央登入設定」。
-3. 端點預填為本部署域名 + `/api/verify-super-ticket`，旅團編號預填為目前旅團；確認後按「儲存設定」。
-4. 系統會接著自動「測試連線」。它是一次真正的自我檢查：會回報旅團是否已登記、
-   以及 Vercel 登記的後端網址是否與本 Sheet 的 Web App 網址一致；顯示「旅團已登記、
-   後端一致」才代表中央登入可用。任何一項不符，訊息會直接指出要改哪個變數。
-   
-   > **首次測試時，若出現 `UrlFetchApp.fetch` 權限錯誤**：
-   > 這是 Apps Script 要求授權 `script.external_request`（外部 HTTP 請求權限）。
-   > 請先按上述步驟手動授權一次，然後再重新測試。詳見 [docs/TROUBLESHOOT_82.md](docs/TROUBLESHOOT_82.md)「Apps Script 外部請求權限設定」。
-5. 之後在登入頁以中央帳號（`sheep`，大小寫與前後空白不拘）+ Vercel 的 `SUPER_KEY` 登入即可。
+所以「設定」只剩兩件事：
 
-> 若登入失敗，登入頁會顯示失敗的關卡與處理方法（尚未設定／後端網址不一致／
-> 旅團未登記／後端尚未更新／`SUPER_KEY` 未設定）。完整對照表見
+1. **部署最新 `apps-script/Code.gs`** 到該旅團的 Web App（部署 → 管理部署作業 → 建立新版本，
+   保留原 `/exec` URL）。
+2. **首次用人手授權一次** `script.external_request`（Apps Script 對外請求權限）：
+   在 Apps Script 編輯器執行一次 `testTrustedTicketVerifier`，按授權對話框
+   （「進階」→「前往〈專案名〉(不安全)」→「允許」）。
+
+需要檢查時（例如換過域名或重新登記旅團）：
+
+- 選單／「成員管理」頁 →「🔑 中央登入設定」→ 按「測試連線」。
+  它是一次真正的自我檢查：`GET` 端點回 **405**（只收 POST，證明端點在生），再用本機
+  API Key ＋ 本機 `/exec` 網址探測，回報**旅團是否已登記、本機 API Key 是否等於
+  `TROOP_{編號}_APIKEY`、Vercel 登記的後端網址是否與本 Sheet 的 Web App 網址一致**。
+  任何一項不符，訊息會直接指出要改哪個 Vercel 變數。
+- 「儲存設定」只准 `127.0.0.1`／`localhost`（本地測試覆寫）。線上端點已經寫死喺
+  `Code.gs` 常數，按落去會顯示「要改 Code.gs 常數」——自架／自訂域名就改
+  `SUPER_VERIFY_URL` 一行，其餘唔使設定。
+
+> 首次測試時若出現 `UrlFetchApp.fetch` 權限錯誤，即係第 2 步未做（未授權
+> `script.external_request`）。詳見 [docs/TROUBLESHOOT_82.md](docs/TROUBLESHOOT_82.md)
+> 「Apps Script 外部請求權限設定」。
+
+> 若登入失敗，登入頁會顯示失敗的關卡與處理方法（端點連唔到／旅團未登記／KEY 唔一致／
+> 後端網址唔一致／後端未更新／`SUPER_KEY` 未設定）。完整對照表見
 > [docs/TROUBLESHOOT_82.md](docs/TROUBLESHOOT_82.md)「中央登入（sheep）失敗」。
 > 設定問題不會計入登入嘗試次數，不會因重試而被鎖 15 分鐘。
 

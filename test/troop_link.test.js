@@ -349,10 +349,12 @@ function run() {
     fresh.down.context.setLocalLoginAllowed(false, 'test');
     assert.strictEqual(postTo(fresh.down, { action: 'getAllUsers', token: before.token }).success, false, '閂口後用戶 token 操作要拒');
 
-    // 中央登入（A）與閘門脫鉤
+    // 中央登入（A）與閘門脫鉤：唔會因為閂口而回 upstream_only（即係照路由），
+    // 但已經只認 Vercel 封嘅短效票（回打驗票）——冇票＝401，唔會偷偷開返單向授權。
     const superLogin = postTo(fresh.down, { action: 'superLogin', login_id: 'sheep', isSuperAdmin: true, apikey: DOWNSTREAM_KEY });
-    assert.strictEqual(superLogin.success, true, '中央登入（A）照舊放行');
-    assert.strictEqual(superLogin.user.role, 'super_admin');
+    assert.strictEqual(superLogin.upstream_only, undefined, '中央登入唔應該被當成本地入口拒');
+    assert.strictEqual(superLogin.success, false, '舊版單向 superLogin 已經停用');
+    assert.strictEqual(superLogin.code, 401);
 
     // 掣值表：只有 1/true/yes/on/open 係開啟，其餘任何值（包括串錯字）＝閂口
     const probe = makeNode({ name: '掣值探測', apikey: 'sc_gate_probe_key_0004', url: 'https://script.google.com/macros/s/GATE_PROBE_NODE/exec' });

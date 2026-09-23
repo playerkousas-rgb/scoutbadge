@@ -4,7 +4,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "check": "node --check build.js && node --check server.js && node --check api/proxy.js && node --check api/troops.js && node --check api/verify-super-ticket.js && node --check lib/registry.js && node --check lib/super-auth.js && node --check lib/login-rate-limit.js && node --check test/mock-gas.js && node --check test/gasvm.js && node scripts/check-static.js",
+    "check": "node --check build.js && node --check server.js && node --check api/proxy.js && node --check api/troops.js && node --check api/verify-super-ticket.js && node --check lib/registry.js && node --check lib/super-auth.js && node --check lib/login-rate-limit.js && node --check lib/verify-rate-limit.js && node --check test/mock-gas.js && node --check test/gasvm.js && node scripts/check-static.js",
     "lint": "npm run check",
     "build": "node build.js",
     "dev": "node test/dev-with-mock.js",

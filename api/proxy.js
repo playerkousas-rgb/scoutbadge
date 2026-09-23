@@ -5,6 +5,7 @@ const {
   centralSubject,
   passwordMatches,
   superConfigured,
+  createSuperTicket,
   createBrowserSession,
   unwrapBrowserSession
 } = require('../lib/super-auth');
@@ -68,19 +69,6 @@ function logResult({ troopId, action, status, startedAt, success, central, centr
   console.log(`[proxy] troop=${troopId} action=${action} status=${status} duration=${Date.now() - startedAt}ms success=${success} central=${central}${centralFail ? ` centralFail=${centralFail}` : ''}`);
 }
 
-// A troop backend that predates the central-login contract answers an unknown
-// action. Say what to do instead of echoing the raw upstream text.
-function explainCentralUpstreamFailure(errorText) {
-  if (typeof errorText === 'string' && /Unknown action/i.test(errorText)) {
-    return '旅團後端尚未更新（缺少中央登入 superLogin）：請覆寫 apps-script/Code.gs，並在原有 Web App 部署新版本。';
-  }
-  return errorText;
-}
-
-function isVerifierUnconfigured(result) {
-  return Boolean(result) &&
-    (result.reason === 'central_verifier_not_configured' || result.code === 409);
-}
 
 // Reads go to Apps Script as a GET with the server-side key on the query
 // string; writes and every other action are POSTed as before.
@@ -243,11 +231,21 @@ module.exports = async function handler(req, res) {
         return fail(res, 401, '登入失敗');
       }
 
+      // The password never leaves this function: what the troop backend gets is
+      // a short-lived ticket sealed with SUPER_KEY, which only that leaf's
+      // callback can redeem. The per-troop API key alone is no longer enough to
+      // open a central session (that was the parked one-way release).
+      const superTicket = createSuperTicket({
+        troopId: troopConfig.id,
+        backend: troopConfig.backend,
+        apikey: troopConfig.apikey,
+        loginId: centralSubjectId
+      });
       forwardPayload = {
         action: 'superLogin',
         login_id: centralSubjectId,
         apikey: troopConfig.apikey,
-        isSuperAdmin: true
+        super_ticket: superTicket
       };
     } else {
       forwardPayload = sanitizeForwardPayload(payload, troopConfig);
@@ -282,11 +280,16 @@ module.exports = async function handler(req, res) {
 
     if (central) {
       if (!result || result.success !== true || typeof result.token !== 'string' || !result.token) {
-        if (isVerifierUnconfigured(result)) {
-          logResult({ troopId, action, status: 409, startedAt, success: false, central, centralFail: 'verifier_unconfigured' });
-          return fail(res, 409, '旅團後端仍使用舊版回調驗證：請覆寫 apps-script/Code.gs，再到「部署 → 管理部署作業」為既有 Web App 建立新版本。');
+        // Only a leaf that answers with the callback tag is a current build;
+        // everything else cannot redeem a ticket and needs a redeploy.
+        if (!result || result.central !== 'callback') {
+          logResult({ troopId, action, status: 409, startedAt, success: false, central, centralFail: 'backend_not_updated' });
+          return fail(res, 409, '旅團後端仍未支援中央登入回打驗票（舊版單向授權已停用）：請覆寫 apps-script/Code.gs，再到「部署 → 管理部署作業」為既有 Web App 建立新版本。');
         }
-        const upstreamError = explainCentralUpstreamFailure(result && result.error);
+        if (result.reason === 'central_verify_unreachable') {
+          logResult({ troopId, action, status: 503, startedAt, success: false, central, centralFail: 'verify_unreachable' });
+          return fail(res, 503, String(result.error || '中央登入驗票端點暫時連不上，請稍後再試'));
+        }
         logResult({
           troopId,
           action,
@@ -294,16 +297,10 @@ module.exports = async function handler(req, res) {
           startedAt,
           success: false,
           central,
-          centralFail: 'setup'
+          centralFail: 'ticket'
         });
-        const httpStatus = (result && result.code && result.code >= 400 && result.code < 600)
-          ? result.code
-          : 401;
-        return res.status(httpStatus).json({
-          success: false,
-          error: upstreamError || '登入失敗',
-          code: result && result.code
-        });
+        // Wrong, expired, replayed, or minted for someone else: one answer.
+        return fail(res, 401, '登入失敗');
       }
       loginRateLimit.succeeded(req);
       result = {

@@ -58,13 +58,13 @@ GS 版號及歷史更新集中於 [Apps Script 維護紀錄](apps-script/CHANGEL
 
 ```bash
 npm run check   # 語法檢查（含 index.html 與 Code.gs）
-npm test        # 單元 + 真實 HTTP 端到端（含 mock GAS 旅團、中央登入純單向全循環）
+npm test        # 單元 + 真實 HTTP 端到端（含 mock GAS 旅團、中央登入回打驗票全循環）
 npm run dev     # 本機預覽：mock 旅團 0082 + 開發伺服器（預設 port 3000）
 npm run build   # 產生 public/
 node server.js  # 只有開發伺服器（不帶 mock）
 ```
 
-`npm test` 中的 `test/e2e_http.test.js`會啟動真實 dev server 與兩個 mock GAS 旅團，走完整 HTTP 流程：旅團清單、登入、讀取／寫入、跨旅團隔離、中央登入（Vercel 核對 SUPER_KEY → 以本團 API_KEY 及 isSuperAdmin: true 單向呼叫 GAS → 封裝 session）、新旅團接入申請。改動 Proxy、Registry 或 Code.gs 的 API 層後，以它作為部署前的最後一道門。
+`npm test` 中的 `test/e2e_http.test.js`會啟動真實 dev server 與兩個 mock GAS 旅團，走完整 HTTP 流程：旅團清單、登入、讀取／寫入、跨旅團隔離、中央登入（Vercel 核對 SUPER_KEY → 封一張 1 分鐘短效票 → 葉端回打 `/api/verify-super-ticket` 驗票 → 驗過先發 session）、新旅團接入申請。改動 Proxy、Registry 或 Code.gs 的 API 層後，以它作為部署前的最後一道門。
 
 開發伺服器會綁定 `0.0.0.0`。部署範圍、依賴與圖片原則見 [DEPLOYMENT_HYGIENE.md](DEPLOYMENT_HYGIENE.md)。
 
@@ -87,10 +87,16 @@ Vercel 的 Output Directory 是 `public/`，由 `npm run build`（`build.js`）�
 - https://scoutsinfohub.org.hk/ScoutTrainingScheme/FullVersion-zh.pdf
 - https://www.scout.org.hk/uploads/tc/circulars/23262/p013-26.pdf
 
-### 中央登入：純單向部署
+### 中央登入：回打驗票（對齊 VS／RS）
 
-中央登入不需要 GAS 反向連線、驗證端點設定或 `script.external_request` 授權。Vercel 核對 `SUPER_KEY` 後，只向已登記旅團後端發送 `superLogin`；GAS 必須同時核對非空本團 `API_KEY`、保留超管身份及嚴格 boolean `isSuperAdmin === true` 才發行 session。瀏覽器不能直接呼叫 Proxy 的 `superLogin` 或控制授權旗標。API_KEY 是伺服器授權憑證，不可公開。
+中央登入＝**Vercel 封票、GAS 回打驗票**。Vercel 核對 `SUPER_KEY` 之後，只向已登記旅團後端發送 `superLogin` ＋ 一張用 `SUPER_KEY` 封（AES-256-GCM）嘅 **1 分鐘短效票**（票內綁旅團編號、後端 `/exec` 雜湊、身份 `sheep`，密碼永不出 Proxy）；GAS 收到票之後**回打固定端點** `SUPER_VERIFY_URL`（`apps-script/Code.gs` 常數，預設 `<本部署域名>/api/verify-super-ticket`）驗票，驗過先發 session。**本團 `API_KEY` 單獨唔再可以開中央 session**（舊版單向授權已停用）。
 
-更新時須同時部署 Vercel 程式碼，並將 `apps-script/Code.gs` 覆寫到 GAS，在「部署 → 管理部署作業」編輯既有 Web App、建立新版本，保留原 `/exec` URL。舊回調版 GAS 不能僅靠更新 Vercel 修好，也不會以 fallback 繞過驗證。
+- 驗票端點係**常數**：唔可以由請求／前端指定（否則有人可以叫後端把票連 `API_KEY` 送去自己部機再開 session）。只有 `127.0.0.1`／`localhost` 可以做本地測試覆寫。
+- 同一張票**只可換一次** token（GAS `CacheService` 記 120 秒，長過票嘅 60 秒壽命）。
+- 失敗一律 **fail closed**：冇票／爛票／錯後端／錯 KEY／重放 → `401`；驗票端點連唔到 → `503`（**唔會**回退單向授權）。回應只含 `{valid: true|false}`，唔會洩漏密碼、session 或失敗原因。
+- **首次要在 Apps Script 編輯器執行一次 `testTrustedTicketVerifier` 授權 `script.external_request`**（Apps Script 對外請求權限，一次性人手批准），之後「測試連線」會真探測端點（GET 應回 405）＋回報旅團登記／KEY／後端一致性。
+- 瀏覽器不能直接呼叫 Proxy 的 `superLogin` 或控制授權旗標。`API_KEY` 是伺服器授權憑證，不可公開。
 
-舊版中央登入設定／驗證端點 API 暫留相容用途，但不參與新登入流程；「模式說明」（舊稱「測試連線」）只回報純單向模式，不代表已檢查 Vercel 旅團登記或後端一致性。
+更新時須同時部署 Vercel 程式碼，並將 `apps-script/Code.gs` 覆寫到 GAS，在「部署 → 管理部署作業」編輯既有 Web App、建立新版本，保留原 `/exec` URL。舊版（單向授權）GAS 見到 Vercel 送票會回 `401`，Proxy 會轉譯成「後端仍未支援中央登入回打驗票」並叫你去建立新版本；不會以 fallback 繞過驗票。
+
+自架／自訂域名：改 `apps-script/Code.gs` 內 `SUPER_VERIFY_URL` 一行（其餘唔使設定）；舊「中央登入設定」介面（`configureTrustedTicketVerifier`）現只用於本地 loopback 測試覆寫，線上會直接拒並顯示要改常數。維運細節與逐項對照見 `operations/TROOP_LINK_UPGRADE.md` 第 12 節（只留 Git）。
