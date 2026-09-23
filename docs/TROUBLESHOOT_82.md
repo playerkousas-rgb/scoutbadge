@@ -60,6 +60,12 @@ TROOP_0082_APIKEY
 
 補充：
 
+- **次序**（兩種情境，唔好混淆）：
+  1. **新開旅團**＝**GS 先、Vercel 後**：Sheet＋`Code.gs` → 執行一次 `initializeSheets()` → 部署 Web App
+     取得 `/exec` URL 及 API Key → 才填 Vercel 嘅 `TROOP_<編號>_NAME／_BACKEND／_APIKEY` → Redeploy。
+     （未部署 Web App 係冇 URL、未初始化係冇 KEY，所以呢個次序係天生嘅，唔係額外規矩。）
+  2. **升級已登記旅團**＝**Vercel 先、葉端後**：先部署 Vercel 新 proxy，再到該團「建立新版本」。
+     掉轉做（葉端先）唔會壞資料、唔影響成員登入，只係中央登入會回乾「登入失敗」，直到 Vercel 部署為止。
 - **Apps Script 外部請求權限設定（一次性，必須人手批）**：
   回打驗票係腳本**第一次**需要對外發送請求——`verifyCentralTicket()`／`testTrustedTicketVerifier()` 要用 `UrlFetchApp.fetch` 打返 Vercel 驗票。Apps Script 對「對外請求」有獨立權限 `script.external_request`，之前從未使用過，所以需要**人手授權一次**：
   

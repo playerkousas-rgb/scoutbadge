@@ -4,9 +4,17 @@
 
 1. 建立 Google Sheet，開啟 Apps Script，貼上 `apps-script/Code.gs`。
 2. 只在這個全新的 Sheet 執行一次 `initializeSheets()` 並完成授權。
-3. 部署為 Web App，取得既有部署的 `/exec` URL 與 API Key。
+3. 部署為 Web App，取得既有部署的 `/exec` URL 與 API Key（選單「🔑 顯示 BACKEND／APIKEY」可隨時查看）。
+
+> **新開團嘅次序天生係「GS 先、Vercel 後」**：未部署 Web App 係冇 `/exec` URL，未初始化係冇 API Key——
+> 即係下面 §B 要填嘅 `TROOP_<編號>_BACKEND`／`TROOP_<編號>_APIKEY` 一定係喺呢一步之後才有。相反，
+> **升級一個已經登記好嘅旅團**才係「Vercel 先、葉端後」（見 §G 及 `operations/TROOP_LINK_UPGRADE.md` 第 12 節）。
 
 > 已投入使用的 Sheet 不要為本次 Vercel／驗證升級執行初始化。更新程式後部署既有 Web App 的新版本即可，原 `/exec` URL 不變。
+
+> **升級次序（已登記旅團）**：先部署 Vercel（新 proxy），再到該團「部署 → 管理部署作業 → 建立新版本」。
+> 掉轉做（葉端先升級）唔會壞任何資料、亦唔會影響成員登入，只係中央登入（`sheep`）會回一句乾「登入失敗」，
+> 直到 Vercel 部署為止；Vercel-先就會彈一條自己識講嘅 409「後端仍未支援中央登入回打驗票 → 建立新版本」。
 
 ## B. Vercel 旅團登記
 

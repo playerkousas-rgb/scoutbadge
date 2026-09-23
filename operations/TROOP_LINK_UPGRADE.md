@@ -308,6 +308,13 @@ npm run build      # 產生 public/（部署內容）
 - **首次一定要人手授權一次 `script.external_request`**（Apps Script 對外請求權限）：喺編輯器執行一次 `testTrustedTicketVerifier`，按授權對話框；之後正式登入就唔會再問。呢個係回打模式唯一嘅一次性人手步驟（亦係以前「失敗」多數嘅真正原因）。
 - 舊「中央登入設定」介面（`configureTrustedTicketVerifier`）保留但**收窄**：線上端點係常數，只准 `127.0.0.1`／`localhost` 做本地測試覆寫，其他一律拒（訊息會講明改 Code.gs 常數）。`index.html` 未改，所以個掣仍然在，但按落去會直接顯示嗰句訊息。**自動開通（bootstrap）機制已完全移除**——常數唔需要開通，亦無「雞生蛋」問題。
 
+### 12.3.1 升級／新開團次序（唔好混淆）
+
+| 情境 | 次序 | 掉轉做會點 |
+|---|---|---|
+| **新開旅團** | **GS 先**：Sheet ＋ `Code.gs` → `initializeSheets()` → 部署 Web App（攞 `/exec` URL、API Key）→ **才**填 Vercel `TROOP_<編號>_*` → Redeploy | 根本做唔到：未部署冇 URL、未初始化冇 KEY（天生次序，唔係額外規矩） |
+| **升級已登記旅團** | **Vercel 先**（新 proxy）→ 該團「管理部署作業 → 建立新版本」（保留 `/exec`） | 唔會壞資料、唔影響成員登入；中央登入會回乾「登入失敗」，直到 Vercel 部署為止。Vercel-先則會彈 409「後端仍未支援…建立新版本」 |
+
 ### 12.4 本修訂改動嘅檔案
 
 | 檔案 | 改動 |
