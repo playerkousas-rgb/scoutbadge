@@ -9,6 +9,13 @@
 4. 取得本節點憑證：選單「🔗 旅系統 → 🔑 顯示 BACKEND／APIKEY（交 ADMIN）」，抄下 **BACKEND（`/exec` URL）**
    與 **APIKEY**（首次讀取時自動生成並存 Script Properties）。
 
+> **成員名單係可選（非前置條件）**：`apply` 只要求 10 位 YMIS、姓名、電郵格式正確＋唔可以同
+> `Users`／`成員名單`／待審批申請重覆——**唔需要**事先有名單。所以可以三條路任揀（可並用）：
+> ① 各成員喺 App 自己申請 → 領袖審批即自動開戶；② 領袖用 `assets/batch-onboard`（批量開戶，
+> 見 `docs/BULK_ONBOARD.md`）或「🔗 旅系統 → 📥 匯入 JSON」批次開；③ 兩者都做。
+> `getAllUsers()` 本身會**合併 `Users` ＋ `成員名單`**，所以有冇名單都可以運作；唯一分別係
+> 領袖介面嘅「全部成員」只顯示**已開戶或已列入名單**嘅人（未申請又未入名單嘅團員暫時唔會出現）。
+
 > **新開團嘅次序天生係「GS 先、Vercel 後」**：未部署 Web App 係冇 `/exec` URL，未初始化係冇 API Key——
 > 即係下面 §B 要填嘅 `TROOP_<編號>_BACKEND`／`TROOP_<編號>_APIKEY` 一定係喺呢一步之後才有。相反，
 > **升級一個已經登記好嘅旅團**才係「Vercel 先、葉端後」（見 §G 及 `operations/TROOP_LINK_UPGRADE.md` 第 12 節）。
