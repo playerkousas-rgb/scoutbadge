@@ -132,6 +132,10 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
 .nav-tab{flex:0 0 auto;min-width:100px;padding:14px 16px;text-align:center;cursor:pointer;border:none;background:none;font-size:13.5px;font-weight:600;color:var(--text-light);border-bottom:3px solid transparent;transition:.2s;white-space:nowrap}
 .nav-tab:hover{background:var(--bg);color:var(--text)}
 .nav-tab.active{color:var(--maroon);border-bottom-color:var(--maroon);background:var(--maroon-light)}
+/* 兩行式導覽容器：桌面版全部攤平成同一行（外觀不變）；手機版見 @media 內分成「主行＋常用行」 */
+.nav-row-primary,.nav-row-leader{display:contents}
+/* 桌面版維持原有次序（用戶管理等仍在「資料庫」之後） */
+#btn-tab-users{order:7}#btn-tab-apps{order:8}#btn-tab-byitem{order:9}#btn-tab-other{order:10}
 .tab-content{display:none;padding:18px}
 .tab-content.active{display:block;animation:fadeIn .25s ease}
 
@@ -289,8 +293,14 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
   .main-app-header h1{font-size:14px;line-height:1.35;white-space:normal}
   .user-info{width:100%;justify-content:space-between}
   .user-chip{max-width:calc(100% - 82px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .nav-tabs{top:0;z-index:120}
-  .nav-tab{min-width:92px;min-height:44px;padding:11px 10px;font-size:12px}
+  /* 手機模式：永遠兩行 — 第一行＝主按鈕（成員：我的進度／領袖：全團總覽＋用戶管理）；第二行＝常用按鈕 */
+  .nav-tabs{top:0;z-index:120;flex-wrap:wrap;overflow-x:visible}
+  .nav-tab{flex:1 1 0;min-width:0;min-height:44px;padding:8px 2px;font-size:11.5px;line-height:1.25;white-space:normal;word-break:break-word}
+  .nav-row-primary{display:flex;flex:0 0 100%;width:100%;justify-content:center;border-bottom:1px solid var(--border);background:var(--card)}
+  #btn-tab-progress{flex:0 1 250px;min-height:48px;font-size:12.5px;padding:10px 8px}
+  .nav-row-leader{display:flex;flex:1 1 auto}
+  .nav-row-leader .nav-tab{flex:1 1 0;min-height:48px;font-size:12.5px;padding:10px 4px}
+  .nav-row-leader .nav-tab+.nav-tab{border-left:1px solid var(--border)}
   .tab-content{padding:12px}
   .badge-header{padding:12px;align-items:flex-start;gap:8px}
   .badge-header h3{font-size:14px;line-height:1.45;display:block}
@@ -500,17 +510,22 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
     </div>
   </div>
   <div class="nav-tabs" id="mainNavTabs">
-    <button class="nav-tab active" id="btn-tab-progress" onclick="switchTab('progress', this)" data-i18n="nav_progress">📊 我的進度</button>
-    <button class="nav-tab" id="btn-tab-overview" onclick="switchTab('overview', this)" data-i18n="nav_overview">👥 全團總覽</button>
+    <!-- 手機第一行（主按鈕）：成員＝我的進度；領袖＝全團總覽＋用戶管理（互斥 → 每種用戶永遠兩行）；桌面版攤平成同一行 -->
+    <div class="nav-row-primary" id="navRowPrimary">
+      <button class="nav-tab active" id="btn-tab-progress" onclick="switchTab('progress', this)" data-i18n="nav_progress">📊 我的進度</button>
+      <div class="nav-row-leader" id="navRowLeader">
+        <button class="nav-tab" id="btn-tab-overview" onclick="switchTab('overview', this)" data-i18n="nav_overview">👥 全團總覽</button>
+        <button class="nav-tab" id="btn-tab-users" onclick="switchTab('users', this)" style="display:none" data-i18n="nav_users">👥 用戶管理</button>
+        <button class="nav-tab" id="btn-tab-apps" onclick="switchTab('apps', this)" style="display:none">📋 審批申請(舊-已合併)</button>
+        <button class="nav-tab" id="btn-tab-byitem" onclick="switchTab('byitem', this)" style="display:none">🔍 按項目(舊)</button>
+      </div>
+    </div>
     <button class="nav-tab" id="btn-tab-requests" onclick="switchTab('requests', this)"><span data-i18n="nav_requests">✅ 審批中心</span> <span id="badgeRequestsCount" style="background:var(--red);color:#fff;border-radius:999px;padding:1px 6px;font-size:10px;display:none">0</span></button>
     <button class="nav-tab" id="btn-tab-logs" onclick="switchTab('logs', this)" data-i18n="nav_logs">📅 活動履曆</button>
     <button class="nav-tab" id="btn-tab-forms" onclick="switchTab('forms', this)" data-i18n="nav_forms">🖨️ 表格列印</button>
     <button class="nav-tab" id="btn-tab-help" onclick="switchTab('help', this)" data-i18n="nav_help">❓ 教學</button>
     <button class="nav-tab" id="btn-tab-info" onclick="switchTab('info', this)" data-i18n="nav_info">📚 資料庫</button>
-    <button class="nav-tab" id="btn-tab-users" onclick="switchTab('users', this)" style="display:none" data-i18n="nav_users">👥 用戶管理</button>
     <!-- 已合併：審批申請已併入審批中心，按項目及按項目已併入全團總覽，其他獎章已併入我的進度，版本更新框架保留 -->
-    <button class="nav-tab" id="btn-tab-apps" onclick="switchTab('apps', this)" style="display:none">📋 審批申請(舊-已合併)</button>
-    <button class="nav-tab" id="btn-tab-byitem" onclick="switchTab('byitem', this)" style="display:none">🔍 按項目(舊)</button>
     <button class="nav-tab" id="btn-tab-other" onclick="switchTab('other', this)" style="display:none">⭐ 其他獎章(舊)</button>
   </div>
 
@@ -1854,6 +1869,32 @@ function setupTabsByRole(){
   document.getElementById('btn-tab-byitem').style.display='none';
   document.getElementById('btn-tab-other').style.display='block';
   document.getElementById('btn-tab-users').style.display=isManage?'block':'none';
+  // 領袖沒有「我的進度」（成員進度由全團總覽進入查看）；成員則沒有領袖按鈕 → 手機版永遠兩行
+  const progBtn=document.getElementById('btn-tab-progress');
+  const progTab=document.getElementById('tab-progress');
+  const ovBtn=document.getElementById('btn-tab-overview');
+  const ovTab=document.getElementById('tab-overview');
+  const noDefault=!document.querySelector('.nav-tab.active');
+  const staleProgress=progBtn.classList.contains('active')||progTab.classList.contains('active');
+  if(isLeader&&(noDefault||staleProgress)){
+    // 領袖預設停「全團總覽」
+    document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));
+    ovBtn.classList.add('active'); ovTab.classList.add('active');
+    if(!ovTab.innerHTML.trim()) renderOverviewTab(); // 資料未到時先顯示載入中
+  }else if(!isLeader&&(noDefault||(ovBtn.style.display==='none'&&ovBtn.classList.contains('active')))){
+    // 成員預設停「我的進度」（領袖登出後成員再登入的還原）
+    document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));
+    progBtn.classList.add('active'); progTab.classList.add('active');
+  }
+  progBtn.style.display=(isLeader&&!progBtn.classList.contains('active'))?'none':'';
+  // 若「領袖專用」組沒有任何可見按鈕（一般成員），整組隱藏
+  const leaderRow=document.getElementById('navRowLeader');
+  if(leaderRow){
+    const anyLeaderTabVisible=['btn-tab-overview','btn-tab-users','btn-tab-apps','btn-tab-byitem'].some(id=>{const b=document.getElementById(id);return b&&b.style.display!=='none';});
+    leaderRow.style.display=anyLeaderTabVisible?'':'none';
+  }
   // 審批申請已合併到審批中心，不再獨立顯示
   document.getElementById('btn-tab-apps').style.display='none';
   // 成員的待批頁顯示自己申請，保留
@@ -2033,6 +2074,9 @@ async function loadItemsAndProgress(){
     selectedProgressYmis=currentUser.ymis;
     renderProgressTab();
     renderInfoTab(); // pre-render
+    // 領袖預設分頁為全團總覽：資料到齊後渲染（成員可看他人者如總覽仍空白也補渲染）
+    const ot=document.getElementById('tab-overview');
+    if(ot&&ot.classList.contains('active')&&(canUserTickRole(currentUser.role)||!ot.innerHTML.trim())) renderOverviewTab();
   }catch(e){
     console.error(e);
     progTab.innerHTML=`<div style="text-align:center;padding:24px;color:var(--red)">${t('load_fail')}: ${e.message}<br><button class="btn btn-sm btn-primary" style="margin-top:8px" onclick="loadItemsAndProgress()">${t('retry')}</button></div>`;
@@ -2041,6 +2085,11 @@ async function loadItemsAndProgress(){
 
 /* ================== Tab Switching - 防止卡死版 ================== */
 let _switching = false;
+function goHomeTab(){
+  // 主頁分頁：領袖＝全團總覽；成員＝我的進度
+  const name=(currentUser&&canUserTickRole(currentUser.role))?'overview':'progress';
+  switchTab(name, document.getElementById('btn-tab-'+name));
+}
 function switchTab(name, btn){
   if(_switching) return;
   _switching = true;
@@ -2049,11 +2098,16 @@ function switchTab(name, btn){
     document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
     if(btn) btn.classList.add('active');
     else document.getElementById('btn-tab-'+name)?.classList.add('active');
+    // 領袖平時沒有「我的進度」按鈕；離開進度詳情（查看成員）時自動收起
+    if(name!=='progress'&&currentUser&&canUserTickRole(currentUser.role)){
+      const pb=document.getElementById('btn-tab-progress');
+      if(pb) pb.style.display='none';
+    }
     const target=document.getElementById('tab-'+name);
     if(target){
       target.classList.add('active');
       if(name!=='progress' && target.innerHTML.trim()===''){
-        target.innerHTML=`<div style="text-align:center;padding:24px;color:var(--text-light)"><div class="spinner" style="margin:0 auto 10px"></div>${t('loading')} <br><button class="btn btn-sm btn-secondary" style="margin-top:10px" onclick="switchTab('progress')">${t('emergency_back')}</button></div>`;
+        target.innerHTML=`<div style="text-align:center;padding:24px;color:var(--text-light)"><div class="spinner" style="margin:0 auto 10px"></div>${t('loading')} <br><button class="btn btn-sm btn-secondary" style="margin-top:10px" onclick="goHomeTab()">${t('emergency_back')}</button></div>`;
       }
     }
     setTimeout(()=>{
@@ -2081,8 +2135,9 @@ function switchTab(name, btn){
   }catch(e){
     _switching=false;
     document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
-    document.getElementById('tab-progress')?.classList.add('active');
-    document.getElementById('btn-tab-progress')?.classList.add('active');
+    const hn=(currentUser&&canUserTickRole(currentUser.role))?'overview':'progress';
+    document.getElementById('tab-'+hn)?.classList.add('active');
+    document.getElementById('btn-tab-'+hn)?.classList.add('active');
     showToast(t('tab_switch_err'),'error');
   }
 }
@@ -2092,10 +2147,11 @@ document.addEventListener('keydown', (e)=>{
     // 關閉所有 modal 和 overlay
     document.querySelectorAll('.modal.active').forEach(m=>m.classList.remove('active'));
     document.getElementById('savingOverlay')?.classList.remove('active');
-    // 若不在進度頁，返回進度頁
+    // 若不在主頁分頁，返回主頁（領袖＝全團總覽／成員＝我的進度）
     const activeTab=document.querySelector('.tab-content.active');
-    if(activeTab && activeTab.id!=='tab-progress'){
-      switchTab('progress');
+    const homeId=(currentUser&&canUserTickRole(currentUser.role))?'tab-overview':'tab-progress';
+    if(activeTab && activeTab.id!==homeId){
+      goHomeTab();
       showToast(t('esc_back'),'warning');
     }
   }
@@ -2104,7 +2160,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   const hdr=document.querySelector('.main-app-header');
   if(hdr){
     hdr.addEventListener('dblclick', ()=>{
-      switchTab('progress');
+      goHomeTab();
       showToast(t('dbl_back'),'warning');
     });
   }
@@ -2565,6 +2621,13 @@ function onProgressMemberChange(ymis){
   selectedProgressYmis=ymis;
   renderProgressTab();
 }
+function openMemberProgress(ymis){
+  // 由全團總覽剔入成員進度：領袖平時沒有「我的進度」按鈕，查看成員時臨時顯示以保持導覽正確
+  selectedProgressYmis=ymis;
+  const pb=document.getElementById('btn-tab-progress');
+  if(pb&&currentUser&&canUserTickRole(currentUser.role)) pb.style.display='';
+  switchTab('progress', pb);
+}
 function resetProgressMember(){ selectedProgressYmis=currentUser.ymis; renderProgressTab(); }
 
 /* ================== Member Request ================== */
@@ -2749,7 +2812,7 @@ function renderOverviewCards(){
     const allIds=getAllItemIds();
     const done=allIds.filter(id=>flat[id]).length;
     const pct=allIds.length?Math.round(done/allIds.length*100):0;
-    html+=`<div class="other-card" style="cursor:pointer" onclick="selectedProgressYmis='${m.ymis}';switchTab('progress', document.getElementById('btn-tab-progress'))">
+    html+=`<div class="other-card" style="cursor:pointer" onclick="openMemberProgress('${m.ymis}')">
       <h4>👤 ${m.name} <small style="color:var(--text-light)">(${m.ymis})</small></h4>
       <div style="font-size:11px;color:var(--text-light)">${tf('items_count_fmt',done,allIds.length)} • ${pct}%</div>
       <div class="progress-bar-outer"><div class="progress-bar-inner" style="width:${pct}%"></div></div>
