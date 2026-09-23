@@ -132,7 +132,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
 .nav-tab{flex:0 0 auto;min-width:100px;padding:14px 16px;text-align:center;cursor:pointer;border:none;background:none;font-size:13.5px;font-weight:600;color:var(--text-light);border-bottom:3px solid transparent;transition:.2s;white-space:nowrap}
 .nav-tab:hover{background:var(--bg);color:var(--text)}
 .nav-tab.active{color:var(--maroon);border-bottom-color:var(--maroon);background:var(--maroon-light)}
-/* 領袖專用按鈕容器：桌面版攤平成同一行（外觀不變）；手機版見 @media 內變成下方第二行 */
+/* 領袖專用按鈕容器：桌面版攤平成同一行（外觀不變）；手機版見 @media 內變成螢幕底部底欄 */
 .nav-row-leader{display:contents}
 .tab-content{display:none;padding:18px}
 .tab-content.active{display:block;animation:fadeIn .25s ease}
@@ -291,11 +291,13 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
   .main-app-header h1{font-size:14px;line-height:1.35;white-space:normal}
   .user-info{width:100%;justify-content:space-between}
   .user-chip{max-width:calc(100% - 82px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  /* 手機模式：按鈕分上下兩行 — 上方＝主要（成員也有）按鈕並排一行；下方＝領袖專用按鈕 */
+  /* 手機模式：主要按鈕（成員也有）在上方一行；領袖專用按鈕固定在螢幕底部（App 底欄） */
   .nav-tabs{top:0;z-index:120;flex-wrap:wrap;overflow-x:visible}
   .nav-tab{flex:1 1 0;min-width:0;min-height:48px;padding:9px 2px;font-size:11.5px;line-height:1.3;white-space:normal;word-break:break-word}
-  .nav-row-leader{display:flex;flex:0 0 100%;width:100%;border-top:2px solid var(--border);background:#F8F9FA}
-  .nav-row-leader .nav-tab{flex:1 1 auto}
+  .nav-row-leader{position:fixed;bottom:0;left:0;right:0;z-index:120;display:flex;background:var(--card);border-top:2px solid var(--border);box-shadow:0 -3px 10px rgba(0,0,0,0.08);padding:2px 4px env(safe-area-inset-bottom)}
+  .nav-row-leader .nav-tab{flex:1 1 auto;border-bottom:3px solid transparent;border-radius:0;min-height:50px}
+  .nav-row-leader .nav-tab.active{border-top-color:var(--maroon);border-bottom-color:transparent}
+  body.has-leader-bottombar{padding-bottom:calc(58px + env(safe-area-inset-bottom))}
   .tab-content{padding:12px}
   .badge-header{padding:12px;align-items:flex-start;gap:8px}
   .badge-header h3{font-size:14px;line-height:1.45;display:block}
@@ -506,7 +508,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
   </div>
   <div class="nav-tabs" id="mainNavTabs">
     <button class="nav-tab active" id="btn-tab-progress" onclick="switchTab('progress', this)" data-i18n="nav_progress">📊 我的進度</button>
-    <!-- 領袖專用按鈕（成員沒有的）：手機模式時自動折到下方第二行；桌面版維持同一行 -->
+    <!-- 領袖專用按鈕（成員沒有的）：手機模式時固定在螢幕底部（底欄）；桌面版維持同一行 -->
     <div class="nav-row-leader" id="navRowLeader">
       <button class="nav-tab" id="btn-tab-overview" onclick="switchTab('overview', this)" data-i18n="nav_overview">👥 全團總覽</button>
       <button class="nav-tab" id="btn-tab-users" onclick="switchTab('users', this)" style="display:none" data-i18n="nav_users">👥 用戶管理</button>
@@ -1862,11 +1864,12 @@ function setupTabsByRole(){
   document.getElementById('btn-tab-byitem').style.display='none';
   document.getElementById('btn-tab-other').style.display='block';
   document.getElementById('btn-tab-users').style.display=isManage?'block':'none';
-  // 手機模式：若「領袖專用」下方列沒有任何可見按鈕（成員登入），整列隱藏以免出現空行；桌面版此容器為 display:contents，外觀不變
+  // 手機模式：「領袖專用」按鈕固定在螢幕底部；若成員登入沒有任何可見按鈕，整列隱藏並移除底部預留空間；桌面版此容器為 display:contents，外觀不變
   const leaderRow=document.getElementById('navRowLeader');
   if(leaderRow){
     const anyLeaderTabVisible=['btn-tab-overview','btn-tab-users','btn-tab-apps','btn-tab-byitem'].some(id=>{const b=document.getElementById(id);return b&&b.style.display!=='none';});
     leaderRow.style.display=anyLeaderTabVisible?'':'none';
+    document.body.classList.toggle('has-leader-bottombar',anyLeaderTabVisible);
   }
   // 審批申請已合併到審批中心，不再獨立顯示
   document.getElementById('btn-tab-apps').style.display='none';
