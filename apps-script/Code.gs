@@ -1093,7 +1093,7 @@ function exportUsersJson(){
     try{ file.setSharingAccess(DriveApp.Access.PRIVATE); file.setSharingPermission(DriveApp.Permission.NONE); }catch(e){}
     fileId=file.getId(); fileUrl=file.getUrl();
   }catch(e){ driveError=(e&&e.message)?e.message:String(e); }
-  writeAudit('system','export_users_json',count+' accounts',fileId?('Drive 檔 '+fileId+'（含 hash，匯入後請刪除）'):('Drive 寫入失敗：'+driveError+'；JSON 已輸出到執行紀錄'));
+  writeAudit('system','export_users_json',count+' accounts',fileId?('Drive 檔 '+fileId+'（含 hash；匯入零失敗會自動移入垃圾桶）'):('Drive 寫入失敗：'+driveError+'；JSON 已輸出到執行紀錄'));
   try{ Logger.log(JSON.stringify(payload,null,2)); }catch(e){}
   return {success:true,count:count,file_id:fileId,file_url:fileUrl,drive_error:driveError};
 }
@@ -2694,7 +2694,7 @@ function menuExportUsersJson(){
   const r=exportUsersJson();
   if(!r.success) return linkAlert('匯出 JSON','匯出失敗：'+String(r.error||''));
   const lines=['已匯出 '+r.count+' 個帳戶（含 password_hash）。'];
-  if(r.file_url) lines.push('\nDrive 檔（已設為私人，匯入後請刪除）：\n'+r.file_url+'\n\n檔案 ID：'+r.file_id);
+  if(r.file_url) lines.push('\nDrive 檔（已設為私人；匯入零失敗會自動移入垃圾桶，有失敗就保留）：\n'+r.file_url+'\n\n檔案 ID：'+r.file_id);
   else lines.push('\nDrive 寫入失敗（'+String(r.drive_error||'')+'）；完整 JSON 已寫入「檢視 → 執行紀錄（Logger）」，可在那裡複製。');
   lines.push('\n⚠️ 檔案含密碼 hash，只用於搬到上游／新支部，切勿公開分享或留在共用資料夾。');
   return linkAlert('匯出 JSON（含 hash）',lines.join(''));
