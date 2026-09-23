@@ -1203,7 +1203,22 @@ function importUsersFromDrive(fileIdOrUrl,actor){
   let text='';
   try{ text=DriveApp.getFileById(fileId).getBlob().getDataAsString(); }
   catch(e){ return {success:false,error:'讀不到 Drive 檔案：'+((e&&e.message)||e)}; }
-  return importUsersFromText(text,actor);
+  const result=importUsersFromText(text,actor);
+  result.file_id=fileId;
+  result.file_deleted=false;
+  // 匯入零失敗 → 即刻將匯出檔（含 hash）移入 Drive 垃圾桶（可還原 30 天）；
+  // 有失敗筆數就保留檔案，等修正後再匯（唔會靜靜刪走未入完嘅數）。
+  if(result.success===true && !result.failed){
+    try{
+      DriveApp.getFileById(fileId).setTrashed(true);
+      result.file_deleted=true;
+      writeAudit(linkActorLabel(actor),'link_import_users_delete_file',fileId,'匯入成功，匯出檔（含 hash）已移入 Drive 垃圾桶');
+    }catch(e){
+      result.delete_error=String((e&&e.message)||e);
+      writeAudit(linkActorLabel(actor),'link_import_users_delete_file',fileId,'自動刪除失敗：'+result.delete_error);
+    }
+  }
+  return result;
 }
 function handleSignedImport(body,actor){
   if(Array.isArray(body.users)) return jsonResponse(importUsersFromText(JSON.stringify({users:body.users}),actor));
@@ -2688,8 +2703,13 @@ function menuImportUsersJson(){
   const input=linkPrompt('匯入 JSON（upsertUser）','貼上「匯出 JSON（含 hash）」檔案的 Drive 連結或檔案 ID：\n\n（匯入會逐個 upsertUser 直插 hash，保留舊密碼；既有帳戶只更新，不會重複開戶）');
   if(input===null) return '';
   const r=importUsersFromDrive(input,'menu-import');
-  if(!r.success) return linkAlert('匯入 JSON','匯入失敗：'+String(r.error||''));
-  return linkAlert('匯入 JSON','匯入完成：共 '+r.count+' 筆\n新增 '+r.created+'、更新 '+r.updated+'、失敗 '+r.failed+linkSummarizeResults(r.results)+'\n\n確認無誤後，可閂下游直接入口（只收 sig）。');
+  // 硬錯誤（讀唔到檔／壞 JSON／缺 users 陣列）才當失敗；有失敗筆數仍要顯示「新增／更新／失敗」。
+  if(!r || r.count===undefined) return linkAlert('匯入 JSON','匯入失敗：'+String((r&&r.error)||'未知錯誤'));
+  let tail='\n\n確認無誤後，可閂下游直接入口（只收 sig）。';
+  if(r.file_deleted) tail='\n\n🔒 匯出檔（含 hash）已移入 Drive 垃圾桶（可還原 30 天）。'+tail;
+  else if(r.delete_error) tail='\n\n⚠️ 未能自動刪除匯出檔（'+String(r.delete_error)+'）：請自行刪除，唔好留在共用資料夾。'+tail;
+  else if(r.failed>0) tail='\n\n⚠️ 有 '+r.failed+' 筆失敗，匯出檔已保留：修好原因後再匯一次（匯入係冪等，唔會開重複帳戶）。'+tail;
+  return linkAlert('匯入 JSON',(r.success?'匯入完成：':'匯入完成（有失敗）：')+'共 '+r.count+' 筆\n新增 '+r.created+'、更新 '+r.updated+'、失敗 '+r.failed+linkSummarizeResults(r.results)+tail);
 }
 function menuShowLinkState(){
   const s=getLinkState();

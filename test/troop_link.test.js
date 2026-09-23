@@ -130,9 +130,11 @@ function makeNode({ name, apikey, url }) {
           getMimeType: () => mime,
           getBlob: () => ({ getDataAsString: () => content }),
           setSharingAccess: () => file,
-          setSharingPermission: () => file
+          setSharingPermission: () => file,
+          setTrashed: (v) => { driveStore.get(fileId).trashed = !!v; return file; },
+          isTrashed: () => !!(driveStore.get(fileId) || {}).trashed
         };
-        driveStore.set(fileId, { file, content, fileName, mime });
+        driveStore.set(fileId, { file, content, fileName, mime, trashed: false });
         return file;
       }
     };
@@ -570,6 +572,10 @@ function run() {
     assert.strictEqual(imported.created, 2, '新支部內置管理員以外的兩個帳戶要新增');
     assert.strictEqual(imported.updated, 1);
     assert.strictEqual(imported.failed, 0);
+    // 匯入零失敗 → 匯出檔（含 hash）即入垃圾桶
+    assert.strictEqual(imported.file_deleted, true, '匯入成功後應自動刪除 Drive 匯出檔');
+    assert.strictEqual(driveStore.get(exported.file_id).trashed, true, 'Drive 檔要真係入垃圾桶');
+    assert.strictEqual(String(sheetRows(newNode, '操作紀錄').map((r) => r.join('|')).join('\n')).includes(chen.password_hash), false, '垃圾桶動作不可記 hash');
     const rec = readUser(newNode, '1234560001');
     assert.strictEqual(rec.password_hash, sha256('newpass1'), '舊密碼必須保留');
     assert.strictEqual(rec.force_change_password, false, '搬舊數唔應該強制改密碼');
@@ -583,6 +589,22 @@ function run() {
     assert.strictEqual(againImport.created, 0);
     assert.strictEqual(againImport.updated, 3);
     assert.strictEqual(sheetRows(newNode, 'Users').filter((r) => String(r[0]) === '1234560001').length, 1);
+
+    // 有失敗筆數 → 保留匯出檔（唔會靜靜刪走未入完嘅數），並在選單訊息講明
+    {
+      const clash = makeNode({ name: '撞 Email 支部', apikey: 'sc_clash_key_0007', url: 'https://script.google.com/macros/s/CLASH_NODE/exec' });
+      clash.context.initializeSheets();
+      clash.context.linkUpsertUser({ ymis: '9999999999', name: '同 Email 另一戶', email: 'li@example.org', password_hash: sha256('zz') }, 'seed');
+      const retry = clash.context.importUsersFromDrive(exported.file_url, 'menu-import');
+      assert.strictEqual(retry.success, false, '有失敗筆數時 success 應為 false');
+      assert.ok(retry.failed >= 1, '李四的 Email 與既有帳戶相撞應計入失敗');
+      assert.strictEqual(retry.file_deleted, false, '有失敗就唔可以刪匯出檔');
+      assert.strictEqual(driveStore.get(exported.file_id).trashed, true, '較早前成功匯入嘅一次已經刪走（垃圾桶狀態保持）');
+      clash.ui._state.answers.length = 0;
+      clash.ui._state.answers.push(exported.file_url);
+      const menuMsg = clash.context.menuImportUsersJson();
+      assert.match(String(menuMsg), /匯出檔已保留/, '選單訊息要講明保留原因：' + String(menuMsg));
+    }
 
     // 匯入守衛：明文密碼、假 hash、壞 JSON、缺 YMIS、超額
     assert.strictEqual(newNode.context.importUsersFromText(JSON.stringify({ users: [{ ymis: '3456789012', name: '王五', password: 'plain1' }] }), 'x').success, false);

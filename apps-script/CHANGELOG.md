@@ -42,7 +42,8 @@
 - `sig` action 白名單：12 讀 ＋ 19 寫；`login`／`apply`／`logout`／`changePassword`／`updateConfig`／`requestLogRecord`／`cancelLogRequest`／`portalLogin` 永不接受。
 - 開戶：`createAccountForDownstream`（上游開戶 → 讀回 hash → `sig` 打下游 `upsertUser`，兩邊同一 hash）；鏡像／匯入用嚴格的
   `linkUpsertUser`（只收 64 位 hex hash，明文密碼拒，冇帶 hash 保留原密碼，冪等）。
-- 吐 JSON：`exportUsersJson()` 寫私人 Drive 檔 `scoutbadge-users-<yyyyMMdd-HHmmss>.json`（Drive 失敗 fallback 去 Logger），
+- 吐 JSON：`exportUsersJson()` 寫私人 Drive 檔 `scoutbadge-users-<yyyyMMdd-HHmmss>.json`（Drive 失敗 fallback 去 Logger）；
+  匯入（`importUsersFromDrive()`）零失敗即自動把該檔移入 Drive 垃圾桶（可還原 30 天，操作紀錄只記檔案 ID），**有失敗筆數就保留檔案**；
   只寫 Drive／Logger，绝不寫入工作表；`importUsersFromText`／`importUsersFromDrive` 逐個直插 hash（上限 2000 筆）。
 - 選單「🔗 旅系統」：匯出／匯入 JSON、本機接駁狀態、顯示 BACKEND＋APIKEY（交 ADMIN）、登記／移除下游、測試連線（sig）、
   為下游開戶（揀團）、下游及本機兩個直接入口掣。

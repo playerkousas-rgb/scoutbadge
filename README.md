@@ -39,7 +39,8 @@ ScoutBadge 係底層**支部進度追蹤系統（leaf）**，可被上層容器�
 同一份 `apps-script/Code.gs` 部署在每一層。上游在 Sheet 選單「🔗 旅系統 → ➕ 登記下游（URL + SHEET KEY）」
 登記下游後，就可以經 `sig`（HMAC-SHA256，根密鑰＝下游 SHEET KEY）讀寫下游；下游 Script Properties 的
 `ALLOW_LOCAL_LOGIN` 未設定＝開啟（現有旅團零影響），一旦閂口，下游只收上游 `sig`。
-同一選單另有「📤 匯出 JSON（含 hash）／📥 匯入 JSON（`upsertUser` 直插 hash）」，用嚟把舊進度嘅密碼 hash 搬去新支部。
+同一選單另有「📤 匯出 JSON（含 hash）／📥 匯入 JSON（`upsertUser` 直插 hash）」，用嚟把舊進度嘅密碼 hash 搬去新支部
+（匯出檔只寫私人 Drive，匯入零失敗會自動入垃圾桶；有失敗就保留檔案）。
 
 - 完整規格、接入步驟、掣值表、action 白名單：[operations/TROOP_LINK_UPGRADE.md](operations/TROOP_LINK_UPGRADE.md)（維運文件，只留 Git，不部署）
 - 守護測試：`npm run test:link`（10 項，載入真實 `Code.gs` 起上下游兩節點對打）
