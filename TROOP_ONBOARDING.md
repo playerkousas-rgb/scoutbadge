@@ -4,13 +4,20 @@
 
 1. 建立 Google Sheet，開啟 Apps Script，貼上 `apps-script/Code.gs`。
 2. 只在這個全新的 Sheet 執行一次 `initializeSheets()` 並完成授權。
-3. 部署為 Web App，取得既有部署的 `/exec` URL 與 API Key（選單「🔑 顯示 BACKEND／APIKEY」可隨時查看）。
+3. 部署為 Web App：**執行身分「我」＋存取權「任何人」**（`Anyone`）。存取權收窄成「只有本人」的話，
+   主系統 proxy 打唔入 `/exec`，該團在 App 內會直接失敗。部署後取得 `/exec` URL。
+4. 取得本節點憑證：選單「🔗 旅系統 → 🔑 顯示 BACKEND／APIKEY（交 ADMIN）」，抄下 **BACKEND（`/exec` URL）**
+   與 **APIKEY**（首次讀取時自動生成並存 Script Properties）。
 
 > **新開團嘅次序天生係「GS 先、Vercel 後」**：未部署 Web App 係冇 `/exec` URL，未初始化係冇 API Key——
 > 即係下面 §B 要填嘅 `TROOP_<編號>_BACKEND`／`TROOP_<編號>_APIKEY` 一定係喺呢一步之後才有。相反，
 > **升級一個已經登記好嘅旅團**才係「Vercel 先、葉端後」（見 §G 及 `operations/TROOP_LINK_UPGRADE.md` 第 12 節）。
 
 > 已投入使用的 Sheet 不要為本次 Vercel／驗證升級執行初始化。更新程式後部署既有 Web App 的新版本即可，原 `/exec` URL 不變。
+
+> ⚠️ **`initializeSheets()` 只在全新 Sheet 執行一次**。既有旅團升級時**唔好重跑**：佢會為「唔見咗」嘅工作表
+> 重建預設內容——如果 `Users` 表曾經改名／刪過，就會新建一個**預設帳號＋預設密碼**嘅管理員出嚟。
+> 既有 Sheet 升級只需要「覆寫 `Code.gs` → 建立新版本」，授權喺編輯器跑一次 `testTrustedTicketVerifier` 就得。
 
 > **升級次序（已登記旅團）**：先部署 Vercel（新 proxy），再到該團「部署 → 管理部署作業 → 建立新版本」。
 > 掉轉做（葉端先升級）唔會壞任何資料、亦唔會影響成員登入，只係中央登入（`sheep`）會回一句乾「登入失敗」，
@@ -29,6 +36,11 @@ TROOP_0082_APIKEY=Apps Script 既有 API Key
 如旅團編號是 `0015`，三項名稱就是 `TROOP_0015_NAME`、`TROOP_0015_BACKEND`、`TROOP_0015_APIKEY`。三項缺一不會被登記；編號按原字串處理，所以 `0082` 與 `82` 不會互相取代。
 
 後端 URL 與 API Key 僅由 Vercel 函式使用，不能放進前端程式、靜態 JSON、網址參數或 Git。重新部署後，首頁會從 `/api/troops` 取得只含編號與名稱的清單。
+
+> 三點實務：① **`NAME` 由你自填**（純顯示）；② `BACKEND`／`APIKEY` 要**逐字**一致（前後空格／換行、`/dev` 測試網址、
+> 「新增部署」產生嘅新 URL 都會對唔上）；③ 加完變數**一定要 Redeploy**（環境變數唔會熱生效），
+> 之後該團卡片才會出現在首頁。要一次確認登記正確，喺該團 Apps Script 跑一次 `testTrustedTicketVerifier`：
+> 三項 `troop_known`／`key_ok`／`backend_matches` 都 true 就係全對。
 
 ## C. 旅系統接駁（可選）
 
