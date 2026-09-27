@@ -120,5 +120,34 @@ console.log('\n【7】中央管理帳號隱藏：用戶可見 UI／文檔不得�
   check('已部署用戶文檔（LEADER／MEMBER／YMIS／BULK）無中央帳號字眼', dirty.length === 0, dirty.join(','));
 }
 
+console.log('\n【8】i18n 屬性完整性：含 HTML 標籤之翻譯鍵必須使用 data-i18n-html 而非 data-i18n');
+{
+  const scriptStart = html.indexOf('const I18N={');
+  const scriptEnd = html.indexOf('let currentLang=');
+  let i18nObj = null;
+  if (scriptStart !== -1 && scriptEnd !== -1) {
+    const code = html.slice(scriptStart, scriptEnd);
+    try {
+      const fn = new Function(code + '; return I18N;');
+      i18nObj = fn();
+    } catch (e) {
+      check('解析 I18N 物件成功', false, e.message);
+    }
+  }
+  if (i18nObj) {
+    const badKeys = [];
+    const matches = [...html.matchAll(/data-i18n=["']([^"']+)["']/g)];
+    for (const m of matches) {
+      const key = m[1];
+      const zh = i18nObj.zh && i18nObj.zh[key];
+      const en = i18nObj.en && i18nObj.en[key];
+      if ((typeof zh === 'string' && zh.includes('<')) || (typeof en === 'string' && en.includes('<'))) {
+        badKeys.push(key);
+      }
+    }
+    check('無 data-i18n 元素綁定含 HTML 內容之翻譯鍵', badKeys.length === 0, `發現錯誤鍵：${badKeys.join(', ')}`);
+  }
+}
+
 console.log(`\n結果：${passed} 通過, ${failed} 失敗`);
 if (failed > 0) process.exit(1);
