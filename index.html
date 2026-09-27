@@ -569,6 +569,20 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
   </div>
 </div>
 
+<div id="forgotPwModal" class="modal">
+  <div class="modal-content" style="max-width:420px">
+    <h3 data-i18n="fp_title">🔑 忘記密碼</h3>
+    <div id="fpTroop" class="troop-info-box" style="margin-bottom:10px">—</div>
+    <div style="font-size:12.5px;line-height:1.8;color:var(--text)" data-i18n-html="fp_body">
+      本系統唔會以電郵自動重設密碼。請聯絡你旅團嘅領袖／團長，由佢哋喺 APP 內「👥 用戶管理 → 重設密碼」幫你重發臨時密碼，首次登入後再自行更改。
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('forgotPwModal')" data-i18n="close">關閉</button>
+      <button class="btn btn-primary" onclick="closeModal('forgotPwModal');openScoutReport()" data-i18n="fp_contact">🐛💬 聯絡支援</button>
+    </div>
+  </div>
+</div>
+
 <div id="itemDetailModal" class="modal">
   <div class="modal-content" style="max-width:600px">
     <h3 id="detailTitle" data-i18n="dm_title">考驗說明</h3>
@@ -892,7 +906,8 @@ zh:{
   guide_member_card:'<b>👤 成員 member</b><ul style="font-size:11px;margin:6px 0 0 16px"><li>只能看自己進度</li><li>不能直接剔，按📝申請</li><li>待批查看自己申請</li><li>其他獎章只讀自己</li><li>表格列印官方格式</li><li>資料庫看綱要及安全指引</li></ul>',
   guide_leader_card:'<b>👨‍💼 領袖 leader</b><ul style="font-size:11px;margin:6px 0 0 16px"><li>全部功能</li><li>我的進度選任何成員看紀錄</li><li>全團一眼睇會員章+百分比</li><li>考驗營批量一鍵幫全團剔</li><li>離線暫存確認寫入</li><li>待批批量批准</li><li>用戶管理及⚙️權限設定</li><li>領袖默認全部，團長/管理員可改低層級</li><li>審批新帳號</li></ul>',
   login_h2:'🔐 登入系統', login_member_tab:'👤 成員<br><small style="font-weight:normal">YMIS 10位</small>', login_leader_tab:'👨‍💼 領袖<br><small style="font-weight:normal">Email</small>',
-  login_pw_label:'密碼', login_pw_ph:'請輸入密碼', login_apply:'🆕 申請帳戶（成員／領袖）', login_join:'旅團接入', login_back:'← 返回首頁', login_page_h1:'童軍進度追蹤 v5.1',
+  login_pw_label:'密碼', login_pw_ph:'請輸入密碼', login_apply:'🆕 申請帳戶（成員／領袖）', login_join:'旅團接入', login_forgot:'🔑 忘記密碼', fp_title:'🔑 忘記密碼', fp_contact:'🐛💬 聯絡支援',
+  fp_body:'本系統唔會以電郵自動重設密碼。請聯絡你旅團嘅領袖／團長，由佢哋喺 APP 內「👥 用戶管理 → 重設密碼」幫你重發臨時密碼，首次登入後再自行更改。', login_back:'← 返回首頁', login_page_h1:'童軍進度追蹤 v5.1',
   nav_progress:'📊 我的進度', nav_overview:'👥 全團總覽', nav_requests:'✅ 審批中心', nav_logs:'📅 活動履曆', nav_forms:'🖨️ 表格列印', nav_help:'❓ 教學', nav_info:'📚 資料庫', nav_users:'👥 用戶管理', logout:'登出',
   pending_hint:'已暫存於瀏覽器', savebar_discard:'捨棄', savebar_confirm:'✅ 確認寫入雲端',
   cm_title:'📧 提交旅團接入申請', cm_tid:'旅團編號 *', cm_tname:'旅團名稱', cm_tname_ph:'第 82 旅', cm_url:'Apps Script URL (…/exec) *', cm_key:'API Key *', cm_note:'聯絡 Email / 備註', cm_note_ph:'請留下聯絡方式...',
@@ -1244,7 +1259,8 @@ en:{
   guide_member_card:'<b>👤 Member</b><ul style="font-size:11px;margin:6px 0 0 16px"><li>Sees own progress only</li><li>Cannot tick — applies via 📝</li><li>Tracks own applications in Approvals</li><li>Other badges read-only (own)</li><li>Prints official-format forms</li><li>Library: syllabus & safety guides</li></ul>',
   guide_leader_card:'<b>👨‍💼 Leader</b><ul style="font-size:11px;margin:6px 0 0 16px"><li>All features</li><li>View any member\'s records in My Progress</li><li>Troop-wide Membership at a glance + %</li><li>One-tap batch ticking for assessment camps</li><li>Offline cache → confirm write</li><li>Batch approvals</li><li>User management & ⚙️ fine-grained permissions</li><li>Leaders default to all; GSL/admin can narrow lower levels</li><li>Approve new accounts</li></ul>',
   login_h2:'🔐 Sign In', login_member_tab:'👤 Member<br><small style="font-weight:normal">10-digit YMIS</small>', login_leader_tab:'👨‍💼 Leader<br><small style="font-weight:normal">Email</small>',
-  login_pw_label:'Password', login_pw_ph:'Enter password', login_apply:'🆕 Apply for an account (member / leader)', login_join:'Troop Integration', login_back:'← Back to Home', login_page_h1:'Scout Progress Tracker v5.1',
+  login_pw_label:'Password', login_pw_ph:'Enter password', login_apply:'🆕 Apply for an account (member / leader)', login_join:'Troop Integration', login_forgot:'🔑 Forgot password', fp_title:'🔑 Forgot password', fp_contact:'🐛💬 Contact support',
+  fp_body:'This system does not send automatic password-reset emails. Please contact your troop leader, who can issue a new temporary password via 👥 User Management → Reset Password in the app. You can change it after your first login.', login_back:'← Back to Home', login_page_h1:'Scout Progress Tracker v5.1',
   nav_progress:'📊 My Progress', nav_overview:'👥 Troop Overview', nav_requests:'✅ Approvals', nav_logs:'📅 Activity Records', nav_forms:'🖨️ Forms & Printing', nav_help:'📖 User Guide', nav_info:'ℹ️ System Info', nav_users:'👥 User Management', logout:'Sign Out',
   pending_hint:'cached in browser', savebar_discard:'Discard', savebar_confirm:'✅ Confirm & write to cloud',
   cm_title:'📧 Submit Troop Integration Request', cm_tid:'Troop ID *', cm_tname:'Troop Name', cm_tname_ph:'Troop 82', cm_url:'Apps Script URL (…/exec) *', cm_key:'API Key *', cm_note:'Contact Email / Notes', cm_note_ph:'Leave your contact...',
@@ -2020,6 +2036,11 @@ async function submitAccountApply(){
 }
 
 /* ================== Contact ================== */
+function showForgotPasswordModal(){
+  const box=document.getElementById('fpTroop');
+  if(box){ const ti=document.getElementById('loginTroopInfo'); box.textContent = (ti&&ti.textContent.trim()) ? ti.textContent.trim() : '—'; }
+  document.getElementById('forgotPwModal').classList.add('active');
+}
 function showContactModal(){ document.getElementById('contactModal').classList.add('active'); }
 function closeContactModal(){ document.getElementById('contactModal').classList.remove('active'); }
 function closeModal(id){ document.getElementById(id).classList.remove('active'); }
