@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>童軍支部進度及行政平台</title>
+<title>童軍進度追蹤系統 v5.1 - 手機友善・批量開戶・全前端控制</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <style>
 :root{
@@ -19,6 +19,16 @@
 body{font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang HK","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:16px;overscroll-behavior:none}
 a{color:var(--maroon);text-decoration:none}
 a:hover{text-decoration:underline}
+/* ===== Scout Admin 統一回報（問題回報／意見回饋）===== */
+/* widget.js 會自生右下浮動按鈕；本 APP 改用上方常駐「回報 · 意見」按鈕開啟同一個 modal，故隱藏 FAB 免重複 */
+#scoutw-fab{display:none!important}
+/* 首頁 welcome-nav 內的回報按鈕：金色外框，與三個分頁按鈕區分 */
+.welcome-nav button.welcome-feedback{border-color:var(--gold-dark);background:#FFF8E1;color:#7A5A00}
+.welcome-nav button.welcome-feedback:hover{background:#FFECB3}
+/* 登入後 main-app-header 內的常駐回報按鈕（配 lang-toggle 藥丸樣式，金色搶眼） */
+.main-app-header .btn-feedback-top{border-color:rgba(255,215,0,0.85);background:rgba(255,215,0,0.22);white-space:nowrap}
+.main-app-header .btn-feedback-top:hover{background:rgba(255,215,0,0.38)}
+
 /* In-app syllabus content: display inline instead of pop-up for mobile record-book use */
 .link-btn{background:none;border:none;color:var(--maroon);font-size:12px;padding:0;margin-top:3px;cursor:pointer;text-decoration:underline;font-family:inherit}
 .link-btn:hover{color:var(--maroon-dark)}
@@ -127,15 +137,12 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
 .user-chip{background:rgba(255,255,255,0.15);padding:4px 10px;border-radius:999px;font-size:11px}
 
 /* Nav Tabs */
-.nav-tabs{display:flex;background:var(--card);border-bottom:2px solid var(--border);overflow-x:auto;scrollbar-width:none;position:sticky;top:54px;z-index:99;box-shadow:0 2px 6px rgba(0,0,0,0.04)}
-.nav-tabs::-webkit-scrollbar{display:none}
+.nav-tabs{display:flex;background:var(--card);border-bottom:2px solid var(--border);position:sticky;top:54px;z-index:99;box-shadow:0 2px 6px rgba(0,0,0,0.04)}
 .nav-tab{flex:0 0 auto;min-width:100px;padding:14px 16px;text-align:center;cursor:pointer;border:none;background:none;font-size:13.5px;font-weight:600;color:var(--text-light);border-bottom:3px solid transparent;transition:.2s;white-space:nowrap}
 .nav-tab:hover{background:var(--bg);color:var(--text)}
 .nav-tab.active{color:var(--maroon);border-bottom-color:var(--maroon);background:var(--maroon-light)}
-/* 兩行式導覽容器：桌面版全部攤平成同一行（外觀不變）；手機版見 @media 內分成「主行＋常用行」 */
-.nav-row-primary,.nav-row-leader{display:contents}
-/* 桌面版維持原有次序（用戶管理等仍在「資料庫」之後） */
-#btn-tab-users{order:7}#btn-tab-apps{order:8}#btn-tab-byitem{order:9}#btn-tab-other{order:10}
+.nav-tab.nav-hidden{display:none!important}
+.nav-tabs.nav-static{position:static}
 .tab-content{display:none;padding:18px}
 .tab-content.active{display:block;animation:fadeIn .25s ease}
 
@@ -293,14 +300,10 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
   .main-app-header h1{font-size:14px;line-height:1.35;white-space:normal}
   .user-info{width:100%;justify-content:space-between}
   .user-chip{max-width:calc(100% - 82px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  /* 手機模式：永遠兩行 — 第一行＝主按鈕（成員：我的進度／領袖：全團總覽＋用戶管理）；第二行＝常用按鈕 */
-  .nav-tabs{top:0;z-index:120;flex-wrap:wrap;overflow-x:visible}
-  .nav-tab{flex:1 1 0;min-width:0;min-height:44px;padding:8px 2px;font-size:11.5px;line-height:1.25;white-space:normal;word-break:break-word}
-  .nav-row-primary{display:flex;flex:0 0 100%;width:100%;justify-content:center;border-bottom:1px solid var(--border);background:var(--card)}
-  #btn-tab-progress{flex:0 1 250px;min-height:48px;font-size:12.5px;padding:10px 8px}
-  .nav-row-leader{display:flex;flex:1 1 auto}
-  .nav-row-leader .nav-tab{flex:1 1 0;min-height:48px;font-size:12.5px;padding:10px 4px}
-  .nav-row-leader .nav-tab+.nav-tab{border-left:1px solid var(--border)}
+  /* 手機模式：格狀分層 — 常用功能在上方，進階功能排下方 */
+  .nav-tabs{top:0;z-index:120;flex-wrap:wrap;overflow:visible}
+  .nav-tab{flex:1 1 33.333%;min-width:0;min-height:44px;padding:8px 4px;font-size:11.5px;line-height:1.25;white-space:normal;word-break:break-word}
+  .nav-tab.nav-elevated{order:100;background:var(--bg);border-top:1px solid var(--border)}
   .tab-content{padding:12px}
   .badge-header{padding:12px;align-items:flex-start;gap:8px}
   .badge-header h3{font-size:14px;line-height:1.45;display:block}
@@ -355,14 +358,15 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
       </div>
       <div style="text-align:left">
         <h1 data-i18n="app_h1">童軍進度追蹤系統</h1>
-        <p data-i18n="app_tagline">Scout Progress Tracker v5.2 • 總領袖獎章 + 第11版綱要（中英對照）</p>
+        <p data-i18n="app_tagline">Scout Progress Tracker v5.1 • 總領袖獎章 + 第11版綱要（中英對照）</p>
       </div>
     </div>
-    <div class="header-subtitle" data-i18n="app_subtitle">童軍支部訓練綱要及進度管理 • 成員紀錄 • 領袖審批 • 表格自動填寫</div>
+    <div class="header-subtitle" data-i18n="app_subtitle">童軍支部訓練綱要及進度管理 • 成員紀錄 • 領袖審批 • 表格自動填寫 • 中英一鍵切換</div>
     <div class="welcome-nav">
       <button class="active" data-tab="enter" onclick="showWelcomeTab('enter', this)" data-i18n="tab_enter">🏠 進入系統</button>
       <button data-tab="setup" onclick="showWelcomeTab('setup', this)" data-i18n="tab_setup">📋 新旅團部署</button>
       <button data-tab="guide" onclick="showWelcomeTab('guide', this)" data-i18n="tab_guide">📖 使用教學</button>
+      <button class="welcome-feedback" onclick="openScoutReport()" title="問題回報 / 意見回饋（經 Scout Admin 統一回收，可匿名）">🐛💬 回報 · 意見</button>
       <!-- changelog hidden for production -->
     </div>
   </div>
@@ -460,7 +464,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
         <div style="margin-top:8px;font-size:11px;color:var(--text-light)">COPYRIGHT 2026 Scout System</div>
       </div>
       <div class="info-section" style="margin-top:12px">
-        <h3>最新：v5.0 FINAL</h3>
+        <h3>最新：v5.1</h3>
         <p style="font-size:12px">PNG LOGO 256px、防卡死、批量、官方表格、細緻權限、MOCK測試、成員私隱開關、教學按角色分開</p>
       </div>
     </div>
@@ -473,7 +477,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
     <button class="btn btn-sm lang-toggle-btn" onclick="setLang(currentLang==='en'?'zh':'en')">🌐 English</button>
     <div class="logo-row" style="margin-bottom:0">
       <div class="logo-svg-wrap"><img src="assets/scout-logo-chief-256.png" alt="Logo" onerror="this.style.display='none'"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:32px;height:32px"><path d="M30 85 L50 38 L70 85" fill="none" stroke="#FFD700" stroke-width="3" stroke-linecap="round"/><rect x="47" y="42" width="6" height="34" fill="#8B0000" rx="2"/><ellipse cx="50" cy="42" rx="9" ry="2.5" fill="none" stroke="#FFD700" stroke-width="1.2"/><path d="M45 46 Q42 36 48 28 Q50 24 50 20 Q50 16 52 13 Q55 18 54 24 Q53 28 55 32 Q58 38 55 46" fill="#FFA000"/></svg></div>
-      <div><h1 style="font-size:18px" data-i18n="login_page_h1">童軍進度追蹤 v5.2</h1></div>
+      <div><h1 style="font-size:18px" data-i18n="login_page_h1">童軍進度追蹤 v5.1</h1></div>
     </div>
   </div>
   <div class="container">
@@ -488,8 +492,11 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
       <div class="form-group"><label id="loginIdLabel">YMIS（10位數字）</label><input type="text" id="loginId" placeholder="例如 1234567890" maxlength="10"></div>
       <div class="form-group"><label data-i18n="login_pw_label">密碼</label><input type="password" id="loginPassword" data-i18n-ph="login_pw_ph" placeholder="請輸入密碼"></div>
       <button class="btn btn-primary" onclick="doLogin()" style="width:100%" id="btnLogin" data-i18n="login_btn">登入</button>
-      <div style="text-align:center;margin-top:12px;display:flex;justify-content:center;gap:12px">
-        <a href="#" onclick="showAccountApplyModal();return false" style="font-size:11px" data-i18n="login_apply">🆕 申請成員帳戶</a><a href="#" onclick="showContactModal();return false" style="font-size:11px" data-i18n="login_join">旅團接入</a>
+      <div style="text-align:center;margin-top:12px;display:flex;justify-content:center;gap:12px;flex-wrap:wrap">
+        <a href="#" onclick="openScoutReport();return false" style="font-size:11px">🐛💬 回報 · 意見</a>
+        <a href="#" onclick="showAccountApplyModal();return false" style="font-size:11px" data-i18n="login_apply">🆕 申請帳戶（成員／領袖）</a>
+        <a href="#" onclick="showContactModal();return false" style="font-size:11px" data-i18n="login_join">旅團接入</a>
+        <a href="#" onclick="showForgotPasswordModal();return false" style="font-size:11px" data-i18n="login_forgot">🔑 忘記密碼</a>
         <a href="#" onclick="backToHome();return false" style="font-size:11px" data-i18n="login_back">← 返回首頁</a>
       </div>
     </div>
@@ -506,27 +513,22 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
     <div class="user-info">
       <span class="user-chip" id="userInfo">—</span>
       <button class="btn btn-sm btn-secondary lang-toggle-btn" onclick="setLang(currentLang==='en'?'zh':'en')" style="background:rgba(255,255,255,0.18);color:#fff;border:1px solid rgba(255,255,255,0.3)">🌐 English</button>
+      <button class="lang-toggle btn-feedback-top" onclick="openScoutReport()" title="問題回報 / 意見回饋（經 Scout Admin 統一回收，可匿名）">🐛💬 回報 · 意見</button>
       <button class="btn btn-sm btn-secondary" onclick="doLogout()" data-i18n="logout">登出</button>
     </div>
   </div>
   <div class="nav-tabs" id="mainNavTabs">
-    <!-- 手機第一行（主按鈕）：成員＝我的進度；領袖＝全團總覽＋用戶管理（互斥 → 每種用戶永遠兩行）；桌面版攤平成同一行 -->
-    <div class="nav-row-primary" id="navRowPrimary">
-      <button class="nav-tab active" id="btn-tab-progress" onclick="switchTab('progress', this)" data-i18n="nav_progress">📊 我的進度</button>
-      <div class="nav-row-leader" id="navRowLeader">
-        <button class="nav-tab" id="btn-tab-overview" onclick="switchTab('overview', this)" data-i18n="nav_overview">👥 全團總覽</button>
-        <button class="nav-tab" id="btn-tab-users" onclick="switchTab('users', this)" style="display:none" data-i18n="nav_users">👥 用戶管理</button>
-        <button class="nav-tab" id="btn-tab-apps" onclick="switchTab('apps', this)" style="display:none">📋 審批申請(舊-已合併)</button>
-        <button class="nav-tab" id="btn-tab-byitem" onclick="switchTab('byitem', this)" style="display:none">🔍 按項目(舊)</button>
-      </div>
-    </div>
+    <button class="nav-tab active" id="btn-tab-progress" onclick="switchTab('progress', this)"><span data-i18n="nav_progress">📊 我的進度</span></button>
+    <button class="nav-tab" id="btn-tab-overview" onclick="switchTab('overview', this)"><span data-i18n="nav_overview">👥 全團總覽</span></button>
     <button class="nav-tab" id="btn-tab-requests" onclick="switchTab('requests', this)"><span data-i18n="nav_requests">✅ 審批中心</span> <span id="badgeRequestsCount" style="background:var(--red);color:#fff;border-radius:999px;padding:1px 6px;font-size:10px;display:none">0</span></button>
-    <button class="nav-tab" id="btn-tab-logs" onclick="switchTab('logs', this)" data-i18n="nav_logs">📅 活動履曆</button>
-    <button class="nav-tab" id="btn-tab-forms" onclick="switchTab('forms', this)" data-i18n="nav_forms">🖨️ 表格列印</button>
-    <button class="nav-tab" id="btn-tab-help" onclick="switchTab('help', this)" data-i18n="nav_help">❓ 教學</button>
-    <button class="nav-tab" id="btn-tab-info" onclick="switchTab('info', this)" data-i18n="nav_info">📚 資料庫</button>
-    <!-- 已合併：審批申請已併入審批中心，按項目及按項目已併入全團總覽，其他獎章已併入我的進度，版本更新框架保留 -->
-    <button class="nav-tab" id="btn-tab-other" onclick="switchTab('other', this)" style="display:none">⭐ 其他獎章(舊)</button>
+    <button class="nav-tab" id="btn-tab-logs" onclick="switchTab('logs', this)"><span data-i18n="nav_logs">📅 活動履歷</span></button>
+    <button class="nav-tab" id="btn-tab-forms" onclick="switchTab('forms', this)"><span data-i18n="nav_forms">🖨️ 表格列印</span></button>
+    <button class="nav-tab" id="btn-tab-users" onclick="switchTab('users', this)"><span data-i18n="nav_users">👥 用戶管理</span></button>
+    <button class="nav-tab" id="btn-tab-help" onclick="switchTab('help', this)"><span data-i18n="nav_help">📖 使用指南</span></button>
+    <button class="nav-tab" id="btn-tab-info" onclick="switchTab('info', this)"><span data-i18n="nav_info">ℹ️ 系統資訊</span></button>
+    <button class="nav-tab nav-hidden" id="btn-tab-apps" onclick="switchTab('apps', this)">📋 審批申請</button>
+    <button class="nav-tab nav-hidden" id="btn-tab-byitem" onclick="switchTab('byitem', this)">🔍 按項目</button>
+    <button class="nav-tab nav-hidden" id="btn-tab-other" onclick="switchTab('other', this)">⭐ 其他獎章</button>
   </div>
 
   <div id="tab-progress" class="tab-content active"></div>
@@ -673,13 +675,18 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
 <div id="toast" class="toast"></div>
 
 <footer style="text-align:center;padding:20px 16px;margin-top:20px;border-top:2px solid var(--border);font-size:12px;color:var(--text-light);background:var(--card)">
-  <div data-i18n="footer_line1">COPYRIGHT 2026 Scout System • 童軍進度追蹤系統 v5.2</div>
+  <div data-i18n="footer_line1">COPYRIGHT 2026 Scout System • 童軍進度追蹤系統 v5.1</div>
   <div style="margin-top:4px;font-size:11px" data-i18n="footer_line2">基於 2026年第11版《童軍訓練綱要》，內置官方英文版對照 | 支援離線暫存 • 批量寫入 • 活動履歷（服務／活動／訓練班） • 保護兒童 Safe from Harm</div>
-  <div style="margin-top:4px;font-size:10px" data-i18n-html="footer_line3">Developed for 82 Troop • All rights reserved • <a href="https://www.scout.org.hk" target="_blank">香港童軍總會</a></div>
+  <div style="margin-top:4px;font-size:10px" data-i18n="footer_line3">Developed for 82 Troop • <a href="https://www.scout.org.hk" target="_blank" rel="noopener">香港童軍總會</a></div>
+  <div style="margin-top:4px;font-size:10px">⚠️ 非官方聲明：本系統為獨立開發的非官方工具，並非香港童軍總會官方產品，與總會並無隸屬或贊助關係。</div>
 </footer>
 
 <!-- YMIS 自訂報表解析器（同時供單元測試 test/ymis_parse.test.js 使用） -->
 <script src="assets/ymis-parse.js"></script>
+<!-- Scout Admin 統一回報 widget（統一回報格式 v1，見 SCOUT_ADMIN.md）：問題回報／意見回饋直達 scout-admin 後台。
+     data-app="進度追蹤"＝來源系統正式名稱；本 APP 的「🐛💬 回報 · 意見」按鈕（登入前 welcome-nav／登入頁連結／登入後 header 常駐）
+     一律經 openScoutReport() 開啟這個 widget 的 modal；widget 載入失敗時 fallback 到獨立回報頁 report.html -->
+<script src="https://scout-admin-blue.vercel.app/widget.js" data-app="進度追蹤"></script>
 <script>
 /* ================== 🌐 中英雙語 i18n 翻譯層 (純介面翻譯；項目 ID 及後端紀錄完全不變) ================== */
 /* 一字典式翻譯：currentLang 只影響「顯示」；凡寫入後端/快取的 itemId 與 badge name 永遠用 data/items.json 中文版正名 */
@@ -690,7 +697,7 @@ zh:{
   retry:'重試', cancel:'取消', close:'關閉', save:'💾 儲存', submit:'提交申請', refresh:'🔄 刷新', all:'全部',
   api_no_troop:'未選擇旅團 (No troop selected)', api_bad_response:'伺服器回應格式錯誤', api_failed:'操作失敗', api_timeout:'請求逾時，請檢查網絡後重試',
   offline_cache:'⚠️ 離線模式：顯示快取資料',
-  role_super_admin:'系統管理員', role_admin:'管理員', role_group_leader:'團長', role_branch_leader:'童軍團長', role_member:'童軍成員', role_member_short:'成員', role_leader_short:'領袖',
+  role_super_admin:'超管', role_admin:'管理員', role_group_leader:'團長', role_branch_leader:'童軍團長', role_member:'童軍成員', role_member_short:'成員', role_leader_short:'領袖',
   demo_word:'示範', demo_member_name:'示範成員', demo_leader_name:'示範團長', demo_troop_name:'第82旅 DEMO (示範)',
   member_mode_toast:'成員模式：只能查看自己進度，其他獎章及申請',
   progress_items:'進度項目',
@@ -778,9 +785,9 @@ zh:{
   info_wearing_points:'<b>佩戴重點（2024新指引）：</b><br>• 和平使者章佩戴左胸袋中央，取代會員章<br>• 急救章統一左袖上方AYP下方<br>• 拯溺布章佩戴左袖上方中央<br>• 世界童軍獎章最多右袖平行4枚<br>• 童軍支部徽章須按現行制服及佩戴指引佩戴',
   /* users */
   users_role_title:'👥 角色說明：USER vs 成員',
-  users_role_body:'<b>USER (系統使用者)</b> = 所有在 Users 表的人，包括：<br>• <span class="role-badge role-member">團員 member</span> = 純成員，不包括領袖<br>• <span class="role-badge role-branch_leader">童軍團領袖 branch_leader</span> = 領袖<br>• <span class="role-badge role-group_leader">團長 group_leader</span> = 領袖<br>• <span class="role-badge role-admin">管理員 admin</span> = 領袖<br>{0}<b>成員</b> = role=member 的人，不包括領袖。<br><b>領袖</b> = 團長/支部領袖/管理員{1}，可勾選及管理。<br><b>USER 總數</b> = 成員 + 領袖 全部。',
-  users_super_line:'• <span class="role-badge role-super_admin">系統管理員 super_admin</span> = 系統管理員<br><br>', users_super_suffix:'/系統管理員',
-  mock_title:'🧪 測試工具 (僅系統管理角色可見)', mock_desc:'一鍵載入 10個 MOCK 成員到前端快取，方便測試全團批量剔、會員章一眼睇等。示範資料只存瀏覽器快取，不會寫入正式 Google Sheet，除非你按確認寫入。',
+  users_role_body:'<b>USER (系統使用者)</b> = 所有在 Users 表的人，包括：<br>• <span class="role-badge role-member">團員 member</span> = 純成員，不包括領袖<br>• <span class="role-badge role-branch_leader">童軍團領袖 branch_leader</span> = 領袖<br>• <span class="role-badge role-group_leader">團長 group_leader</span> = 領袖<br>• <span class="role-badge role-admin">管理員 admin</span> = 領袖<br><b>成員</b> = role=member 的人，不包括領袖。<br><b>領袖</b> = 團長/支部領袖/管理員，可勾選及管理。<br><b>USER 總數</b> = 成員 + 領袖 全部。',
+  users_super_line:'', users_super_suffix:'',
+  mock_title:'🧪 測試工具', mock_desc:'一鍵載入 10個 MOCK 成員到前端快取，方便測試全團批量剔、會員章一眼睇等。示範資料只存瀏覽器快取，不會寫入正式 Google Sheet，除非你按確認寫入。',
   mock_load_btn:'🧪 載入示範成員到全團', mock_clear_btn:'🗑️ 清除示範資料快取', mock_view_json:'📄 查看示範資料 JSON', mock_dl_csv:'📄 下載 CSV 匯入 Sheet',
   privacy_title:'🔒 私隱設定 (僅團長/管理員可見)', privacy_desc:'普通成員預設只看自己，能否看其他成員由團長開放。有些旅團重私隱，有些想互相鼓勵，領袖及小隊長要按進度策劃活動。',
   ca_title:'🔑 中央登入設定（領袖以上可見）', ca_note:'中央登入採純單向驗證，無需設定回調。下方欄位僅保留舊版相容用途，不影響新版登入。「模式說明」不會檢查 Vercel 登記或後端一致性。',
@@ -861,7 +868,7 @@ zh:{
   seed_role_server:'服務員', seed_role_participant:'參加者', seed_role_student:'學員', seed_role_organiser:'籌委',
   mock_squad:'紅隊',
   /* ---- 靜態頁面 ---- */
-  app_h1:'童軍進度追蹤系統', app_tagline:'Scout Progress Tracker v5.2 • 總領袖獎章 + 第11版綱要（中英對照）', app_subtitle:'童軍支部訓練綱要及進度管理 • 成員紀錄 • 領袖審批 • 表格自動填寫 • 中英一鍵切換',
+  app_h1:'童軍進度追蹤系統', app_tagline:'Scout Progress Tracker v5.1 • 總領袖獎章 + 第11版綱要（中英對照）', app_subtitle:'童軍支部訓練綱要及進度管理 • 成員紀錄 • 領袖審批 • 表格自動填寫 • 中英一鍵切換',
   tab_enter:'🏠 進入系統', tab_setup:'📋 新旅團部署', tab_guide:'📖 使用教學',
   home_awards_title:'童軍支部進度獎章', lv1:'會員章', lv1d:'2大項 • 含保護兒童', lv2:'探索獎章', lv3:'標準獎章', lv4:'高級獎章', lv5:'總領袖獎章', lvd:'逐項記錄及審批', lv5d:'最高進度獎章',
   home_pick_troop:'📍 請選擇您的旅團', home_reload:'🔄 重新載入', home_demo_l:'👀 示範：領袖功能', home_demo_m:'👤 示範：成員功能',
@@ -885,7 +892,7 @@ zh:{
   guide_member_card:'<b>👤 成員 member</b><ul style="font-size:11px;margin:6px 0 0 16px"><li>只能看自己進度</li><li>不能直接剔，按📝申請</li><li>待批查看自己申請</li><li>其他獎章只讀自己</li><li>表格列印官方格式</li><li>資料庫看綱要及安全指引</li></ul>',
   guide_leader_card:'<b>👨‍💼 領袖 leader</b><ul style="font-size:11px;margin:6px 0 0 16px"><li>全部功能</li><li>我的進度選任何成員看紀錄</li><li>全團一眼睇會員章+百分比</li><li>考驗營批量一鍵幫全團剔</li><li>離線暫存確認寫入</li><li>待批批量批准</li><li>用戶管理及⚙️權限設定</li><li>領袖默認全部，團長/管理員可改低層級</li><li>審批新帳號</li></ul>',
   login_h2:'🔐 登入系統', login_member_tab:'👤 成員<br><small style="font-weight:normal">YMIS 10位</small>', login_leader_tab:'👨‍💼 領袖<br><small style="font-weight:normal">Email</small>',
-  login_pw_label:'密碼', login_pw_ph:'請輸入密碼', login_apply:'🆕 申請帳戶（成員／領袖）', login_join:'旅團接入', login_back:'← 返回首頁', login_page_h1:'童軍進度追蹤 v5.2',
+  login_pw_label:'密碼', login_pw_ph:'請輸入密碼', login_apply:'🆕 申請帳戶（成員／領袖）', login_join:'旅團接入', login_back:'← 返回首頁', login_page_h1:'童軍進度追蹤 v5.1',
   nav_progress:'📊 我的進度', nav_overview:'👥 全團總覽', nav_requests:'✅ 審批中心', nav_logs:'📅 活動履曆', nav_forms:'🖨️ 表格列印', nav_help:'❓ 教學', nav_info:'📚 資料庫', nav_users:'👥 用戶管理', logout:'登出',
   pending_hint:'已暫存於瀏覽器', savebar_discard:'捨棄', savebar_confirm:'✅ 確認寫入雲端',
   cm_title:'📧 提交旅團接入申請', cm_tid:'旅團編號 *', cm_tname:'旅團名稱', cm_tname_ph:'第 82 旅', cm_url:'Apps Script URL (…/exec) *', cm_key:'API Key *', cm_note:'聯絡 Email / 備註', cm_note_ph:'請留下聯絡方式...',
@@ -904,9 +911,9 @@ zh:{
   appv_ok:'✅ 帳戶已建立', appv_as:'已按申請開立為 {0} 帳戶。', appv_member:'帳戶角色：成員。',
   appv_fallback:'申請人要求 {0}，但你的權限未能設定該角色，已建立為成員，請由團長在「用戶管理」調整。',
   appv_temp:'臨時密碼（首次登入須更改）：', appv_ymis:'登入帳號（YMIS）：', appv_loginmail:'登入方式：電郵＋臨時密碼（領袖毋須 YMIS）。',
-  footer_line1:'COPYRIGHT 2026 Scout System • 童軍進度追蹤系統 v5.2',
+  footer_line1:'COPYRIGHT 2026 Scout System • 童軍進度追蹤系統 v5.1',
   footer_line2:'基於 2026年第11版《童軍訓練綱要》，內置官方英文版對照 | 支援離線暫存 • 批量寫入 • 活動履歷（服務／活動／訓練班） • 保護兒童 Safe from Harm',
-  footer_line3:'Developed for 82 Troop • All rights reserved • <a href="https://www.scout.org.hk" target="_blank">香港童軍總會</a>',
+  footer_line3:'Developed for 82 Troop • <a href="https://www.scout.org.hk" target="_blank" rel="noopener">香港童軍總會</a>',
   /* dynamic JS additions */
   not_loaded:'資料未載入', no_detail:'暫無詳細說明。', show_full_syllabus:'📚 在頁面內顯示完整綱要',
   no_perm_tick_item:'你的權限不可勾選此項目 ({0})，請聯絡團長/管理員設定',
@@ -983,9 +990,9 @@ zh:{
   req_cleared_fmt:'⚠️ 已清空 {0} 筆本地待提交申請，請聯絡領袖協助',
   role_body_begin:'<b>USER (系統使用者)</b> = 所有在 Users 表的人，包括：<br>',
   role_line_member:'團員 member = 純成員，不包括領袖', role_line_branch:'童軍團領袖 branch_leader = 領袖',
-  role_line_group:'團長 group_leader = 領袖', role_line_admin:'管理員 admin = 領袖', role_line_super:'系統管理員 super_admin = 系統管理員',
-  role_body_end:'<b>成員</b> = role=member 的人，不包括領袖。<br><b>領袖</b> = 團長/支部領袖/管理員{0}，可勾選及管理。<br><b>USER 總數</b> = 成員 + 領袖 全部。',
-  role_super_word:'/系統管理員',
+  role_line_group:'團長 group_leader = 領袖', role_line_admin:'管理員 admin = 領袖', role_line_super:'超管 super_admin = 超管',
+  role_body_end:'<b>成員</b> = role=member 的人，不包括領袖。<br><b>領袖</b> = 團長/支部領袖/管理員，可勾選及管理。<br><b>USER 總數</b> = 成員 + 領袖 全部。',
+  role_super_word:'',
   role_opt_member:'團員', role_opt_branch:'支部領袖', role_opt_group:'團長', role_opt_admin:'管理員',
   sfh_courses:'必修課程：', sfh_prevention:'預防方法：', sfh_handling:'處理方法：', sfh_hotlines:'求助熱線：',
   srv_fill:'請填寫活動名稱及時數', srv_added:'服務紀錄已加入', srv_add_fail_colon:'新增失敗：', srv_load_fail:'服務紀錄暫時無法載入',
@@ -1133,9 +1140,9 @@ en:{
   info_scheme_inline:'Scout Training Scheme (shown on this page)', info_scheme_inline_sub:'No pop-ups — jump straight to each badge below',
   info_wearing_points:'<b>Wearing essentials (2024 guide):</b><br>• Messengers of Peace badge: centre of left chest pocket, replacing the Membership Badge<br>• First Aid badge: top of left sleeve, below AYP<br>• Lifesaver cloth badge: top centre of left sleeve<br>• At most 4 World Scout badges in a row on the right sleeve<br>• Scout Section badges must follow the current uniform and wearing guide',
   users_role_title:'👥 Roles explained: USER vs Member',
-  users_role_body:'<b>USER (system user)</b> = everyone in the Users sheet, including:<br>• <span class="role-badge role-member">member</span> = plain members, excluding leaders<br>• <span class="role-badge role-branch_leader">Scout Leader branch_leader</span> = leader<br>• <span class="role-badge role-group_leader">GSL group_leader</span> = leader<br>• <span class="role-badge role-admin">admin</span> = leader<br>{0}<b>Member</b> = users with role=member, excluding leaders.<br><b>Leader</b> = GSL / section leader / admin{1} — can tick and manage.<br><b>Total USERs</b> = members + leaders.',
-  users_super_line:'• <span class="role-badge role-super_admin">super_admin</span> = system administrator<br><br>', users_super_suffix:'/super admin',
-  mock_title:'🧪 Test Tools (system admin only)', mock_desc:'One-click loads 10 MOCK members into the browser cache to test troop-wide batch ticking, Membership at a glance, etc. Demo data stays in the browser cache and never touches the real Google Sheet unless you confirm the write.',
+  users_role_body:'<b>USER (system user)</b> = everyone in the Users sheet, including:<br>• <span class="role-badge role-member">member</span> = plain members, excluding leaders<br>• <span class="role-badge role-branch_leader">Scout Leader branch_leader</span> = leader<br>• <span class="role-badge role-group_leader">GSL group_leader</span> = leader<br>• <span class="role-badge role-admin">admin</span> = leader<br><b>Member</b> = users with role=member, excluding leaders.<br><b>Leader</b> = GSL / section leader / admin — can tick and manage.<br><b>Total USERs</b> = members + leaders.',
+  users_super_line:'', users_super_suffix:'',
+  mock_title:'🧪 Test Tools', mock_desc:'One-click loads 10 MOCK members into the browser cache to test troop-wide batch ticking, Membership at a glance, etc. Demo data stays in the browser cache and never touches the real Google Sheet unless you confirm the write.',
   mock_load_btn:'🧪 Load demo members to troop', mock_clear_btn:'🗑️ Clear demo cache', mock_view_json:'📄 View demo JSON', mock_dl_csv:'📄 Download CSV for Sheet import',
   privacy_title:'🔒 Privacy Settings (GSL/admin only)', privacy_desc:'Members see only themselves by default; the GSL may open viewing to others. Some troops value privacy, others mutual encouragement; leaders and patrol leaders plan activities from progress.',
   ca_title:'🔑 Central Login Setup (leaders only)', ca_note:'Central login uses one-way authentication with no callback. These fields are retained for legacy compatibility only. Mode information does not check Vercel registration or backend consistency.',
@@ -1213,7 +1220,7 @@ en:{
   seed_role_server:'Service volunteer', seed_role_participant:'Participant', seed_role_student:'Trainee', seed_role_organiser:'Organiser',
   mock_squad:'Red Patrol',
   /* ---- static pages ---- */
-  app_h1:'Scout Progress Tracker', app_tagline:'Scout Progress Tracker v5.2 • Chief Scout\'s Award + 11th ed. Scheme (bilingual 中/EN)', app_subtitle:'Scout Section Training Scheme & Progress • Member Records • Leader Approvals • Auto-filled Forms • One-click 中/EN toggle',
+  app_h1:'Scout Progress Tracker', app_tagline:'Scout Progress Tracker v5.1 • Chief Scout\'s Award + 11th ed. Scheme (bilingual 中/EN)', app_subtitle:'Scout Section Training Scheme & Progress • Member Records • Leader Approvals • Auto-filled Forms • One-click 中/EN toggle',
   tab_enter:'🏠 Enter System', tab_setup:'📋 New Troop Setup', tab_guide:'📖 User Guide',
   home_awards_title:'Scout Section Progressive Awards', lv1:'Membership Badge', lv1d:'2 areas • incl. Safe from Harm', lv2:'Pathfinder Award', lv3:'Standard Award', lv4:'Advanced Award', lv5:'Chief Scout\'s Award', lvd:'Item-by-item records & approval', lv5d:'Highest progressive award',
   home_pick_troop:'📍 Select Your Troop', home_reload:'🔄 Reload', home_demo_l:'👀 Demo: Leader Features', home_demo_m:'👤 Demo: Member Features',
@@ -1237,8 +1244,8 @@ en:{
   guide_member_card:'<b>👤 Member</b><ul style="font-size:11px;margin:6px 0 0 16px"><li>Sees own progress only</li><li>Cannot tick — applies via 📝</li><li>Tracks own applications in Approvals</li><li>Other badges read-only (own)</li><li>Prints official-format forms</li><li>Library: syllabus & safety guides</li></ul>',
   guide_leader_card:'<b>👨‍💼 Leader</b><ul style="font-size:11px;margin:6px 0 0 16px"><li>All features</li><li>View any member\'s records in My Progress</li><li>Troop-wide Membership at a glance + %</li><li>One-tap batch ticking for assessment camps</li><li>Offline cache → confirm write</li><li>Batch approvals</li><li>User management & ⚙️ fine-grained permissions</li><li>Leaders default to all; GSL/admin can narrow lower levels</li><li>Approve new accounts</li></ul>',
   login_h2:'🔐 Sign In', login_member_tab:'👤 Member<br><small style="font-weight:normal">10-digit YMIS</small>', login_leader_tab:'👨‍💼 Leader<br><small style="font-weight:normal">Email</small>',
-  login_pw_label:'Password', login_pw_ph:'Enter password', login_apply:'🆕 Apply for an account (member / leader)', login_join:'Troop Integration', login_back:'← Back to Home', login_page_h1:'Scout Progress Tracker v5.2',
-  nav_progress:'📊 My Progress', nav_overview:'👥 Troop Overview', nav_requests:'✅ Approvals', nav_logs:'📅 Activity Records', nav_forms:'🖨️ Forms & Printing', nav_help:'❓ Guides', nav_info:'📚 Library', nav_users:'👥 User Management', logout:'Sign Out',
+  login_pw_label:'Password', login_pw_ph:'Enter password', login_apply:'🆕 Apply for an account (member / leader)', login_join:'Troop Integration', login_back:'← Back to Home', login_page_h1:'Scout Progress Tracker v5.1',
+  nav_progress:'📊 My Progress', nav_overview:'👥 Troop Overview', nav_requests:'✅ Approvals', nav_logs:'📅 Activity Records', nav_forms:'🖨️ Forms & Printing', nav_help:'📖 User Guide', nav_info:'ℹ️ System Info', nav_users:'👥 User Management', logout:'Sign Out',
   pending_hint:'cached in browser', savebar_discard:'Discard', savebar_confirm:'✅ Confirm & write to cloud',
   cm_title:'📧 Submit Troop Integration Request', cm_tid:'Troop ID *', cm_tname:'Troop Name', cm_tname_ph:'Troop 82', cm_url:'Apps Script URL (…/exec) *', cm_key:'API Key *', cm_note:'Contact Email / Notes', cm_note_ph:'Leave your contact...',
   dm_title:'Requirement Details', sm_title:'📚 Training Scheme',
@@ -1256,9 +1263,9 @@ en:{
   appv_ok:'✅ Account created', appv_as:'Opened as a {0} account as requested.', appv_member:'Account role: member.',
   appv_fallback:'The applicant requested {0}, but your level cannot set that role — created as member; ask the GSL to adjust it under Users.',
   appv_temp:'Temporary password (must be changed at first sign-in): ', appv_ymis:'Sign-in ID (YMIS): ', appv_loginmail:'Sign-in with email + temporary password (leaders need no YMIS).',
-  footer_line1:'COPYRIGHT 2026 Scout System • Scout Progress Tracker v5.2',
+  footer_line1:'COPYRIGHT 2026 Scout System • Scout Progress Tracker v5.1',
   footer_line2:'Based on the Scout Training Scheme (11th ed., 2026) with the official English version built in | Offline caching • batch writes • activity records (service / activity / training) • Safe from Harm',
-  footer_line3:'Developed for 82 Troop • All rights reserved • <a href="https://www.scout.org.hk" target="_blank">Scout Association of Hong Kong</a>',
+  footer_line3:'Developed for 82 Troop • <a href="https://www.scout.org.hk" target="_blank" rel="noopener">Scout Association of Hong Kong</a>',
   /* dynamic JS additions */
   not_loaded:'Data not loaded', no_detail:'No details available yet.', show_full_syllabus:'📚 Show full syllabus here',
   no_perm_tick_item:'You are not permitted to tick this item ({0}); please ask a Group Leader / Admin to set permissions',
@@ -1518,6 +1525,29 @@ function setLang(l){
 
 /* ================== 全局狀態 ================== */
 let currentTroopId='',currentTroopName='',portalLaunch=false;
+
+/* ================== Scout Admin 統一回報（問題回報／意見回饋） ==================
+   對接 scout-admin「統一回報格式 v1」：widget.js（data-app="進度追蹤"）
+   負責 modal 與送出，來源系統、欄位、接收端全部統一；本 APP 各頁的「🐛💬 回報 · 意見」
+   按鈕（登入前 welcome-nav、登入頁連結、登入後 header 常駐）都開啟同一個 modal。
+   widget 未載入（離線／被擋）時 fallback 到獨立回報頁 report.html。 */
+function openScoutReport(){
+  try{
+    const ov=document.getElementById('scoutw-overlay');
+    if(ov){
+      // 已選旅團 → 預填旅團號（選填欄，提交前仍可改）
+      if(typeof currentTroopId==='string' && currentTroopId){
+        ['scoutw_i_troop','scoutw_f_troop'].forEach(function(id){
+          const el=document.getElementById(id);
+          if(el && !el.value.trim()) el.value=currentTroopId;
+        });
+      }
+      ov.classList.add('open');
+      return;
+    }
+  }catch(e){}
+  window.open('https://scout-admin-blue.vercel.app/report.html?app='+encodeURIComponent('進度追蹤'), '_blank', 'noopener');
+}
 
 /* ================== Unified API Proxy Wrapper ================== */
 async function apiRequest(action, payload = {}, options = {}) {
@@ -1865,40 +1895,14 @@ function setupTabsByRole(){
   const isSquadLeader=['隊長','副隊長','patrol_leader','patrol_assistant'].includes((currentUser.squad_role||'').toLowerCase()) || ['隊長','副隊長'].includes(currentUser.squad_role||'');
   const canMemberViewOthers = appConfig.member_progress_scope!=='private' && appConfig.allow_member_view_others==='true' && (appConfig.member_progress_scope!=='team_leaders' || isSquadLeader);
   // 領袖顯示全部，成員預設只看自己，能否看其他成員由團長開放
-  document.getElementById('btn-tab-overview').style.display= (isLeader || (isMember && canMemberViewOthers)) ? 'block' : 'none';
-  document.getElementById('btn-tab-byitem').style.display='none';
-  document.getElementById('btn-tab-other').style.display='block';
-  document.getElementById('btn-tab-users').style.display=isManage?'block':'none';
-  // 領袖沒有「我的進度」（成員進度由全團總覽進入查看）；成員則沒有領袖按鈕 → 手機版永遠兩行
-  const progBtn=document.getElementById('btn-tab-progress');
-  const progTab=document.getElementById('tab-progress');
-  const ovBtn=document.getElementById('btn-tab-overview');
-  const ovTab=document.getElementById('tab-overview');
-  const noDefault=!document.querySelector('.nav-tab.active');
-  const staleProgress=progBtn.classList.contains('active')||progTab.classList.contains('active');
-  if(isLeader&&(noDefault||staleProgress)){
-    // 領袖預設停「全團總覽」
-    document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));
-    ovBtn.classList.add('active'); ovTab.classList.add('active');
-    if(!ovTab.innerHTML.trim()) renderOverviewTab(); // 資料未到時先顯示載入中
-  }else if(!isLeader&&(noDefault||(ovBtn.style.display==='none'&&ovBtn.classList.contains('active')))){
-    // 成員預設停「我的進度」（領袖登出後成員再登入的還原）
-    document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));
-    progBtn.classList.add('active'); progTab.classList.add('active');
-  }
-  progBtn.style.display=(isLeader&&!progBtn.classList.contains('active'))?'none':'';
-  // 若「領袖專用」組沒有任何可見按鈕（一般成員），整組隱藏
-  const leaderRow=document.getElementById('navRowLeader');
-  if(leaderRow){
-    const anyLeaderTabVisible=['btn-tab-overview','btn-tab-users','btn-tab-apps','btn-tab-byitem'].some(id=>{const b=document.getElementById(id);return b&&b.style.display!=='none';});
-    leaderRow.style.display=anyLeaderTabVisible?'':'none';
-  }
+  setNavTabVisible('overview', isLeader || (isMember && canMemberViewOthers));
+  setNavTabVisible('byitem', false);
+  setNavTabVisible('other', false);
+  setNavTabVisible('users', isManage);
   // 審批申請已合併到審批中心，不再獨立顯示
-  document.getElementById('btn-tab-apps').style.display='none';
-  // 成員的待批頁顯示自己申請，保留
-  // 其他獎章頁合併進進度，但保留獨立頁供領袖編輯，成員只讀自己
+  setNavTabVisible('apps', false);
+  // 按「常用 / 進階」重新分層（只影響外觀，不改權限）
+  applyNavLayout();
   // restore pending from local
   try{
     const p=localStorage.getItem(LS.pending(currentTroopId));
@@ -1909,11 +1913,42 @@ function setupTabsByRole(){
     showToast(t('member_mode_toast'),'warning');
   }
 }
+const NAV_TAB_MAIN=['progress','requests','logs','forms','help','info'];
+const NAV_TAB_ELEVATED_COND={
+  overview: cfg=> cfg.allow_member_view_others!=='true',
+  users:    cfg=> !(cfg.allow_member_users==='true'||cfg.allow_users_all==='true')
+};
+function navTabId(btn){ return ((btn&&btn.id)||'').replace(/^btn-tab-/,''); }
+function isElevatedNavTab(id){
+  const cfg=(typeof appConfig!=='undefined'&&appConfig)?appConfig:{};
+  if(NAV_TAB_ELEVATED_COND[id]){ try{ return !!NAV_TAB_ELEVATED_COND[id](cfg); }catch(e){ return true; } }
+  return NAV_TAB_MAIN.indexOf(id)<0;
+}
+function setNavTabVisible(id, show){
+  const b=document.getElementById('btn-tab-'+id); if(!b) return;
+  b.classList.toggle('nav-hidden', !show);
+  if(b.style.display) b.style.display='';
+}
+function applyNavLayout(){
+  document.querySelectorAll('#mainNavTabs .nav-tab').forEach(b=>{
+    b.classList.toggle('nav-elevated', isElevatedNavTab(navTabId(b)));
+  });
+  updateNavSticky();
+}
+function updateNavSticky(){
+  const nav=document.getElementById('mainNavTabs'); if(!nav) return;
+  nav.classList.remove('nav-static');
+  if(window.innerWidth>768) return;
+  const first=nav.querySelector('.nav-tab:not(.nav-hidden)');
+  const rowH=first?first.offsetHeight:0;
+  if(rowH>0 && Math.round(nav.offsetHeight/rowH)>2) nav.classList.add('nav-static');
+}
+if(typeof window!=='undefined') window.addEventListener('resize',()=>{ try{ updateNavSticky(); }catch(e){} });
 function getRoleName(r){ const k={'super_admin':'role_super_admin','admin':'role_admin','group_leader':'role_group_leader','branch_leader':'role_branch_leader','member':'role_member'}[r]; return k?t(k):r; }
 function canUserTickRole(role){ return ['admin','group_leader','branch_leader','super_admin'].includes(role); } // 童軍無執委，全部領袖
 
 function canCurrentUserTickItem(itemId){
-  // 系統管理員全部可勾
+  // 超管全部可勾
   if(!currentUser) return false;
   if(currentUser.role==='super_admin') return true;
   // 若沒有 allowed_badges 欄位或為 * 或空且為領袖，默認全部
@@ -2098,11 +2133,6 @@ function switchTab(name, btn){
     document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
     if(btn) btn.classList.add('active');
     else document.getElementById('btn-tab-'+name)?.classList.add('active');
-    // 領袖平時沒有「我的進度」按鈕；離開進度詳情（查看成員）時自動收起
-    if(name!=='progress'&&currentUser&&canUserTickRole(currentUser.role)){
-      const pb=document.getElementById('btn-tab-progress');
-      if(pb) pb.style.display='none';
-    }
     const target=document.getElementById('tab-'+name);
     if(target){
       target.classList.add('active');
@@ -3317,7 +3347,7 @@ function renderFormsTab(){
 
 function downloadPrintableArea(){
   const area=document.getElementById('printableArea'); if(!area||!area.innerHTML){showToast(t('form_gen_first'),'warning');return;}
-  const html='<!doctype html><html lang="'+(inEn()?'en':'zh-HK')+'"><meta charset="utf-8"><title>'+t('form_doc_title')+'</title><style>body{font-family:Arial,sans-serif;padding:24px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #333;padding:6px;font-size:12px}.no-print{display:none}</style>'+area.innerHTML+'</html>';
+  const html='<!doctype html><'+'html lang="'+(inEn()?'en':'zh-HK')+'"><meta charset="utf-8"><title>'+t('form_doc_title')+'</title><style>body{font-family:Arial,sans-serif;padding:24px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #333;padding:6px;font-size:12px}.no-print{display:none}</style>'+area.innerHTML+'<'+'/html>';
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));a.download='scoutbadge-form-'+todayISO()+'.html';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 
@@ -3665,11 +3695,10 @@ async function loadUsers(){
     const d = await apiRequest('getAllUsers', { token: currentToken });
     if(d.success){
       d.users=mergeRosterIntoUsers(d.users);
-      // 系統管理員帳號僅系統管理員可見：若非系統管理員，過濾掉 super_admin
-      if(currentUser.role!=='super_admin'){
-        d.users=d.users.filter(u=>u.role!=='super_admin');
-      }
-      // 角色說明 + 系統管理測試工具 - 系統管理員相關僅系統管理員可見
+      // super_admin 角色用戶一律不顯示（登入者自己除外），名單過濾只按 role，不寫死任何帳號
+      const selfSuperId=(currentUser && currentUser.role==='super_admin') ? String(currentUser.ymis||'').trim().toLowerCase() : '';
+      d.users=(d.users||[]).filter(u=>u.role!=='super_admin' && (!selfSuperId || String(u.ymis||'').trim().toLowerCase()!==selfSuperId));
+      // 角色說明 + 測試工具 - 管理員相關僅管理員可見
       const isSuper = currentUser && currentUser.role==='super_admin';
       let roleExplain=`<div class="info-section" style="background:var(--blue-light);border-left-color:var(--blue)">
         <h3 style="color:var(--blue)">${t('users_role_title')}</h3>
@@ -3680,8 +3709,7 @@ async function loadUsers(){
           • <span class="role-badge role-branch_leader">${t('role_line_branch')}</span><br>
           • <span class="role-badge role-group_leader">${t('role_line_group')}</span><br>
           • <span class="role-badge role-admin">${t('role_line_admin')}</span><br>
-          ${isSuper?`• <span class="role-badge role-super_admin">${t('role_line_super')}</span><br><br>`:''}
-          ${tf('role_body_end', isSuper?t('role_super_word'):'')}
+          ${t('role_body_end')}
         </div>
       </div>`;
 
@@ -3725,27 +3753,23 @@ async function loadUsers(){
         </div>`;
       }
 
-      // 中央登入 verifier 設定（一次性；領袖以上可見，GAS 端另查 apikey+權限）
-      let centralAuthHtml='';
-      if(['branch_leader','group_leader','admin','super_admin'].includes(currentUser.role)){
-        centralAuthHtml=`<div class="info-section" style="border-left-color:#7C3AED;background:#F5F3FF">
-          <h3>${t('ca_title')}</h3>
-          <p style="font-size:11px;color:var(--text-light)">${t('ca_note')}</p>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-            <input type="text" id="caVerifyUrl" value="${window.location.origin}/api/verify-super-ticket" placeholder="https://your-deploy/api/verify-super-ticket" style="flex:2;min-width:240px;font-size:12px">
-            <input type="text" id="caTroopId" value="${escapeHtml(currentTroopId)}" placeholder="0082" style="width:110px;font-size:12px">
-          </div>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <button class="btn btn-sm btn-primary" onclick="saveCentralAuthConfig()">${t('ca_save')}</button>
-            <button class="btn btn-sm btn-secondary" onclick="testCentralAuth()">${t('ca_test')}</button>
-          </div>
-          <div id="caStatus" style="font-size:11px;margin-top:8px;color:var(--text-light)"></div>
-          <div style="font-size:10px;color:var(--text-light);margin-top:4px">${t('ca_hint')}</div>
-          <div style="font-size:10px;color:var(--text-light);margin-top:4px">${t('entry_note')}</div>
-        </div>`;
-      }
+      let troopLinkHtml=`<div class="info-section" style="border-left-color:var(--maroon);background:#FFF5F5">
+        <h3 style="color:var(--maroon)">🔗 旅系統接駁（進度系統節點，上下游 sig 直連）</h3>
+        <p style="font-size:11px;color:var(--text-light)">本節點係進度系統（下游），唔設支部表。上下游接駁經 Google Sheet 選單「🔗 旅系統」操作（sig 係 GAS→GAS 直連，唔經本 proxy）：➕ 登記下游（URL + SHEET KEY）→ 📡 測試下游連線 → 📤 匯出 JSON（含 hash，Drive 私人檔）→ 📥 匯入 JSON → 🚪 閂下游直接入口 → 👤 為下游開戶。新節點接入：選單「🔑 顯示 BACKEND／APIKEY（交 ADMIN）」→ 收件匣 → ADMIN 登記 Vercel env。</p>
+        <p style="font-size:11px;color:var(--text-light);margin-top:6px">⚠️ 直接入口開關（ALLOW_LOCAL_LOGIN）只由上游（旅／支部系統）選單／sig 遠端操作，或在本節點 GAS Script Properties 手動設定；本 APP 屬下游系統，介面內不設此掣。誤閂而鎖死時：由上游選單「🚪 下游直接入口」重開。</p>
+      </div>
+      <div class="info-section" style="border-left-color:var(--blue);background:var(--blue-light)">
+        <h3 style="color:var(--blue)">🔄 搬舊數（JSON 匯出／匯入，保留密碼 hash）</h3>
+        <p style="font-size:11px;color:var(--text-light)">舊系統有資料、新系統為空時：舊節點點「匯出 JSON（含 hash）」（推薦用 Sheet 選單版，會存成 Drive 私人檔）→ 新節點點「匯入」逐個 upsertUser 直插 hash，保留舊密碼，之後可閂本節點直接入口（只收上游 sig）。匯入只接受 64 位 hex hash，明文密碼一律被拒。</p>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+          <button class="btn btn-sm btn-success" onclick="exportUsersJson()">⬇️ 匯出 JSON（含 hash，舊系統用）</button>
+          <label class="btn btn-sm btn-warning" style="cursor:pointer">📤 匯入 JSON（新支部用）<input type="file" accept=".json,application/json" onchange="importUsersJson(this.files[0]);this.value=''" style="display:none"></label>
+          <button class="btn btn-sm btn-secondary" onclick="downloadUsersList()">⬇️ 匯出用戶清單（CSV）</button>
+        </div>
+        <div id="migrationStatus" style="font-size:11px;color:var(--text-light);margin-top:6px"></div>
+      </div>`;
 
-      let h=roleExplain+systemSettingHtml+centralAuthHtml+mockTool+`<div class="filter-bar"><button class="btn btn-sm btn-warning" onclick="openBulkOnboardModal()">${t('users_bulk_btn')}</button><button class="btn btn-sm btn-primary" onclick="addMemberFromApp()">${t('users_add_btn')}</button><button class="btn btn-sm btn-secondary" onclick="downloadSquadReport()">${t('users_report_btn')}</button><button class="btn btn-sm btn-outline" onclick="loadAuditHistory()">${t('users_audit_btn')}</button><button class="btn btn-sm btn-outline" onclick="loadApprovalHistory()">${t('users_hist_btn')}</button><label class="btn btn-sm btn-secondary">${t('users_csv_btn')}<input type="file" accept=".csv" onchange="importMembersFull(this.files[0])" style="display:none"></label><button class="btn btn-sm btn-secondary" onclick="exportMembersJson()">${t('users_export_json_btn')}</button><input type="text" id="userSearch" placeholder="${t('user_search_ph')}" oninput="filterUsers()" style="flex:1"></div><div id="userList">`;
+      let h=roleExplain+systemSettingHtml+mockTool+troopLinkHtml+`<div class="filter-bar"><button class="btn btn-sm btn-warning" onclick="openBulkOnboardModal()">${t('users_bulk_btn')}</button><button class="btn btn-sm btn-primary" onclick="addMemberFromApp()">${t('users_add_btn')}</button><button class="btn btn-sm btn-secondary" onclick="downloadSquadReport()">${t('users_report_btn')}</button><button class="btn btn-sm btn-outline" onclick="loadAuditHistory()">${t('users_audit_btn')}</button><button class="btn btn-sm btn-outline" onclick="loadApprovalHistory()">${t('users_hist_btn')}</button><label class="btn btn-sm btn-secondary">${t('users_csv_btn')}<input type="file" accept=".csv" onchange="importMembersFull(this.files[0])" style="display:none"></label><button class="btn btn-sm btn-secondary" onclick="exportMembersJson()">${t('users_export_json_btn')}</button><input type="text" id="userSearch" placeholder="${t('user_search_ph')}" oninput="filterUsers()" style="flex:1"></div><div id="userList">`;
       // v5.3.0：團長全團只可一位 —— 預先找出在職團長；有人嘗試升第二位時由 updateUserRole 彈提示阻擋（唔直接 disabled，令人知點解唔得）
       const gslHolder=(d.users||[]).find(u=>u.role==='group_leader')||null;
       const gslCount=(d.users||[]).filter(u=>u.role==='group_leader').length;
@@ -3753,7 +3777,7 @@ async function loadUsers(){
       const leaderCount=(d.users||[]).length-memberCount;
       h+=`<div style="font-size:12px;color:var(--text-light);margin:4px 0 10px">${tf('users_count_fmt',(d.users||[]).length,memberCount,leaderCount)}</div>`;
       if(!(d.users||[]).length) h+=`<p style="color:var(--text-light);padding:16px;background:var(--bg);border-radius:8px">${t('users_empty')}</p>`;
-      h+=d.users.map(u=>`<div class="user-item" data-search="${(u.name+u.ymis+(u.email||'')).toLowerCase()}"><div class="user-item-info"><b>${u.name}</b> ${u.ymis&&String(u.ymis).charAt(0)!=='L'?`(${u.ymis})`:''} ${u.email?` - ${u.email}`:''}<span class="role-badge role-${u.role}">${getRoleName(u.role)}</span> ${u.roster_only?`<span style="background:var(--orange);color:#fff;padding:1px 6px;border-radius:999px;font-size:9px;margin-left:4px">${t('users_roster_chip')}</span>`:''} ${u.can_tick?`<span style="background:var(--green-light);color:var(--green);padding:1px 6px;border-radius:999px;font-size:9px">${t('can_tick_chip')}</span>`:''}<br><small style="font-size:10px;color:var(--text-light)">${t('perm_prefix')}${u.allowed_badges|| (u.role==='member'?t('perm_none_word'):t('perm_all_word'))}</small></div><div class="user-item-actions">`+
+      h+=d.users.map(u=>`<div class="user-item" data-search="${(u.name+u.ymis+(u.email||'')).toLowerCase()}" data-ymis="${escapeHtml(u.ymis||'')}" data-name="${escapeHtml(u.name||'')}" data-email="${escapeHtml(u.email||'')}" data-role="${escapeHtml(u.role||'')}" data-status="${escapeHtml(u.status||'')}" data-cantick="${u.can_tick?'true':'false'}" data-note="${escapeHtml(u.note||'')}"><div class="user-item-info"><b>${u.name}</b> ${u.ymis&&String(u.ymis).charAt(0)!=='L'?`(${u.ymis})`:''} ${u.email?` - ${u.email}`:''}<span class="role-badge role-${u.role}">${getRoleName(u.role)}</span> ${u.roster_only?`<span style="background:var(--orange);color:#fff;padding:1px 6px;border-radius:999px;font-size:9px;margin-left:4px">${t('users_roster_chip')}</span>`:''} ${u.can_tick?`<span style="background:var(--green-light);color:var(--green);padding:1px 6px;border-radius:999px;font-size:9px">${t('can_tick_chip')}</span>`:''}<br><small style="font-size:10px;color:var(--text-light)">${t('perm_prefix')}${u.allowed_badges|| (u.role==='member'?t('perm_none_word'):t('perm_all_word'))}</small></div><div class="user-item-actions">`+
         (['admin','group_leader','branch_leader','super_admin'].includes(currentUser.role)&&u.ymis!==currentUser.ymis?`<select onchange="updateUserRole('${u.ymis}',this.value,'${u.role}',${!!(gslHolder&&gslHolder.ymis!==u.ymis)},${u.role==='group_leader'&&gslCount<2})"><option value="member" ${u.role==='member'?'selected':''}>${t('role_opt_member')}</option><!-- 童軍無執委 --><option value="branch_leader" ${u.role==='branch_leader'?'selected':''}>${t('role_opt_branch')}</option><option value="group_leader" ${u.role==='group_leader'?'selected':''} ${gslHolder&&u.role!=='group_leader'?'disabled':''}>${gslHolder&&u.role!=='group_leader'?tf('gsl_opt_taken',gslHolder.name):t('role_opt_group')}</option><option value="admin" ${u.role==='admin'?'selected':''}>${t('role_opt_admin')}</option></select><button class="btn btn-sm ${u.can_tick?'btn-danger':'btn-success'}" onclick="toggleCanTick('${u.ymis}',${!u.can_tick})">${u.can_tick?t('tick_revoke'):t('tick_grant')}</button><button class="btn btn-sm btn-warning" onclick="openPermissionModal('${u.ymis}','${u.name.replace(/'/g,"\'") }','${u.role}','${(u.allowed_badges||'').replace(/'/g,"")}')">${t('perm_btn')}</button><button class="btn btn-sm btn-warning" onclick="resetMemberPassword('${u.ymis}')">${t('pw_reset_btn')}</button><button class="btn btn-sm btn-outline" onclick="editSquad('${u.ymis}','${(u.squad||'').replace(/'/g,"\'")}','${(u.squad_role||'member').replace(/'/g,"\'")}')">${t('squad_btn')}</button><button class="btn btn-sm btn-danger" onclick="deactivateUser('${u.ymis}',${u.role==='group_leader'&&gslCount<2})">${t('deactivate_btn')}</button>`:'' )+
         `</div></div>`).join('');
       h+='</div>';
@@ -4102,29 +4126,75 @@ async function toggleAllowMemberViewOthers(checked){
 }
 /* 中央登入 verifier：一次性設定。GAS 端會向 verifyUrl 回調 /api/verify-super-ticket
    驗證 Proxy 簽發的短效票據；troopId 由 Proxy 以路由旅團為準。 */
-async function saveCentralAuthConfig(){
-  const status=document.getElementById('caStatus');
-  const verifyUrl=document.getElementById('caVerifyUrl').value.trim();
-  const troopId=document.getElementById('caTroopId').value.trim();
-  if(!verifyUrl||!troopId){ status.textContent=t('ca_fill'); status.style.color='var(--red)'; return; }
-  status.textContent='…'; status.style.color='var(--text-light)';
+async function exportUsersJson(){
+  const st=document.getElementById('migrationStatus');
+  if(st) st.textContent='匯出中...';
   try{
-    const d=await apiRequest('configureTrustedTicketVerifier',{verifyUrl,troopId});
-    if(!d.success) throw new Error(d.error||t('ca_test_fail'));
-    status.textContent=t('ca_saved'); status.style.color='var(--green)';
-    // 儲存後立即自我檢查：旅團有冇登記、後端網址雜湊一唔一致都要講得出
-    testCentralAuth();
-  }catch(e){ status.textContent=e.message; status.style.color='var(--red)'; }
+    const d=await apiRequest('exportUsers',{token:currentToken});
+    if(d.success){
+      const payload={
+        format:'scoutbadge-users-export', schema:1,
+        exported_at:new Date().toISOString().slice(0,19).replace('T',' '),
+        node:String(currentTroopName||currentTroopId||''),
+        count:(d.users||[]).length, users:d.users||[]
+      };
+      const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download=`scoutbadge-users_${currentTroopId}_${todayISO()}.json`;
+      a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+      if(st) st.textContent=`✅ 已匯出 ${d.count||payload.count} 筆（含 hash），請到新節點用「匯入 JSON」`;
+      showToast(`✅ 已匯出 ${d.count||payload.count} 筆`,'success');
+    }else throw new Error(d.error||'匯出失敗');
+  }catch(e){
+    if(st) st.textContent='匯出失敗：'+e.message;
+    showToast('匯出失敗：'+e.message,'error');
+  }
 }
-async function testCentralAuth(){
-  const status=document.getElementById('caStatus');
-  status.textContent='…'; status.style.color='var(--text-light)';
+async function importUsersJson(file){
+  if(!file) return;
+  const st=document.getElementById('migrationStatus');
+  if(st) st.textContent='讀取檔案中...';
   try{
-    const d=await apiRequest('testTrustedTicketVerifier',{});
-    if(!d.success) throw new Error(d.error||t('ca_test_fail'));
-    status.textContent=(d.detail||t('ca_test_ok'))+(typeof d.status==='number'?' (HTTP '+d.status+')':'');
-    status.style.color='var(--green)';
-  }catch(e){ status.textContent=t('ca_test_fail')+'：'+e.message; status.style.color='var(--red)'; }
+    const text=await file.text();
+    const parsed=JSON.parse(text);
+    const arr=Array.isArray(parsed)?parsed:(parsed&&Array.isArray(parsed.users)?parsed.users:null);
+    if(!arr) throw new Error('JSON 須為陣列或 {users:[...]} 格式');
+    if(!confirm(`確定匯入 ${arr.length} 筆到當前節點 ${currentTroopName}？會逐個 upsertUser 直插 hash（保留舊密碼；明文密碼會被拒）`)) return;
+    if(st) st.textContent=`匯入中 0/${arr.length} ...`;
+    let ok=0, fail=0, errors=[];
+    for(let i=0;i<arr.length;i++){
+      const u=arr[i];
+      if(st) st.textContent=`匯入中 ${i+1}/${arr.length} ...`;
+      try{
+        const d=await apiRequest('upsertUser',{token:currentToken,user:u});
+        if(d.success) ok++; else { fail++; errors.push(`${u.ymis||u.email||i}: ${d.error}`); }
+      }catch(e){ fail++; errors.push(`${u.ymis||u.email||i}: ${e.message}`); }
+    }
+    if(st) st.innerHTML=`✅ 匯入完成：成功 ${ok} 筆，失敗 ${fail} 筆${fail?'<br>失敗詳情：<pre style="white-space:pre-wrap;font-size:10px;max-height:120px;overflow:auto">'+escapeHtml(errors.slice(0,20).join('\n'))+'</pre>':''}`;
+    showToast(`匯入完成：成功 ${ok} 筆${fail?`，失敗 ${fail} 筆`:''}`, fail?'warning':'success');
+    loadUsers();
+  }catch(e){
+    if(st) st.textContent='匯入失敗：'+e.message;
+    showToast('匯入失敗：'+e.message,'error');
+  }
+}
+function downloadUsersList(){
+  const items=document.querySelectorAll('#userList .user-item');
+  if(!items.length){ showToast('沒有可匯出的用戶','warning'); return; }
+  const rows=[['YMIS','姓名','Email','角色','狀態','可勾選','備註']];
+  items.forEach(it=>{
+    const ds=it.dataset||{};
+    rows.push([ds.ymis||'',ds.name||'',ds.email||'',ds.role||'',ds.status||'',ds.cantick==='true'?'是':'否',ds.note||'']);
+  });
+  const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));
+  a.download=`scout_users_${currentTroopId}_${todayISO()}.csv`;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  showToast(`✅ 已匯出 ${rows.length-1} 個用戶`,'success');
 }
 async function updateSystemConfig(key,value){
   try{const d=await apiRequest('updateConfig', {key, value});if(!d.success)throw new Error(d.error);appConfig[key]=value;setupTabsByRole();loadUsers();showToast(t('cfg_updated'),'success');}catch(e){showToast(t('cfg_fail_colon')+e.message,'error');}

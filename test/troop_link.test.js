@@ -374,6 +374,92 @@ function run() {
   ok('閂口後 login／apply／GET load／apikey save／token 操作全拒，中央登入（A）照放行，掣值 fail closed');
 
   // ========================================================
+  // 2b. 閂口後超管救援通道：super_ticket 登入＋超管 token 操作照放行，可重開直接入口
+  // ========================================================
+  console.log('\n2b. 閂口後超管救援通道：super_ticket 登入＋超管 token 操作放行、可重開掣（偽造照拒）');
+  {
+    const { down } = buildPair();
+    const g = down.context;
+    const SU_ID = vm.runInContext('SUPER_ADMIN_ID', g);
+    assert.strictEqual(typeof SU_ID, 'string');
+    // 閂口前先攞一個一般用戶 token（對照組）
+    seedAccounts(down, [{ ymis: '1234560001', name: '陳大文', role: 'member', password: 'OldPass123' }]);
+    const norm = postTo(down, { action: 'login', login_id: '1234560001', password: 'OldPass123', apikey: DOWNSTREAM_KEY });
+    assert.strictEqual(norm.success, true);
+    g.setLocalLoginAllowed(false, 'test');
+
+    // 假中央驗票端點（SUPER_VERIFY_URL）：接受任何票據（真世界由 /api/verify-super-ticket 驗 SUPER_KEY 簽嘅票）
+    const VERIFY_URL = 'https://scoutbadge.vercel.app/api/verify-super-ticket';
+    net.set(VERIFY_URL, {
+      context: {
+        doPost: () => ({ getContent: () => JSON.stringify({ ok: true, valid: true }) })
+      }
+    });
+    try {
+      // 一般登入被拒（閂口，只收 sig）
+      const normLogin = postTo(down, { action: 'login', login_id: '1234560001', password: 'OldPass123', apikey: DOWNSTREAM_KEY });
+      assert.strictEqual(normLogin.success, false);
+      assert.strictEqual(normLogin.upstream_only, true);
+      // 超管 super_ticket 登入照放行：唔經旅團登記 Sheet（Users 表），密碼喺 Vercel SUPER_KEY
+      const su = postTo(down, { action: 'superLogin', login_id: SU_ID, super_ticket: 't'.repeat(64), apikey: DOWNSTREAM_KEY });
+      assert.strictEqual(su.success, true, JSON.stringify(su));
+      assert.ok(String(su.token).startsWith('sbs-super-v1-'), '超管 token 要有 sbs-super-v1- 前綴');
+      assert.strictEqual(su.user.role, 'super_admin');
+
+      // 一般 token 操作被拒（對照組：閂口係為咗逼一般用戶經上游 sig）
+      const blocked = postTo(down, { action: 'getAllUsers', token: norm.token });
+      assert.strictEqual(blocked.success, false);
+      assert.strictEqual(blocked.upstream_only, true);
+      const loadBlocked = getFrom(down, { action: 'load', token: norm.token, apikey: DOWNSTREAM_KEY });
+      assert.strictEqual(loadBlocked.success, false, '閂口後 GET load 一般 token 都要被拒');
+      // 假超管 token（前綴啱但無效）唔可以過閘
+      const fakeSuper = postTo(down, { action: 'getAllUsers', token: 'sbs-super-v1-forged' });
+      assert.strictEqual(fakeSuper.success, false, '偽造超管 token 唔可以繞過閂口');
+
+      // 超管 token 操作照放行（救援）：讀名單、GET load（前端登入後第一個請求）
+      const users = postTo(down, { action: 'getAllUsers', token: su.token });
+      assert.strictEqual(users.success, true, JSON.stringify(users));
+      const load = getFrom(down, { action: 'load', token: su.token, apikey: DOWNSTREAM_KEY });
+      assert.strictEqual(load.success, true, '閂口後超管 token 嘅 GET load 要放行（否則登入後載入不到資料）');
+
+      // 工作表零蹤跡：保留帳號做嘅操作，任何 Sheet 欄位都唔可以出現帳號／顯示名稱（一律中性 system）
+      const SU_NAME = vm.runInContext('SUPER_ADMIN_NAME', g);
+      const saved = postTo(down, { action: 'save', token: su.token, changes: [{ ymis: '1234560001', itemId: 'L1', date: '2026-04-04' }], confirmer: SU_NAME });
+      assert.strictEqual(saved.success, true, JSON.stringify(saved));
+      const progRow = sheetRows(down, '進度追蹤').find(r => String(r[0]) === '1234560001' && String(r[1]) === 'L1');
+      assert.ok(progRow, '進度應已寫入');
+      assert.strictEqual(String(progRow[4]), 'system', '進度「確認者」欄要寫中性 system，唔可以落保留帳號名稱：' + progRow[4]);
+      const added = postTo(down, { action: 'addUser', token: su.token, ymis: '2222222222', name: '測試成員', role: 'member' });
+      assert.strictEqual(added.success, true, JSON.stringify(added));
+      const userRow = sheetRows(down, 'Users').find(r => String(r[0]) === '2222222222');
+      assert.ok(userRow, '新帳號應已寫入 Users 表');
+      assert.strictEqual(String(userRow[7]), 'system', 'Users「auth_by」欄要寫中性 system：' + userRow[7]);
+
+      // 全 Sheet 掃描：帳號識別字同顯示名稱都唔可以出現；登入時間戳唔可以寫入 Script Properties
+      const allText = allSheetText(down).toLowerCase();
+      assert.ok(!allText.includes(String(SU_ID).toLowerCase()), '全部工作表唔可以出現保留帳號識別字');
+      assert.ok(!allText.includes(String(SU_NAME).toLowerCase()), '全部工作表唔可以出現保留帳號顯示名稱');
+      assert.strictEqual(down.props.has('SUPER_ADMIN_LAST_LOGIN'), false, '旅團自己嘅 GAS Script Properties 唔可以有登入時間戳');
+      assert.ok(allSheetText(down).includes('system'), '審計應以 system 現身');
+      const tokenRows = sheetRows(down, 'Tokens').slice(1);
+      assert.ok(!tokenRows.some(r => String(r[1]) === '__sys__' || String(r[0]).startsWith('sbs-super-v1-')),
+        'Tokens 表（登入 session 紀錄）完全唔可以有保留帳號行：' + JSON.stringify(tokenRows));
+
+      // 超管重開直接入口（救援鎖死旅團嘅關鍵動作）
+      const reopen = postTo(down, { action: 'setAllowLocalLogin', token: su.token, allow: true });
+      assert.strictEqual(reopen.success, true, JSON.stringify(reopen));
+      assert.strictEqual(g.localLoginAllowed(), true, '超管應能重開直接入口');
+      // 重開後一般登入恢復
+      const ok3 = postTo(down, { action: 'login', login_id: '1234560001', password: 'OldPass123', apikey: DOWNSTREAM_KEY });
+      assert.strictEqual(ok3.success, true, '重開後一般登入要恢復');
+    } finally {
+      net.delete(VERIFY_URL);
+      g.setLocalLoginAllowed(false, 'test');
+    }
+  }
+  ok('閂口後超管救援通道：super_ticket 登入＋超管 token 操作照放行，可重開直接入口（超管唔經旅團登記 Sheet，工作表零蹤跡）');
+
+  // ========================================================
   // 3. 登記下游後 sig 可讀可寫，上游可閂下游掣；非 GAS URL／短 KEY 拒
   // ========================================================
   console.log('\n3. 上游登記下游（DOWNSTREAM_<id>_*）後經 sig 讀寫下游');

@@ -78,6 +78,10 @@ function installEnv() {
     const crypto = require('crypto');
     return Array.from(crypto.createHash('sha256').update(String(str), 'utf8').digest());
   };
+  global.Utilities.computeHmacSha256Signature = function(value, key){
+    const crypto = require('crypto');
+    return Array.from(crypto.createHmac('sha256', String(key)).update(String(value), 'utf8').digest());
+  };
 }
 installEnv();
 
@@ -252,11 +256,11 @@ check('冇票唔會建立中央 session（舊單向授權已停用、亦唔會�
 global.UrlFetchApp={fetch(){ callbacks++; throw new Error('verifier down'); }};
 const staleTick=out(api.handleSuperLogin(centralId,'sbt1.fake.envelope.tag'));
 check('驗票端點連唔到＝fail closed（503，冇 token）', staleTick.success===false && staleTick.code===503 && staleTick.reason==='central_verify_unreachable' && !staleTick.token && callbacks===1, JSON.stringify(staleTick));
-// 3) 端點話 valid → 才建立受限中央 session（sa_ token）。
+// 3) 端點話 valid → 才建立受限中央 session（sbs-super-v1- token）。
 global.UrlFetchApp={fetch(){ callbacks++; return { getResponseCode(){ return 200; }, getContentText(){ return JSON.stringify({valid:true}); } }; }};
 const ticketLogin=out(api.handleSuperLogin(centralId,'sbt1.fake.envelope.tag'));
 check('回打驗票通過才建立中央 session', ticketLogin.success===true && ticketLogin.user.role==='super_admin' && !!ticketLogin.token && callbacks===2, JSON.stringify(ticketLogin));
-check('新中央 session 使用受限 token 格式', String(ticketLogin.token||'').startsWith('sa_') && api.validateToken(ticketLogin.token)===centralId, JSON.stringify(ticketLogin));
+check('新中央 session 使用受限 token 格式', String(ticketLogin.token||'').startsWith('sbs-super-v1-') && api.validateToken(ticketLogin.token)===centralId, JSON.stringify(ticketLogin));
 sheets['Tokens'].appendRow(['legacy-central-token',centralId,'','2999-01-01']);
 check('舊 GAS 直接登入遺留 token 被撤銷', api.validateToken('legacy-central-token')===null);
 const changeCentral=out(api.handleChangePassword(centralId,'old','new1'));
