@@ -86,7 +86,10 @@ console.log('\n【5】Scout Admin 回報 · 意見按鈕 ＋ 非官方聲明');
   check('登入頁有回報 · 意見連結', /onclick="openScoutReport\(\);return false"/.test(html));
   check('登入後 header 常駐回報 · 意見按鈕', /class="lang-toggle btn-feedback-top" onclick="openScoutReport\(\)"/.test(html));
   check('頁尾有非官方聲明（並非香港童軍總會官方產品）', html.includes('⚠️ 非官方聲明：本系統為獨立開發的非官方工具，並非香港童軍總會官方產品'));
-  check('頁尾保留香港童軍總會公開連結（官方公開文件參考）', html.includes('href="https://www.scout.org.hk" target="_blank"'));
+  const footer = (html.match(/<footer\b[\s\S]*?<\/footer>/) || [''])[0];
+  check('頁尾沒有固定旅團／香港童軍總會歸屬行',
+    !html.includes('footer_line3') && !html.includes('Developed for 82 Troop') &&
+    !/href=["']https?:\/\/(?:[^/"']+\.)?scout\.org\.hk(?:[/:?#"']|$)/i.test(footer));
   check('頁尾已移除 All rights reserved', !/All rights reserved/.test(html));
 }
 
