@@ -127,6 +127,20 @@ function trustedAdminApi() {
   return raw && isTrustedBackend(raw) ? raw : null;
 }
 
+// 統一回報（問題回報／意見回饋）固定送往 Scout Admin 的統一收件端（統一回報
+// 格式 v1，與 widget.js 同一接收端）。SCOUTBADGE_ADMIN_API 可覆蓋；不設定就
+// 用 widget 內建的公開端點，令回報功能不需額外配置也能用。瀏覽器不能指定或
+// 讀取這個目的地。送出結果以 deliveryStatus 表達：confirmed（收件系統確認收
+// 到）／rejected（收件系統明確未接收）／unknown（送出後未能確認，可能已收）
+// ／not_sent（驗證失敗或服務未配置，確定沒有送出）。
+const FEEDBACK_API_DEFAULT =
+  'https://script.google.com/macros/s/AKfycbxj5BDDGgjs559smkK4Z5aYImWYeXbN5af8U1ObON0z9WnsN6QJW4I1XWolhs5kQ_H-UQ/exec';
+
+function feedbackInboxApi() {
+  const raw = String(process.env[ADMIN_API_ENV] || FEEDBACK_API_DEFAULT).trim();
+  return raw && isTrustedBackend(raw) ? raw : null;
+}
+
 function clampText(value, max) {
   return String(value === undefined || value === null ? '' : value).trim().slice(0, max);
 }
@@ -178,6 +192,91 @@ async function handleRegistration(res, payload, startedAt) {
   }
 }
 
+// 統一回報格式 v1（與 Scout Admin widget 相同欄位）：name／contact／troopId
+// 一律選填（可匿名）。前端依 deliveryStatus 決定顯示「已確認收到／未接收／
+// 未能確認」，避免把「已送出請求」誤當「已完成傳送」。
+async function handleFeedback(res, payload, startedAt) {
+  const inbox = feedbackInboxApi();
+  if (!inbox) {
+    logResult({ troopId: 'FB', action: 'submitFeedback', status: 500, startedAt, success: false, central: false });
+    return res.status(500).json({ success: false, deliveryStatus: 'not_sent', error: '回報服務暫時無法使用，請稍後重試' });
+  }
+  const type = clampText(payload.type, 20).toLowerCase();
+  if (type !== 'issue' && type !== 'feedback') {
+    return res.status(400).json({ success: false, deliveryStatus: 'not_sent', error: '回報類型不正確' });
+  }
+  const safeText = (value, limit) => {
+    const text = clampText(value, limit);
+    return /^[=+\-@]/.test(text) ? "'" + text : text;
+  };
+  const troopIdRaw = clampText(payload.troopId, 32);
+  const troopId = /^[0-9A-Za-z_-]{1,32}$/.test(troopIdRaw) ? troopIdRaw : '';
+  const common = {
+    type,
+    sourceApp: '進度追蹤',
+    troopId,
+    name: safeText(payload.name, 80),
+    contact: safeText(payload.contact, 120)
+  };
+  let body;
+  if (type === 'issue') {
+    const title = clampText(payload.title, 120);
+    const desc = clampText(payload.desc, 2000);
+    if (!title || !desc) {
+      return res.status(400).json({ success: false, deliveryStatus: 'not_sent', error: '請簡單寫下問題及需要的協助' });
+    }
+    const severity = ['低', '中', '高', '緊急'].includes(String(payload.severity || ''))
+      ? String(payload.severity)
+      : '中';
+    body = { ...common, title: safeText(title, 120), desc: safeText(desc, 2000), severity };
+  } else {
+    const content = clampText(payload.content, 2000);
+    if (content.length < 5) {
+      return res.status(400).json({ success: false, deliveryStatus: 'not_sent', error: '請簡單描述你的意見' });
+    }
+    const fbType = ['建議', '讚', '批評', '其他'].includes(String(payload.fbType || ''))
+      ? String(payload.fbType)
+      : '建議';
+    body = { ...common, fbType, content: safeText(content, 2000) };
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+  try {
+    const upstream = await fetch(inbox, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body),
+      redirect: 'follow',
+      signal: controller.signal
+    });
+    const raw = await upstream.text();
+    let result = null;
+    try { result = JSON.parse(raw); } catch (_) { /* non-JSON inbox response */ }
+    // 收件端回應格式可能係 {status:'success'} 或 {success:true}；兩者都接納。
+    const confirmed = !!result && typeof result === 'object' &&
+      (result.status === 'success' || result.success === true);
+    if (confirmed) {
+      logResult({ troopId: 'FB', action: 'submitFeedback', status: upstream.status, startedAt, success: true, central: false });
+      return res.status(200).json({ success: true, deliveryStatus: 'confirmed', message: '已送出並確認收到' });
+    }
+    if (result && typeof result === 'object') {
+      console.error(`[proxy] feedback_inbox_rejected status=${upstream.status}`);
+      logResult({ troopId: 'FB', action: 'submitFeedback', status: 502, startedAt, success: false, central: false });
+      return res.status(502).json({ success: false, deliveryStatus: 'rejected', error: '收件系統未有接收這次回報，請稍後再試' });
+    }
+    console.error(`[proxy] feedback_inbox_bad_response status=${upstream.status}`);
+    logResult({ troopId: 'FB', action: 'submitFeedback', status: 502, startedAt, success: false, central: false });
+    return res.status(502).json({ success: false, deliveryStatus: 'unknown', error: '暫時未能確認回報是否送達' });
+  } catch (error) {
+    const timeoutHit = error && error.name === 'AbortError';
+    console.error(`[proxy] feedback_send_error timeout=${timeoutHit}`);
+    logResult({ troopId: 'FB', action: 'submitFeedback', status: timeoutHit ? 504 : 502, startedAt, success: false, central: false });
+    return res.status(timeoutHit ? 504 : 502).json({ success: false, deliveryStatus: 'unknown', error: '暫時未能確認回報是否送達' });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 module.exports = async function handler(req, res) {
   attachResponseHelpers(res);
   res.setHeader('Cache-Control', 'no-store');
@@ -200,7 +299,10 @@ module.exports = async function handler(req, res) {
       ? String(payload.troopId).trim().toUpperCase()
       : '';
     action = safeAction(payload.action);
-    if (!troopId || !action) return fail(res, 400, '請求資料不完整');
+    if (!action) return fail(res, 400, '請求資料不完整');
+    // 統一回報可匿名、未揀旅團都可送出（其餘 action 一律要有旅團編號）。
+    if (action === 'submitFeedback') return handleFeedback(res, payload, startedAt);
+    if (!troopId) return fail(res, 400, '請求資料不完整');
 
     if (action === 'superLogin') return fail(res, 403, '未授權請求');
     // Registration applies to a troop that is NOT registered yet, so it must

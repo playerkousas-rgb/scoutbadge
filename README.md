@@ -4,9 +4,10 @@ ScoutBadge 是為香港童軍支部設計的進度紀錄、專科徽章及領袖
 
 ## 主要功能
 
-- 會員章、探索獎章、標準獎章、高級獎章、總領袖獎章及專科徽章進度
-- 成員／領袖帳戶申請、前端審批、批量開戶及 YMIS 匯入
-- 成員完成申請與領袖審批
+- 2026 年修訂版《童軍訓練綱要》：會員章、探索、標準、高級、總領袖獎章及專科徽章進度（2026-08-15 生效，P022/2026）
+- 訓練綱要過渡安排（2017 → 2026）：章級對照、細項比對參考、保留舊清單紀錄 ID、領袖核實後自行記錄舊獎章過渡等同（不刪改舊進度、不自動勾選新細項），見 `docs/SCHEME_TRANSITION.md`
+- 回報／意見即時傳送狀態：顯示「傳送中 → 已確認收到／未接收／未能確認」，傳送中防重複點擊、內容保留、未確認時須確認才重送
+- 成員完成申請與領袖審批、批量開戶及 YMIS 匯入
 - 小隊、私隱範圍、小隊完成率及活動履歷
 - PT/18、PT/120A 等表格資料帶入及列印
 - 主系統 Portal 的旅團選擇與嵌入入口
@@ -83,9 +84,9 @@ Vercel 的 Output Directory 是 `public/`，由 `npm run build`（`build.js`）�
 
 ## 資料來源
 
-- https://scoutsinfohub.org.hk/
-- https://scoutsinfohub.org.hk/scout-training-scheme
-- https://scoutsinfohub.org.hk/ScoutTrainingScheme/FullVersion-zh.pdf
+- https://scoutsinfohub.org.hk/scout-training-scheme（2026 年修訂版綱要；各專科徽章個別 PDF 連結，最近更新 2026-09）
+- https://www.scout.org.hk/uploads/tc/circulars/23585/p022-26.pdf（總會通告 P022/2026：2026 年修訂版實施及過渡安排）
+- https://scoutsinfohub.org.hk/ScoutTrainingScheme/FullVersion-zh.pdf（舊版 2015／2017 全本，僅作 2017 版過渡對照之用）
 - https://www.scout.org.hk/uploads/tc/circulars/23262/p013-26.pdf
 
 ### 中央登入：回打驗票（對齊 VS／RS）
