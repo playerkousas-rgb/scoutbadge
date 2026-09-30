@@ -28,6 +28,30 @@ a:hover{text-decoration:underline}
 /* 登入後 main-app-header 內的常駐回報按鈕（配 lang-toggle 藥丸樣式，金色搶眼） */
 .main-app-header .btn-feedback-top{border-color:rgba(255,215,0,0.85);background:rgba(255,215,0,0.22);white-space:nowrap}
 .main-app-header .btn-feedback-top:hover{background:rgba(255,215,0,0.38)}
+/* 回報／意見傳送狀態（包住 scout-admin widget 的送出流程，令用戶知道進度及完成沒有） */
+#scoutw-msg.pending{color:#8A6D00!important}
+#scoutw-msg.success{color:#1a7a3c!important}
+#scoutw-msg.warning{color:#B26A00!important}
+#scoutw-msg.error{color:#c62828!important}
+#scoutw-overlay button[disabled]{opacity:.55;cursor:not-allowed}
+
+/* ===== 訓練綱要過渡對照（2017 → 2026，對齊 vsbadge 的 legacy 面板） ===== */
+.legacy-transition{border-left:4px solid var(--gold-dark);background:#FFFEF7}
+.legacy-transition>summary{cursor:pointer;font-weight:700;color:var(--maroon);font-size:14px;list-style-position:inside}
+.legacy-policy{font-size:11px;line-height:1.7;margin:9px 0;background:#FFF7E6;border-left:3px solid var(--gold-dark);padding:9px 10px;border-radius:5px}
+.legacy-crosswalk-wrap{width:100%;overflow-x:auto;margin:7px 0 12px}
+.legacy-crosswalk{width:100%;min-width:720px;border-collapse:collapse;font-size:11px;line-height:1.55;background:#fff}
+.legacy-crosswalk th,.legacy-crosswalk td{border:1px solid var(--border);padding:7px 8px;text-align:left;vertical-align:top}
+.legacy-crosswalk th{background:var(--maroon-light);color:var(--maroon);position:sticky;top:0}
+.legacy-detail-list{margin:6px 0 12px;padding:7px 9px;background:#fff;border:1px solid var(--border);border-radius:7px}
+.legacy-detail-list>summary{cursor:pointer;color:var(--blue);font-size:11px;font-weight:600}
+.legacy-transfer-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:8px;margin:8px 0}
+.legacy-transfer-row{background:#fff;border:1px solid var(--border);border-radius:8px;padding:9px;display:grid;grid-template-columns:24px minmax(0,1fr);gap:7px;align-items:start}
+.legacy-transfer-row input[type=checkbox]{width:18px;height:18px;margin-top:2px;accent-color:var(--maroon)}
+.legacy-transfer-row .legacy-date{grid-column:2;width:100%;max-width:200px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px}
+.legacy-transfer-row .legacy-status{grid-column:2;font-size:10px;color:var(--text-light)}
+.legacy-equivalent-tag{display:inline-block;margin-left:5px;padding:2px 6px;border-radius:999px;background:#FFF4D6;color:#805B00;font-size:9px;font-weight:600;white-space:nowrap}
+@media(max-width:640px){.legacy-crosswalk{min-width:620px}.legacy-transfer-list{grid-template-columns:1fr}.legacy-transfer-row .legacy-date{max-width:none;min-height:42px;font-size:16px}}
 
 /* In-app syllabus content: display inline instead of pop-up for mobile record-book use */
 .link-btn{background:none;border:none;color:var(--maroon);font-size:12px;padding:0;margin-top:3px;cursor:pointer;text-decoration:underline;font-family:inherit}
@@ -690,7 +714,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
 
 <footer style="text-align:center;padding:20px 16px;margin-top:20px;border-top:2px solid var(--border);font-size:12px;color:var(--text-light);background:var(--card)">
   <div data-i18n="footer_line1">COPYRIGHT 2026 Scout System • 童軍進度追蹤系統 v5.1</div>
-  <div style="margin-top:4px;font-size:11px" data-i18n="footer_line2">基於 2026年第11版《童軍訓練綱要》，內置官方英文版對照 | 支援離線暫存 • 批量寫入 • 活動履歷（服務／活動／訓練班） • 保護兒童 Safe from Harm</div>
+  <div style="margin-top:4px;font-size:11px" data-i18n="footer_line2">基於 2026 年修訂版《童軍訓練綱要》（2026 年 8 月 15 日生效，P022/2026），內置官方英文版對照及 2017 版過渡安排 | 支援離線暫存 • 批量寫入 • 活動履歷（服務／活動／訓練班） • 保護兒童 Safe from Harm</div>
   <div style="margin-top:4px;font-size:10px">⚠️ 非官方聲明：本系統為獨立開發的非官方工具，並非香港童軍總會官方產品，與總會並無隸屬或贊助關係。</div>
 </footer>
 
@@ -1068,6 +1092,39 @@ zh:{
   ymis_count_fmt:'（共 {0} 筆，已選 {1} 筆）', bulk_progress_fmt:'批量開戶中 {0}／{1}...',
   ymis_go:'🚀 確認批量開戶（{0} 人）',
   ymis_pick_none:'請至少勾選一位成員',
+  /* 回報／意見傳送狀態 */
+  fb_sending_hint:'⏳ 正在傳送回報，請勿重複按「送出」。收到回覆後會在此清楚顯示結果。',
+  fb_sending:'傳送中…', fb_sent_btn:'已送出 ✓', fb_close:'關閉',
+  fb_confirmed:'✅ 已成功送出；收件系統已確認收到。請等待開發者通知。此視窗不會自動關閉。',
+  fb_not_accepted:'收件系統表示未接收這次回報；內容已保留，請稍後再試。',
+  fb_unknown:'⚠️ 連線中斷，暫時未能確認收件系統是否收到。請先不要重複提交，稍後查看通知；如仍未收到，可按「確認重送」。重送可能造成重複回報。',
+  fb_retry:'確認重送',
+  fb_retry_confirm:'目前未能確認上一筆回報是否送達。重送可能產生重複回報；你確定要再傳送一次嗎？',
+  fb_need_issue:'⚠️ 請填寫標題和問題詳情（*）', fb_need_feedback:'⚠️ 請填寫回饋內容（*）',
+  fb_fail:'回報未能送出，請稍後重試。', fb_dup_block:'傳送中或已送出，請勿重複提交。',
+  /* 訓練綱要過渡對照 */
+  legacy_title:'🧭 2017版 → 2026版過渡對照', legacy_summary:'查閱總會過渡安排；由領袖核實及自行選擇是否記錄等同，系統不會自動轉換或勾選新細項。',
+  legacy_source_link:'查看官方過渡安排（P022/2026）', legacy_new_link:'查看2026年修訂版綱要', legacy_old_link:'查看2017年第1次修訂版綱要',
+  legacy_crosswalk_title:'章級對照（P022/2026 對童軍支部沒有官方對照表；以下為比對參考）',
+  legacy_category_title:'章節分類變化', legacy_unmatched_title:'2017版有、但2026版沒有直接對應的項目',
+  legacy_newreq_title:'轉用2026版時須留意的新增／修訂要求',
+  legacy_detail_title:'細項比對參考（不代表總會逐項兌換）', legacy_expand_details:'展開 {0} 項細項比對參考',
+  legacy_old:'2017版內容', legacy_new:'2026版／對應說明', legacy_notes:'限制及領袖處理方式', legacy_manual:'只作參考，須由領袖核實',
+  legacy_history_title:'已保存的舊清單紀錄 ID（僅供歷史查閱）',
+  legacy_history_hint:'既有舊進度仍保留；這些舊 ID 不計入新制完成百分比，也不會自動視為新細項完成。',
+  legacy_history_progress:'已保存的舊進度', legacy_history_done:'有完成紀錄', legacy_history_none:'未找到完成紀錄',
+  legacy_transfer_title:'領袖自行選擇記錄已核實的舊獎章等同',
+  legacy_transfer_hint:'只在成員符合資格（2026年8月15日前宣誓）、舊制獎章已完成並由領袖核實後才選取。選取只新增獨立的「過渡等同紀錄」；不刪除或覆寫舊進度、不勾選任何新版細項，也不代表每個新版細項已完成。日期可留白。',
+  legacy_date_optional:'舊獎章日期（選填）', legacy_submit:'加入所選過渡紀錄',
+  legacy_confirm:'確定為「{0}」加入 {1} 項舊獎章過渡紀錄？只會新增等同紀錄，不會改動新舊清單進度。',
+  legacy_none_selected:'請先選擇已考獲並核實的舊獎章。', legacy_queued:'✅ 已加入 {0} 項過渡紀錄；按底部「確認寫入雲端」保存。',
+  legacy_recorded:'已記錄', legacy_pending:'待寫入', legacy_unknown_date:'未提供日期',
+  legacy_remove:'撤回紀錄', legacy_remove_confirm:'確定撤回「{0}」的這項舊獎章過渡紀錄？不會更改任何清單細項。',
+  legacy_remove_queued:'已將撤回過渡紀錄加入待寫入清單。', legacy_no_permission:'你沒有此獎章的直接寫入權限，請聯絡團長。',
+  legacy_no_transfers:'目前沒有可轉換的舊獎章紀錄。',
+  legacy_eligibility:'我確認此成員於2026年8月15日前宣誓，並已核實所選舊獎章確已完成。',
+  legacy_activity_note:'過渡等同紀錄不計入新制完成百分比；新版細項須另行逐項核實及勾選。',
+  legacy_equivalent:'已記錄舊獎章過渡等同',
   syl_suffix:'訓練綱要'
 },
 en:{
@@ -1418,7 +1475,44 @@ en:{
   ymis_pad:'🔢 Pad all to 10 digits', ymis_clear:'🗑️ Clear preview', ymis_sel_all:'☑️ Select all', ymis_sel_none:'⬜ Select none',
   ymis_count_fmt:'({0} rows, {1} selected)', bulk_progress_fmt:'Onboarding {0}/{1}...',
   ymis_go:'🚀 Confirm bulk onboarding ({0})',
-  ymis_pick_none:'Please tick at least one member'
+  ymis_pick_none:'Please tick at least one member',
+  /* report / feedback delivery status */
+  fb_sending_hint:'⏳ Sending your report. Please do not press Send again; the result will appear here.',
+  fb_sending:'Sending…', fb_sent_btn:'Sent ✓', fb_close:'Close',
+  fb_confirmed:'✅ Sent successfully; the receiving system confirmed receipt. Please wait for a reply. This dialog will stay open.',
+  fb_not_accepted:'The receiving system did not accept this report. Your text is still here; please try again later.',
+  fb_unknown:'⚠️ The connection ended before we could confirm receipt. Please do not submit again yet. Check for a notification later; if none arrives, choose “Resend anyway”. Resending may create a duplicate report.',
+  fb_retry:'Resend anyway',
+  fb_retry_confirm:'We could not confirm whether the previous report was received. Resending may create a duplicate. Do you still want to send it again?',
+  fb_need_issue:'⚠️ Please fill in the title and problem details (*)', fb_need_feedback:'⚠️ Please fill in the feedback content (*)',
+  fb_fail:'Could not send your report. Please try again later.', fb_dup_block:'Still sending or already sent — do not submit twice.',
+  /* training-scheme transition */
+  legacy_title:'🧭 2017 → 2026 Edition transition crosswalk',
+  legacy_summary:'Review the Association\'s transition rules. Leaders verify each old award and choose whether to record an equivalence; the app never auto-converts or ticks new items.',
+  legacy_source_link:'View official transition arrangements (P022/2026)', legacy_new_link:'View the 2026 revised scheme', legacy_old_link:'View the 2017 1st revision scheme',
+  legacy_crosswalk_title:'Award-level mapping (P022/2026 gives no official table for the Scout Section; references below)',
+  legacy_category_title:'Section re-grouping', legacy_unmatched_title:'2017 items with no direct 2026 counterpart',
+  legacy_newreq_title:'New/revised requirements to check when moving to the 2026 scheme',
+  legacy_detail_title:'Item comparison references (not an official item-by-item conversion)',
+  legacy_expand_details:'Expand {0} comparison references',
+  legacy_old:'2017 Edition content', legacy_new:'2026 Edition / comparison', legacy_notes:'Limits and leader action',
+  legacy_manual:'Reference only; leader must verify',
+  legacy_history_title:'Preserved old checklist IDs (historical reference only)',
+  legacy_history_hint:'Existing old progress is retained. These legacy IDs do not count towards the new-scheme percentage or automatically complete a new item.',
+  legacy_history_progress:'Preserved old progress', legacy_history_done:'Completion record found', legacy_history_none:'No completion record found',
+  legacy_transfer_title:'Leader-selected equivalence for verified old awards',
+  legacy_transfer_hint:'Select only when the member is eligible (invested before 15 August 2026), the old award is fully earned, and the leader has verified it. Selection adds a separate transition-equivalence record only; it never deletes or overwrites old progress, ticks a new-scheme item, or proves every new item complete. Date is optional.',
+  legacy_date_optional:'Old award date (optional)', legacy_submit:'Add selected transition records',
+  legacy_confirm:'Add {1} old-award transition-equivalence record(s) for “{0}”?\nOnly equivalence records are added; neither checklist is changed.',
+  legacy_none_selected:'Select a verified old award that has been earned.', legacy_queued:'✅ Added {0} transition record(s) to the save queue. Tap “Confirm & write” to finish.',
+  legacy_recorded:'Recorded', legacy_pending:'Pending save', legacy_unknown_date:'Date not provided',
+  legacy_remove:'Remove record', legacy_remove_confirm:'Remove this transition-equivalence record for “{0}”? No checklist items will change.',
+  legacy_remove_queued:'Transition-record removal added to the save queue.',
+  legacy_no_permission:'You do not have write access to this award. Ask the Group Scout Leader.',
+  legacy_no_transfers:'No selectable old-award records are available.',
+  legacy_eligibility:'I confirm this member was invested before 15 August 2026 and the selected old award has been earned and verified.',
+  legacy_activity_note:'Transition equivalence records do not count towards new-scheme completion. Verify and tick each applicable new item separately.',
+  legacy_equivalent:'Legacy award equivalence recorded'
 }};
 
 let currentLang='zh';
@@ -1460,6 +1554,16 @@ function itName(it){ return (inEn()&&it&&it.name_en)?it.name_en:((it&&it.name)||
 function itDetail(it){ return (inEn()&&it&&it.detail_en)?it.detail_en:((it&&it.detail)||''); }
 function obName(ob){ return (inEn()&&ob&&ob.name_en)?ob.name_en:((ob&&ob.name)||''); }
 function obDesc(ob){ return (inEn()&&ob&&ob.desc_en)?ob.desc_en:((ob&&ob.desc)||''); }
+/* legacyTransition 欄位本地化：enXxx 覆蓋層存在於 items.json 物件本身（對齊 vsbadge） */
+function tx(obj, field){
+  if(!obj) return '';
+  if(inEn()){
+    const enKey='en'+field.charAt(0).toUpperCase()+field.slice(1);
+    if(obj[enKey]!==undefined && obj[enKey]!=='') return obj[enKey];
+  }
+  return obj[field]||'';
+}
+function escapeHtmlText(s){ return escapeHtml(s==null?'':String(s)); }
 function otherGroupLabel(g){
   const m=itemsEn&&itemsEn.otherGroupNames;
   if(inEn()&&m&&m[g]) return m[g];
@@ -1556,10 +1660,159 @@ function openScoutReport(){
         });
       }
       ov.classList.add('open');
+      renderScoutwStatus();
       return;
     }
   }catch(e){}
   window.open('https://scout-admin-blue.vercel.app/report.html?app='+encodeURIComponent('進度追蹤'), '_blank', 'noopener');
+}
+
+/* ---- 傳送狀態層：確保用戶知道回報／意見的進度及完成傳送了沒有 ----
+   widget.js 自己的送出以 no-cors 直送，無法得知收件系統收妥與否，且可重複按鈕。
+   本 APP 接管兩個送出按鈕（clone-swap 移除 widget 內建 handler），改為經
+   /api/proxy 的 submitFeedback（統一回報格式 v1，同一收件端）送出，並以
+   deliveryStatus 明確顯示：傳送中 → 已確認收到／未接收／未能確認（勿重複
+   提交，可確認重送）。內容在確認／未知狀態下保留，不會被清走。 */
+let feedbackSubmitState='idle'; // idle / sending / sent / failed / unknown
+
+function setScoutwControlsDisabled(disabled){
+  ['scoutw_i_title','scoutw_i_desc','scoutw_i_sev','scoutw_i_troop','scoutw_i_name','scoutw_i_contact',
+   'scoutw_f_content','scoutw_f_troop','scoutw_f_name','scoutw_f_contact'].forEach(function(id){
+    const el=document.getElementById(id);
+    if(el) el.disabled=disabled;
+  });
+}
+function renderScoutwStatus(){
+  const msg=document.getElementById('scoutw-msg');
+  const issueBtn=document.getElementById('scoutw_i_submit');
+  const fbBtn=document.getElementById('scoutw_f_submit');
+  if(!msg) return;
+  if(feedbackSubmitState==='sending'){
+    msg.textContent=t('fb_sending_hint'); msg.className='pending';
+    if(issueBtn){ issueBtn.disabled=true; issueBtn.textContent=t('fb_sending'); }
+    if(fbBtn){ fbBtn.disabled=true; fbBtn.textContent=t('fb_sending'); }
+    setScoutwControlsDisabled(true);
+  }else if(feedbackSubmitState==='sent'){
+    msg.textContent=t('fb_confirmed'); msg.className='success';
+    if(issueBtn){ issueBtn.disabled=true; issueBtn.textContent=t('fb_sent_btn'); }
+    if(fbBtn){ fbBtn.disabled=true; fbBtn.textContent=t('fb_sent_btn'); }
+    setScoutwControlsDisabled(true);
+  }else if(feedbackSubmitState==='failed'){
+    msg.className='error';
+    if(issueBtn){ issueBtn.disabled=false; issueBtn.textContent=t('fb_retry'); }
+    if(fbBtn){ fbBtn.disabled=false; fbBtn.textContent=t('fb_retry'); }
+    setScoutwControlsDisabled(false);
+  }else if(feedbackSubmitState==='unknown'){
+    msg.textContent=t('fb_unknown'); msg.className='warning';
+    if(issueBtn){ issueBtn.disabled=false; issueBtn.textContent=t('fb_retry'); }
+    if(fbBtn){ fbBtn.disabled=false; fbBtn.textContent=t('fb_retry'); }
+    setScoutwControlsDisabled(false);
+  }else{
+    msg.textContent=''; msg.className='';
+    if(issueBtn){ issueBtn.disabled=false; issueBtn.textContent='提交問題回報'; }
+    if(fbBtn){ fbBtn.disabled=false; fbBtn.textContent='提交意見回饋'; }
+    setScoutwControlsDisabled(false);
+  }
+}
+function hookScoutwSubmit(id, kind){
+  const btn=document.getElementById(id);
+  if(!btn || btn.dataset.sbHooked==='1') return;
+  const clone=btn.cloneNode(true); // 換走節點＝移除 widget 內建 click handler
+  clone.dataset.sbHooked='1';
+  btn.parentNode.replaceChild(clone, btn);
+  clone.addEventListener('click', function(){ submitScoutReport(kind); });
+}
+function hookScoutwWidget(){
+  try{
+    hookScoutwSubmit('scoutw_i_submit','issue');
+    hookScoutwSubmit('scoutw_f_submit','feedback');
+    // 換頁籤時 widget 會清空 #scoutw-msg；換走頁籤節點，令傳送狀態重新顯示
+    const tabBtns=document.querySelectorAll('#scoutw-tabs button');
+    tabBtns.forEach(function(b){
+      if(b.dataset.sbHooked==='1') return;
+      const clone=b.cloneNode(true);
+      clone.dataset.sbHooked='1';
+      b.parentNode.replaceChild(clone,b);
+      clone.addEventListener('click', function(){
+        document.querySelectorAll('#scoutw-tabs button').forEach(function(x){ x.classList.remove('active'); });
+        clone.classList.add('active');
+        document.querySelectorAll('.scoutw-pane').forEach(function(p){
+          p.classList.toggle('open', p.getAttribute('data-pane')===clone.getAttribute('data-pane'));
+        });
+        renderScoutwStatus();
+      });
+    });
+    renderScoutwStatus();
+    if(!window.__sbScoutwEnterHooked){
+      window.__sbScoutwEnterHooked=true;
+      document.addEventListener('keydown', function(e){
+        if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){
+          const ov=document.getElementById('scoutw-overlay');
+          if(ov&&ov.classList.contains('open')){
+            const issuePane=document.querySelector('.scoutw-pane[data-pane="issue"]');
+            submitScoutReport(issuePane&&issuePane.classList.contains('open')?'issue':'feedback');
+          }
+        }
+      });
+    }
+  }catch(e){}
+}
+function scoutwField(id){ const el=document.getElementById(id); return el?String(el.value||'').trim():''; }
+async function submitScoutReport(kind){
+  const msg=document.getElementById('scoutw-msg');
+  if(feedbackSubmitState==='sending'){ renderScoutwStatus(); return; }
+  if(feedbackSubmitState==='sent'){ renderScoutwStatus(); return; }
+  let payload;
+  if(kind==='issue'){
+    const title=scoutwField('scoutw_i_title'), desc=scoutwField('scoutw_i_desc');
+    if(!title||!desc){ if(msg){ msg.textContent=t('fb_need_issue'); msg.className='error'; } return; }
+    payload={ type:'issue', title:title, desc:desc,
+      severity:scoutwField('scoutw_i_sev')||'中', troopId:scoutwField('scoutw_i_troop'),
+      name:scoutwField('scoutw_i_name'), contact:scoutwField('scoutw_i_contact') };
+  }else{
+    const content=scoutwField('scoutw_f_content');
+    if(!content){ if(msg){ msg.textContent=t('fb_need_feedback'); msg.className='error'; } return; }
+    const typeEl=document.querySelector('input[name="scoutw_fb_type"]:checked');
+    payload={ type:'feedback', fbType:typeEl?typeEl.value:'建議', content:content,
+      troopId:scoutwField('scoutw_f_troop'), name:scoutwField('scoutw_f_name'), contact:scoutwField('scoutw_f_contact') };
+  }
+  if(feedbackSubmitState==='unknown'&&!confirm(t('fb_retry_confirm'))) return;
+  feedbackSubmitState='sending';
+  renderScoutwStatus();
+  try{
+    const controller=new AbortController();
+    const timer=setTimeout(function(){ controller.abort(); }, 58000);
+    let result=null;
+    try{
+      const res=await fetch('/api/proxy',{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(Object.assign({action:'submitFeedback'}, payload)),
+        signal:controller.signal
+      });
+      try{ result=await res.json(); }catch(parseErr){ result=null; }
+    }finally{ clearTimeout(timer); }
+    if(result&&result.success===true){
+      feedbackSubmitState='sent';
+    }else if(result&&['not_sent','rejected'].includes(result.deliveryStatus)){
+      feedbackSubmitState='failed';
+      if(msg){
+        msg.textContent=result.deliveryStatus==='rejected'?t('fb_not_accepted'):(result.error||t('fb_fail'));
+        msg.className='error';
+      }
+    }else{
+      // 送出後未能確認（包括舊 proxy 未回 deliveryStatus）：保守處理，勿重複提交。
+      feedbackSubmitState='unknown';
+    }
+  }catch(error){
+    // 網絡中斷／逾時可能發生在收件系統收到之後；永不斷言「一定失敗」。
+    feedbackSubmitState='unknown';
+  }
+  renderScoutwStatus();
+  if(feedbackSubmitState==='failed'&&msg&&!msg.textContent) msg.textContent=t('fb_fail');
+}
+if(typeof document!=='undefined'){
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', hookScoutwWidget);
+  else hookScoutwWidget();
 }
 
 /* ================== Unified API Proxy Wrapper ================== */
@@ -2214,6 +2467,147 @@ document.addEventListener('DOMContentLoaded', ()=>{
   }
 });
 
+/* ================== 訓練綱要過渡對照（2017 → 2026，P022/2026） ==================
+   對齊 vsbadge 的 legacyTransition：政策／對照表／細項比對／保留舊 ID／等同紀錄。
+   勾選只新增 LEGACY-2017-* 過渡等同紀錄（寫入進度追蹤表，不計入新制完成百分比），
+   不會刪改舊進度，也不會自動勾選任何新細項。 */
+function hasProgressRecord(ymis,itemId){
+  const flat=progressFlat[ymis]||{};
+  const pending=(pendingChanges||[]).some(pc=>String(pc.ymis)===String(ymis)&&String(pc.itemId)===String(itemId)&&!pc.uncomplete);
+  return Object.prototype.hasOwnProperty.call(flat,itemId)||pending;
+}
+function renderLegacyBadgeTag(ymis,badgeId){
+  const records=((itemsData&&itemsData.legacyTransition&&itemsData.legacyTransition.quickTransfers)||[])
+    .filter(row=>row.targetBadge===badgeId&&hasProgressRecord(ymis,row.recordId));
+  if(!records.length) return '';
+  return `<small class="legacy-equivalent-tag" title="${t('legacy_equivalent')}">↔ ${t('legacy_equivalent')} (${records.length})</small>`;
+}
+function renderLegacyTransitionPanel(targetYmis,isLeader){
+  const transition=itemsData&&itemsData.legacyTransition;
+  if(!transition) return '';
+  const memberName=(members.find(m=>String(m.ymis)===String(targetYmis))||{}).name||(String(targetYmis)===String(currentUser.ymis)?currentUser.name:targetYmis);
+  const headers=`<thead><tr><th>${t('legacy_old')}</th><th>${t('legacy_new')}</th><th>${t('legacy_notes')}</th></tr></thead>`;
+  const badgeRows=(transition.badgeMappings||[]).map(row=>`<tr>
+    <td>${escapeHtmlText(tx(row,'old'))}</td><td>${escapeHtmlText(tx(row,'new'))}</td><td>${escapeHtmlText(tx(row,'note'))}${row.transferable?'':` <b style="color:var(--orange)">(${t('legacy_manual')})</b>`}</td>
+  </tr>`).join('');
+  const detailRows=(transition.detailMappings||[]).map(row=>`<tr>
+    <td><code>${escapeHtmlText(tx(row,'code'))}</code><br>${escapeHtmlText(tx(row,'old'))}</td>
+    <td>${tx(row,'newItemId')?`<code>${escapeHtmlText(tx(row,'newItemId'))}</code><br>`:''}${escapeHtmlText(tx(row,'new'))}</td><td>${escapeHtmlText(tx(row,'note'))}</td>
+  </tr>`).join('');
+  const renderNoteRows=rows=>(rows||[]).map(row=>`<tr>
+    <td>${escapeHtmlText(tx(row,'old'))}</td><td>${escapeHtmlText(tx(row,'new'))}</td><td>${escapeHtmlText(tx(row,'consequence'))}</td>
+  </tr>`).join('');
+  const categoryRows=renderNoteRows(transition.categoryOnlyNotes);
+  const unmatchedRows=renderNoteRows(transition.unmatchedItems);
+  const newReqRows=renderNoteRows(transition.newRequirements);
+  const preservedRows=(transition.preservedChecklistItems||[]).map(row=>{
+    const oldProgress=progressFlat[targetYmis]||{};
+    const hasOldRecord=Object.prototype.hasOwnProperty.call(oldProgress,row.id);
+    const oldValue=oldProgress[row.id];
+    const oldStatus=hasOldRecord?`${t('legacy_history_done')}${oldValue?` · ${escapeHtmlText(oldValue)}`:''}`:t('legacy_history_none');
+    return `<tr>
+      <td><code>${escapeHtmlText(row.id)}</code></td>
+      <td>${escapeHtmlText(inEn()?(row.enName||row.name):(row.name||row.id))}</td>
+      <td>${escapeHtmlText(inEn()?(row.enSegmentName||row.segmentName||''):(row.segmentName||''))}</td>
+      <td>${oldStatus}</td>
+    </tr>`;
+  }).join('');
+  const linkRow=(label,url)=>url?`<a href="${escapeHtmlText(url)}" target="_blank" rel="noopener noreferrer">🔗 ${label}</a>`:'';
+  const sourceLinks=[linkRow(t('legacy_source_link'),transition.sourceUrl),linkRow(t('legacy_new_link'),transition.newSchemeUrl),linkRow(t('legacy_old_link'),transition.oldSchemeUrl)].filter(Boolean).join('<br>');
+  const transfers=transition.quickTransfers||[];
+  const transferRows=transfers.map(row=>{
+    const pendingChange=(pendingChanges||[]).find(pc=>String(pc.ymis)===String(targetYmis)&&String(pc.itemId)===String(row.recordId)&&!pc.uncomplete);
+    const pending=!!pendingChange;
+    const already=hasProgressRecord(targetYmis,row.recordId);
+    const allowed=isLeader&&canUserTickRole(currentUser.role)&&canCurrentUserTickItem(row.permissionItemId);
+    const date=((progressFlat[targetYmis]||{})[row.recordId])||(pendingChange&&pendingChange.date)||'';
+    const status=already?(pending?t('legacy_pending'):t('legacy_recorded')):'';
+    const checkId=`legacyCheck_${row.id}`;
+    return `<div class="legacy-transfer-row">
+      <input id="${checkId}" type="checkbox" data-transfer-id="${escapeHtmlText(row.id)}" ${already?'checked':''} ${already||!allowed?'disabled':''}>
+      <label for="${checkId}"><b>${escapeHtmlText(tx(row,'old'))}</b> → <b>${escapeHtmlText(tx(row,'new'))}</b><br><small>${escapeHtmlText(tx(row,'note'))}</small></label>
+      <input class="legacy-date" type="date" data-transfer-date="${escapeHtmlText(row.id)}" max="${todayISO()}" value="${escapeHtmlText(date)}" ${already||!allowed?'disabled':''} aria-label="${t('legacy_date_optional')}">
+      <span class="legacy-status">${status}${already&&!date?` · ${t('legacy_unknown_date')}`:''}${!allowed&&!already?` · ${t('legacy_no_permission')}`:''}${already&&allowed?` <button type="button" class="btn btn-sm btn-outline" onclick="removeLegacyTransfer('${escapeAttr(targetYmis)}','${escapeAttr(row.recordId)}')">${t('legacy_remove')}</button>`:''}</span>
+    </div>`;
+  }).join('');
+  const transferTool=isLeader?`<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
+    <h4 style="font-size:13px;color:var(--maroon)">${t('legacy_transfer_title')}</h4>
+    <p style="font-size:11px;color:var(--text-light);line-height:1.6">${t('legacy_transfer_hint')}</p>
+    <label style="display:flex;gap:7px;align-items:flex-start;margin:8px 0;font-size:11px;color:var(--red)"><input id="legacyEligibility_${escapeAttr(targetYmis)}" type="checkbox" style="margin-top:2px;flex:0 0 auto">${t('legacy_eligibility')}</label>
+    <div class="legacy-transfer-list" id="legacyTransferList">${transferRows||`<p>${t('legacy_no_transfers')}</p>`}</div>
+    <button type="button" class="btn btn-sm btn-primary" onclick="queueLegacyTransfers('${escapeAttr(targetYmis)}')">${t('legacy_submit')}</button>
+  </div>`:'';
+  const historySection=preservedRows?`<details class="legacy-detail-list legacy-history"><summary>${t('legacy_history_title')} (${(transition.preservedChecklistItems||[]).length})</summary>
+    <p>${t('legacy_history_hint')}</p>
+    <div class="legacy-crosswalk-wrap"><table class="legacy-crosswalk"><thead><tr><th>ID</th><th>${t('legacy_old')}</th><th>${t('legacy_new')}</th><th>${t('legacy_history_progress')}</th></tr></thead><tbody>${preservedRows}</tbody></table></div>
+  </details>`:'';
+  const section=(title,rows)=>rows?`<h4 style="font-size:13px;color:var(--maroon)">${title}</h4><div class="legacy-crosswalk-wrap"><table class="legacy-crosswalk">${headers}<tbody>${rows}</tbody></table></div>`:'';
+  return `<details class="info-section legacy-transition" id="legacyTransitionDetails">
+    <summary>${t('legacy_title')} <small style="font-weight:400;color:var(--text-light)">— ${escapeHtmlText(memberName)}</small></summary>
+    <div class="legacy-policy"><b>${escapeHtmlText(tx(transition,'from'))} → ${escapeHtmlText(tx(transition,'to'))}</b><br>
+      ${escapeHtmlText(tx(transition,'policy'))}<br>
+      ${escapeHtmlText(tx(transition,'mappingScope'))}<br>
+      ${t('legacy_activity_note')}<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;font-size:11px">${sourceLinks}</div>
+    </div>
+    ${section(t('legacy_crosswalk_title'),badgeRows)}
+    ${section(t('legacy_category_title'),categoryRows)}
+    ${section(t('legacy_unmatched_title'),unmatchedRows)}
+    ${section(t('legacy_newreq_title'),newReqRows)}
+    <h4 style="font-size:13px;color:var(--maroon)">${t('legacy_detail_title')} (${(transition.detailMappings||[]).length})</h4>
+    <details class="legacy-detail-list"><summary>${tf('legacy_expand_details',(transition.detailMappings||[]).length)}</summary>
+      <div class="legacy-crosswalk-wrap"><table class="legacy-crosswalk">${headers}<tbody>${detailRows}</tbody></table></div>
+    </details>
+    ${historySection}
+    ${transferTool}
+  </details>`;
+}
+function queueLegacyTransfers(targetYmis){
+  if(!canUserTickRole(currentUser.role)){ showToast(t('legacy_no_permission'),'warning'); return; }
+  const transition=itemsData&&itemsData.legacyTransition;
+  if(!transition) return;
+  const elig=document.getElementById('legacyEligibility_'+targetYmis);
+  if(!elig||!elig.checked){ showToast(t('legacy_eligibility'),'warning'); return; }
+  const selected=Array.prototype.slice.call(document.querySelectorAll('#legacyTransferList input[data-transfer-id]:checked'));
+  const records=selected.map(input=>(transition.quickTransfers||[]).find(row=>row.id===input.getAttribute('data-transfer-id'))).filter(Boolean);
+  if(!records.length){ showToast(t('legacy_none_selected'),'warning'); return; }
+  for(let i=0;i<records.length;i++){
+    if(!canCurrentUserTickItem(records[i].permissionItemId)){ showToast(t('legacy_no_permission'),'warning'); return; }
+  }
+  const memberName=(members.find(m=>String(m.ymis)===String(targetYmis))||{}).name||(String(targetYmis)===String(currentUser.ymis)?currentUser.name:targetYmis);
+  if(!confirm(tf('legacy_confirm',memberName,records.length))) return;
+  let added=0;
+  records.forEach(record=>{
+    if(hasProgressRecord(targetYmis,record.recordId)) return;
+    const dateEl=document.querySelector('#legacyTransferList input[data-transfer-date="'+record.id+'"]');
+    const date=dateEl?dateEl.value:'';
+    const note=inEn()
+      ? `Legacy transition record (2017 to 2026 revision): ${record.enOld} → ${record.enNew}. SAHK Circular P022/2026.${date?'':' Date not provided.'}`
+      : `舊制過渡紀錄（2017年第1次修訂版→2026年修訂版）：${record.old} → ${record.new}。參考總會通告 P022/2026。${date?'':'未提供舊獎章日期。'}`;
+    if(!progressFlat[targetYmis]) progressFlat[targetYmis]={};
+    progressFlat[targetYmis][record.recordId]=date;
+    addOrUpdatePending(targetYmis,record.recordId,date,false,note);
+    added++;
+  });
+  if(!added){ showToast(t('legacy_no_transfers'),'warning'); return; }
+  renderProgressTab();
+  const panel=document.getElementById('legacyTransitionDetails');
+  if(panel){ panel.open=true; panel.scrollIntoView({behavior:'smooth',block:'start'}); }
+  showToast(tf('legacy_queued',added),'success');
+}
+function removeLegacyTransfer(ymis,itemId){
+  if(!canUserTickRole(currentUser.role)){ showToast(t('legacy_no_permission'),'warning'); return; }
+  const row=((itemsData&&itemsData.legacyTransition&&itemsData.legacyTransition.quickTransfers)||[]).find(entry=>entry.recordId===itemId);
+  if(!row||!canCurrentUserTickItem(row.permissionItemId)){ showToast(t('legacy_no_permission'),'warning'); return; }
+  const memberName=(members.find(m=>String(m.ymis)===String(ymis))||{}).name||(String(ymis)===String(currentUser.ymis)?currentUser.name:ymis);
+  if(!confirm(tf('legacy_remove_confirm',memberName))) return;
+  if(progressFlat[ymis]) delete progressFlat[ymis][itemId];
+  addOrUpdatePending(ymis,itemId,'',true);
+  renderProgressTab();
+  const panel=document.getElementById('legacyTransitionDetails');
+  if(panel){ panel.open=true; panel.scrollIntoView({behavior:'smooth',block:'start'}); }
+  showToast(t('legacy_remove_queued'),'success');
+}
+
 /* ================== Progress Tab ================== */
 function renderProgressTab(){
   const container=document.getElementById('tab-progress');
@@ -2250,7 +2644,7 @@ function renderProgressTab(){
     const badgePct=badgeIds.length?Math.round(badgeDone/badgeIds.length*100):0;
     html+=`<div class="badge-card">
       <div class="badge-header" onclick="toggleBadgeBody(this)">
-        <h3><span>${badge.icon}</span> ${bName(badge)} <small style="font-weight:400;opacity:.9">- ${bPurpose(badge)}</small></h3>
+        <h3><span>${badge.icon}</span> ${bName(badge)} <small style="font-weight:400;opacity:.9">- ${bPurpose(badge)}</small>${renderLegacyBadgeTag(targetYmis,badge.id)}</h3>
         <div style="display:flex;align-items:center;gap:8px"><span class="progress-chip">${badgeDone}/${badgeIds.length} (${badgePct}%)</span><span>▶</span></div>
       </div>
       <div class="badge-body">
@@ -2305,6 +2699,7 @@ function renderProgressTab(){
       </div>
     </div>`;
   }
+  html+=renderLegacyTransitionPanel(targetYmis,isLeader);
   container.innerHTML=html;
   // auto expand first badge if not too many
   const firstBody=container.querySelector('.badge-body');
@@ -2597,13 +2992,15 @@ function checkCascading(targetYmis){
     });
   });
 }
-function addOrUpdatePending(ymis, itemId, date, isUncomplete){
+function addOrUpdatePending(ymis, itemId, date, isUncomplete, note){
   // remove existing pending for same ymis+itemId
   pendingChanges=pendingChanges.filter(pc=>!(pc.ymis===ymis && pc.itemId===itemId));
   if(isUncomplete){
     pendingChanges.push({ymis, itemId, date:'', uncomplete:true, confirmer: currentUser.name});
   }else{
-    pendingChanges.push({ymis, itemId, date: date||todayISO(), uncomplete:false, confirmer: currentUser.name, note:''});
+    const row={ymis, itemId, date: date||todayISO(), uncomplete:false, confirmer: currentUser.name, note:''};
+    if(note!==undefined) row.note=note;
+    pendingChanges.push(row);
   }
   savePendingToLocal();
 }
@@ -3659,6 +4056,18 @@ function renderInfoTab(){
     <div style="margin-top:10px"><b style="font-size:12px">${t('progress_flow_label')}</b><span style="font-size:11px;background:var(--maroon-light);padding:3px 8px;border-radius:999px;margin-left:6px">${tpVal('progressFlow')}</span></div>
     <div style="margin-top:8px;font-size:11px;color:var(--text-light)"><b>${t('assess_principles')}</b>${tpVal('assessmentPrinciples')}</div>
     <div style="margin-top:10px"><b style="font-size:12px">${t('tp_syllabus_label')}</b><span class="syllabus-direct-note">${t('inline_listed')}</span><button class="btn btn-sm btn-primary" style="margin-top:6px" onclick="document.getElementById('fullSyllabusInline')?.scrollIntoView({behavior:'smooth',block:'start'})">${t('jump_syllabus')}</button><div style="font-size:11px;color:var(--text-light);margin-top:6px">${t('official_res_label')}</div><div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">${tpLinks().map(l=>`<a href="${l.url}" target="_blank" rel="noopener" class="link-card" style="padding:8px;margin:0"><div class="link-icon">🔗</div><div class="link-text"><div class="title">${l.title}</div><div class="url">${l.url}</div></div></a>`).join('')}</div></div>
+  </div>`;
+
+  html+=`<div class="info-section legacy-transition"><h3>🧭 ${t('legacy_title')}</h3>
+    <p style="font-size:11.5px;line-height:1.8;color:var(--text-light)">${t('legacy_summary')}</p>
+    <div class="legacy-policy" style="margin-top:8px">${escapeHtmlText((itemsData.legacyTransition&&itemsData.legacyTransition.policy)||'')}<br>
+      <span style="font-size:10.5px;color:var(--text-light)">${t('legacy_activity_note')}</span>
+      <div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;font-size:11px">
+        ${itemsData.legacyTransition&&itemsData.legacyTransition.sourceUrl?`<a href="${escapeHtmlText(itemsData.legacyTransition.sourceUrl)}" target="_blank" rel="noopener">🔗 ${t('legacy_source_link')}</a>`:''}
+        ${itemsData.legacyTransition&&itemsData.legacyTransition.newSchemeUrl?`<a href="${escapeHtmlText(itemsData.legacyTransition.newSchemeUrl)}" target="_blank" rel="noopener">🔗 ${t('legacy_new_link')}</a>`:''}
+        ${itemsData.legacyTransition&&itemsData.legacyTransition.oldSchemeUrl?`<a href="${escapeHtmlText(itemsData.legacyTransition.oldSchemeUrl)}" target="_blank" rel="noopener">🔗 ${t('legacy_old_link')}</a>`:''}
+      </div>
+    </div>
   </div>`;
 
   html+=`<div class="info-section"><h3>🛡️ ${sfhVal('title')}</h3><p style="font-size:11px;background:#FFF5F5;padding:8px;border-radius:6px;border-left:3px solid var(--red)">${sfhVal('policy')}</p>
