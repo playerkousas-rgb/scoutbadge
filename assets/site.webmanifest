@@ -1,0 +1,36 @@
+{
+  "name": "童軍進度追蹤系統",
+  "short_name": "童軍進度",
+  "lang": "zh-Hant",
+  "start_url": "../",
+  "scope": "../",
+  "display": "standalone",
+  "background_color": "#F8F9FA",
+  "theme_color": "#2E7D32",
+  "icons": [
+    {
+      "src": "chief-scout-award.avif",
+      "sizes": "200x200",
+      "type": "image/avif",
+      "purpose": "any"
+    },
+    {
+      "src": "scoutbadge-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "scoutbadge-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "scoutbadge-icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

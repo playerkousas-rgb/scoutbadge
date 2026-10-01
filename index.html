@@ -3,6 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2E7D32">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="童軍進度">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<!-- Official uploaded Chief Scout emblem: AVIF first, with PNG/ICO browser fallbacks. -->
+<link rel="icon" type="image/avif" sizes="200x200" href="assets/chief-scout-award.avif">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/scout-favicon-32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="assets/scout-favicon-48.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/scout-favicon-192.png">
+<link rel="shortcut icon" type="image/x-icon" href="assets/scout-favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/scoutbadge-icon-180.png">
+<link rel="manifest" href="assets/site.webmanifest">
 <title>童軍進度追蹤系統 v5.1 - 手機友善・批量開戶・全前端控制</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <style>
@@ -377,7 +389,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
     <button class="btn btn-sm lang-toggle-btn" onclick="setLang(currentLang==='en'?'zh':'en')">🌐 English</button>
     <div class="logo-row">
       <div class="logo-svg-wrap" aria-hidden="true" title="童軍">
-        <img src="assets/scout-logo-chief-256.png" alt="童軍標誌" onerror="this.onerror=null; this.src='assets/scout-logo-chief-256.png'; if(this.src.includes('128')){ this.onerror=function(){this.style.display='none'; document.getElementById('fallbackSvgHome').style.display='block';}; }">
+        <img src="assets/chief-scout-award.avif" alt="總領袖獎章徽章" onerror="this.onerror=null;this.src='assets/chief-scout-award.png'">
         <svg id="fallbackSvgHome" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="display:none"><defs><radialGradient id="flameGrad2" cx="0.5" cy="0.3" r="0.7"><stop offset="0%" stop-color="#FFEE58"/><stop offset="50%" stop-color="#FFA000"/><stop offset="100%" stop-color="#BF360C"/></radialGradient></defs><path d="M30 85 L50 38 L70 85" fill="none" stroke="#FFD700" stroke-width="3" stroke-linecap="round"/><rect x="47" y="42" width="6" height="34" fill="#8B0000" rx="2"/><ellipse cx="50" cy="42" rx="9" ry="2.5" fill="none" stroke="#FFD700" stroke-width="1.2"/><path d="M45 46 Q42 36 48 28 Q50 24 50 20 Q50 16 52 13 Q55 18 54 24 Q53 28 55 32 Q58 38 55 46" fill="url(#flameGrad2)"/></svg>
       </div>
       <div style="text-align:left">
@@ -500,7 +512,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
   <div class="app-header-common" style="padding:14px">
     <button class="btn btn-sm lang-toggle-btn" onclick="setLang(currentLang==='en'?'zh':'en')">🌐 English</button>
     <div class="logo-row" style="margin-bottom:0">
-      <div class="logo-svg-wrap"><img src="assets/scout-logo-chief-256.png" alt="Logo" onerror="this.style.display='none'"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:32px;height:32px"><path d="M30 85 L50 38 L70 85" fill="none" stroke="#FFD700" stroke-width="3" stroke-linecap="round"/><rect x="47" y="42" width="6" height="34" fill="#8B0000" rx="2"/><ellipse cx="50" cy="42" rx="9" ry="2.5" fill="none" stroke="#FFD700" stroke-width="1.2"/><path d="M45 46 Q42 36 48 28 Q50 24 50 20 Q50 16 52 13 Q55 18 54 24 Q53 28 55 32 Q58 38 55 46" fill="#FFA000"/></svg></div>
+      <div class="logo-svg-wrap"><img src="assets/chief-scout-award.avif" alt="總領袖獎章徽章" onerror="this.onerror=null;this.src='assets/chief-scout-award.png'"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:32px;height:32px"><path d="M30 85 L50 38 L70 85" fill="none" stroke="#FFD700" stroke-width="3" stroke-linecap="round"/><rect x="47" y="42" width="6" height="34" fill="#8B0000" rx="2"/><ellipse cx="50" cy="42" rx="9" ry="2.5" fill="none" stroke="#FFD700" stroke-width="1.2"/><path d="M45 46 Q42 36 48 28 Q50 24 50 20 Q50 16 52 13 Q55 18 54 24 Q53 28 55 32 Q58 38 55 46" fill="#FFA000"/></svg></div>
       <div><h1 style="font-size:18px" data-i18n="login_page_h1">童軍進度追蹤 v5.1</h1></div>
     </div>
   </div>
@@ -531,7 +543,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
 <div id="mainApp" style="display:none">
   <div class="main-app-header">
     <div class="left">
-      <div class="logo-mini" style="overflow:hidden"><img src="assets/scout-logo-chief-256.png" alt="logo" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:24px;height:24px;display:none"><path d="M30 85 L50 38 L70 85" fill="none" stroke="#FFD700" stroke-width="3" stroke-linecap="round"/><rect x="47" y="42" width="6" height="34" fill="#fff" rx="2"/><ellipse cx="50" cy="42" rx="9" ry="2.5" fill="none" stroke="#FFD700" stroke-width="1.2"/><path d="M45 46 Q42 36 48 28 Q50 24 50 20 Q50 16 52 13 Q55 18 54 24 Q53 28 55 32 Q58 38 55 46" fill="#FFD700"/></svg></div>
+      <div class="logo-mini" style="overflow:hidden"><img src="assets/chief-scout-award.avif" alt="總領袖獎章徽章" style="width:100%;height:100%;object-fit:cover" onerror="this.onerror=null;this.src='assets/chief-scout-award.png'"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:24px;height:24px;display:none"><path d="M30 85 L50 38 L70 85" fill="none" stroke="#FFD700" stroke-width="3" stroke-linecap="round"/><rect x="47" y="42" width="6" height="34" fill="#fff" rx="2"/><ellipse cx="50" cy="42" rx="9" ry="2.5" fill="none" stroke="#FFD700" stroke-width="1.2"/><path d="M45 46 Q42 36 48 28 Q50 24 50 20 Q50 16 52 13 Q55 18 54 24 Q53 28 55 32 Q58 38 55 46" fill="#FFD700"/></svg></div>
       <h1 id="appTitle">童軍進度追蹤</h1>
     </div>
     <div class="user-info">
