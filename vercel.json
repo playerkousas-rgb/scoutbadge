@@ -4,6 +4,11 @@
   "framework": null,
   "buildCommand": "npm run build",
   "outputDirectory": "public",
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  },
   "functions": {
     "api/proxy.js": { "maxDuration": 60 },
     "api/troops.js": { "maxDuration": 60 },
