@@ -56,6 +56,11 @@ async function run() {
   });
   assert(!JSON.stringify(troopsRes.body).includes('server-key-a'));
   assert(!JSON.stringify(troopsRes.body).includes('script.google.com'));
+  assert.strictEqual(
+    troopsRes.headers['cache-control'],
+    'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400',
+    'public catalogue only reflects env vars (change on redeploy), so it must be edge-cacheable'
+  );
   console.log('  [PASS] only complete environment triplets register; public list has ID and name only');
 
   console.log('\n2. Server injects API key and ignores browser-supplied key');
