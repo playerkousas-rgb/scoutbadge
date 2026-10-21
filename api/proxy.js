@@ -151,15 +151,19 @@ async function handleRegistration(res, payload, startedAt) {
     logResult({ troopId: 'REG', action: 'submitContact', status: 503, startedAt, success: false, central: false });
     return fail(res, 503, '接入申請功能尚未啟用，請直接聯絡管理員');
   }
+  // Scout Admin's Apps Script contract uses type=apply, backendUrl, and
+  // responds with { status: 'success' }. Adapt the browser-facing ScoutBadge
+  // payload here so the frontend contract can remain unchanged.
   const regPayload = {
+    type: 'apply',
     troopId: clampText(payload.troopId, 32),
     troopName: clampText(payload.troopName, 100),
-    scriptUrl: clampText(payload.scriptUrl, 300),
+    backendUrl: clampText(payload.scriptUrl, 300),
     apiKey: clampText(payload.apiKey, 120),
     appType: 'scoutbadge',
     note: clampText(payload.note, 500)
   };
-  if (!regPayload.troopId || !regPayload.scriptUrl || !regPayload.apiKey) {
+  if (!regPayload.troopId || !regPayload.backendUrl || !regPayload.apiKey) {
     return fail(res, 400, '申請資料不完整');
   }
   const controller = new AbortController();
@@ -175,7 +179,8 @@ async function handleRegistration(res, payload, startedAt) {
     const raw = await upstream.text();
     let result = null;
     try { result = JSON.parse(raw); } catch (_) { /* non-JSON inbox response */ }
-    if (!upstream.ok || !result || result.success !== true) {
+    const accepted = !!result && (result.success === true || result.status === 'success');
+    if (!upstream.ok || !accepted) {
       console.error(`[proxy] registration_upstream_bad status=${upstream.status}`);
       logResult({ troopId: 'REG', action: 'submitContact', status: 502, startedAt, success: false, central: false });
       return fail(res, 502, '申請未能送達管理員，請稍後重試');

@@ -76,7 +76,7 @@ function startAdminInbox(port) {
         try { parsed = JSON.parse(raw); } catch (_) { /* ignore */ }
         seen.push({ url: req.url, body: parsed });
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true }));
+        res.end(JSON.stringify({ status: "success", message: "已收到" }));
       });
     });
     server.listen(port, '127.0.0.1', () => resolve({ server, seen }));
@@ -332,6 +332,8 @@ async function run() {
     assert.strictEqual(inbox.seen.length, 1);
     assert.strictEqual(inbox.seen[0].body.troopId, '0777');
     assert.strictEqual(inbox.seen[0].body.apiKey, 'NEW-TROOP-KEY');
+    assert.strictEqual(inbox.seen[0].body.type, 'apply');
+    assert.strictEqual(inbox.seen[0].body.backendUrl, 'https://script.google.com/macros/s/FAKEDEPLOYID1234567890/exec');
     assert.strictEqual(inbox.seen[0].body.appType, 'scoutbadge');
     ok('submitContact forwards to the fixed server-side admin inbox (unregistered troop ok)');
 
