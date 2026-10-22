@@ -16,6 +16,18 @@ TROOP_0082_APIKEY
 
 確認既有 Apps Script Web App 的 `/exec` URL、部署存取權及 Apps Script 授權狀態。使用 Apps Script 編輯器的 `diagnoseSheets()` 只讀檢查既有工作表狀態。
 
+**出「旅團後端要求 Google 登入，伺服器無法匿名存取」／「後端服務暫時無法使用」（尤其係其他旅團正常、只有新團失敗）**：
+即係 `/exec` 冇行到 `Code.gs`，而係回咗 Google 登入頁——用無痕窗口直接開條 `/exec` 網址，
+彈登入頁就係中招。成因多數係用**學校 Google Workspace 帳戶**部署後端：
+
+1. 「部署 → 管理部署作業 → 編輯」確認存取權係**「任何人」**，唔係「〈學校域名〉內任何人」
+   或「任何擁有 Google 帳戶的人」，執行身分係「我」；改完一定要**建立新版本**先生效；
+2. 「任何人」選項唔存在／揀完仍然強制登入 → 學校 Workspace 管理員政策封咗對外發佈，
+   改用非學校 Google 帳戶部署（做法見 `TROOP_ONBOARDING.md` §A）；
+3. `TROOP_<編號>_BACKEND` 要同選單「🔑 顯示 BACKEND／APIKEY」顯示嘅**逐字一致**，包括
+   `/a/macros/<學校域名>/` 前綴（如有）——proxy 呼叫時會自動轉成標準 `/macros/` 形式，唔使人手改，
+   改咗反而會令後端雜湊核對唔上。
+
 不要為本次代理或登入升級而執行 `initializeSheets()`、`repairSheets()`、清空資料或變更工作表欄位。若需修復真正缺失的工作表，先備份並依既有營運流程處理。
 
 ## 更新 Code.gs 之後一定要「部署新版本」

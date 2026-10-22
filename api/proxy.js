@@ -1,6 +1,6 @@
 'use strict';
 
-const { getTroopConfig, isTrustedBackend } = require('../lib/registry');
+const { getTroopConfig, isTrustedBackend, canonicalBackendUrl } = require('../lib/registry');
 const {
   centralSubject,
   passwordMatches,
@@ -70,10 +70,25 @@ function logResult({ troopId, action, status, startedAt, success, central, centr
 }
 
 
+// True when Google answered the upstream request with its sign-in page
+// instead of running the web app (deployment access is not 「任何人」).
+// The post-redirect response URL is the reliable signal; body markers are
+// a fallback for environments whose fetch does not expose it.
+function looksLikeGoogleSignIn(upstream, raw) {
+  const finalUrl = String((upstream && upstream.url) || '');
+  if (/(^|\/\/)accounts\.google\.com(\/|$)/.test(finalUrl)) return true;
+  const head = String(raw || '').slice(0, 4096);
+  return /accounts\.google\.com|ServiceLogin|signin\/identifier/.test(head);
+}
+
 // Reads go to Apps Script as a GET with the server-side key on the query
-// string; writes and every other action are POSTed as before.
+// string; writes and every other action are POSTed as before. Upstream
+// requests always use the canonical /macros/ URL form: a Workspace
+// domain-scoped registration (/a/macros/<domain>/…) would force a Google
+// sign-in the proxy cannot perform. The registered string itself is never
+// rewritten — tickets and sessions stay bound to it (see registry).
 async function getUpstream(troopConfig, forwardPayload) {
-  const target = new URL(troopConfig.backend);
+  const target = new URL(canonicalBackendUrl(troopConfig.backend));
   target.searchParams.set('action', 'load');
   if (forwardPayload.token) target.searchParams.set('token', forwardPayload.token);
   // ecportal v4.1.0：家長 sig bearer 可經 GET load 讀自己子女範圍
@@ -103,7 +118,7 @@ async function postUpstream(backend, payload) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
   try {
-    return await fetch(backend, {
+    return await fetch(canonicalBackendUrl(backend), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload),
@@ -381,6 +396,17 @@ module.exports = async function handler(req, res) {
     try {
       result = JSON.parse(raw);
     } catch (_) {
+      // A deployment whose access is not 「任何人」 never reaches Code.gs:
+      // Google answers with its sign-in page instead. School Google
+      // Workspace accounts hit this when the admin policy blocks external
+      // publishing (or when access is 「<域名> 內任何人」/「任何 Google
+      // 帳戶」rather than 「任何人」), and retrying can never fix it — so
+      // name the cause and the remedy. Any other non-JSON upstream keeps
+      // the generic 502 and leaks nothing about the backend.
+      if (looksLikeGoogleSignIn(upstream, raw)) {
+        console.error(`[proxy] upstream_signin_wall troop=${troopId} action=${action} status=${upstream.status}`);
+        return fail(res, 502, '旅團後端要求 Google 登入，伺服器無法匿名存取：請喺 Apps Script「部署 → 管理部署作業」將存取權設為「任何人」並建立新版本；學校 Google Workspace 帳戶如被管理員政策限制對外發佈，請改用非學校 Google 帳戶部署該旅團後端');
+      }
       console.error(`[proxy] upstream_non_json troop=${troopId} action=${action} status=${upstream.status}`);
       return fail(res, 502, '後端服務暫時無法使用，請稍後再試');
     }

@@ -3,7 +3,7 @@
 const assert = require('assert');
 const proxyHandler = require('../api/proxy');
 const troopsHandler = require('../api/troops');
-const { getTroopConfig, getRegistry, getPortalConfig } = require('../lib/registry');
+const { getTroopConfig, getRegistry, getPortalConfig, canonicalBackendUrl } = require('../lib/registry');
 const { unwrapBrowserSession } = require('../lib/super-auth');
 const loginRateLimit = require('../lib/login-rate-limit');
 
@@ -186,6 +186,64 @@ async function run() {
   assert(!output.includes('do-not-log-token'));
   assert(!output.includes('do-not-log-key'));
   console.log('  [PASS] proxy diagnostics do not print password, token, or API key');
+
+  console.log('\n7. Workspace domain-scoped backends are canonicalised on the wire only');
+  assert.strictEqual(
+    canonicalBackendUrl('https://script.google.com/a/macros/school.edu.hk/s/AKfyc_TEST_DEPLOYMENT/exec'),
+    'https://script.google.com/macros/s/AKfyc_TEST_DEPLOYMENT/exec'
+  );
+  assert.strictEqual(
+    canonicalBackendUrl('https://script.google.com/macros/s/AKfyc_TEST_DEPLOYMENT/exec'),
+    'https://script.google.com/macros/s/AKfyc_TEST_DEPLOYMENT/exec'
+  );
+  assert.strictEqual(canonicalBackendUrl('http://127.0.0.1:3901/exec'), 'http://127.0.0.1:3901/exec');
+  assert.strictEqual(canonicalBackendUrl('not a url'), 'not a url');
+  process.env.TROOP_0013_NAME = '學校域名旅團';
+  process.env.TROOP_0013_BACKEND = 'https://script.google.com/a/macros/school.edu.hk/s/AKfyc_TEST_DEPLOYMENT/exec';
+  process.env.TROOP_0013_APIKEY = 'server-key-0013';
+  // Registration keeps the verbatim string: sealed tickets/sessions hash
+  // exactly what the leaf reports about itself, so the registry must not
+  // rewrite it — only the fetch target changes.
+  assert.strictEqual(getTroopConfig('0013').backend, 'https://script.google.com/a/macros/school.edu.hk/s/AKfyc_TEST_DEPLOYMENT/exec');
+  let fetchUrl0013;
+  global.fetch = async (url) => {
+    fetchUrl0013 = String(url);
+    return { status: 200, text: async () => JSON.stringify({ success: true }) };
+  };
+  const ok0013 = await callProxy({ troopId: '0013', action: 'login', login_id: '1234560001', password: 'member-password' });
+  assert.strictEqual(ok0013.statusCode, 200);
+  assert.strictEqual(fetchUrl0013, 'https://script.google.com/macros/s/AKfyc_TEST_DEPLOYMENT/exec');
+  const load0013 = await callProxy({ troopId: '0013', action: 'load' });
+  assert.strictEqual(load0013.statusCode, 200);
+  assert(fetchUrl0013.startsWith('https://script.google.com/macros/s/AKfyc_TEST_DEPLOYMENT/exec?action=load'), fetchUrl0013);
+  console.log('  [PASS] domain-scoped URL registers verbatim but POST/GET go to the canonical /macros/ form');
+
+  console.log('\n8. A Google sign-in wall upstream is named, other HTML stays generic');
+  global.fetch = async () => ({
+    status: 200,
+    url: 'https://accounts.google.com/v3/signin/identifier?continue=https%3A%2F%2Fscript.google.com%2Fmacros%2Fs%2FAKfyc_TEST_DEPLOYMENT%2Fexec',
+    text: async () => '<html><head><title>Sign in - Google Accounts</title></head><body>Use your Google Account</body></html>'
+  });
+  const signInWall = await callProxy({ troopId: '0013', action: 'login', login_id: '1234560001', password: 'member-password' });
+  assert.strictEqual(signInWall.statusCode, 502, JSON.stringify(signInWall.body));
+  assert(String(signInWall.body.error).indexOf('要求 Google 登入') >= 0, signInWall.body.error);
+  assert(!JSON.stringify(signInWall.body).includes('AKfyc_TEST_DEPLOYMENT'), 'error must not leak the backend URL');
+  assert(!JSON.stringify(signInWall.body).includes('server-key-0013'), 'error must not leak the API key');
+  global.fetch = async () => ({
+    status: 200,
+    text: async () => '<html><body><a href="https://accounts.google.com/ServiceLogin">Sign in</a></body></html>'
+  });
+  const signInByBody = await callProxy({ troopId: '0013', action: 'login', login_id: '1234560001', password: 'member-password' });
+  assert.strictEqual(signInByBody.statusCode, 502);
+  assert(String(signInByBody.body.error).indexOf('要求 Google 登入') >= 0, signInByBody.body.error);
+  global.fetch = async () => ({ status: 200, text: async () => '<html><body>upstream failure</body></html>' });
+  const genericHtml = await callProxy({ troopId: '0013', action: 'login', login_id: '1234560001', password: 'member-password' });
+  assert.strictEqual(genericHtml.statusCode, 502);
+  assert.strictEqual(genericHtml.body.error, '後端服務暫時無法使用，請稍後再試');
+  delete process.env.TROOP_0013_NAME;
+  delete process.env.TROOP_0013_BACKEND;
+  delete process.env.TROOP_0013_APIKEY;
+  console.log('  [PASS] sign-in wall becomes an actionable message; other non-JSON keeps the generic 502');
 
   global.fetch = originalFetch;
   console.log('\n=== All proxy regression tests passed ===');
