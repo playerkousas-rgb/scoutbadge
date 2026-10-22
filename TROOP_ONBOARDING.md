@@ -6,8 +6,16 @@
 2. 只在這個全新的 Sheet 執行一次 `initializeSheets()` 並完成授權。
 3. 部署為 Web App：**執行身分「我」＋存取權「任何人」**（`Anyone`）。存取權收窄成「只有本人」的話，
    主系統 proxy 打唔入 `/exec`，該團在 App 內會直接失敗。部署後取得 `/exec` URL。
+
+   > ⚠️ **學校／機構 Google Workspace 帳戶**：「任何人」唔等於「〈學校域名〉內任何人」，
+   > 亦唔等於「任何擁有 Google 帳戶的人」——後兩者都要求 Google 登入，而伺服器冇登入狀態，
+   > 只會食到登入頁，App 會出「旅團後端要求 Google 登入」。如果「任何人」選項唔見咗／㩒唔到，
+   > 或者揀咗之後用無痕窗口開 `/exec` 仍然彈登入頁，即係學校 Workspace 管理員政策封咗對外發佈：
+   > 請 IT 管理員放行，或者用**非學校 Google 帳戶**（例如旅團自建嘅 Gmail）建 Sheet 重新部署。
 4. 取得本節點憑證：選單「🔗 旅系統 → 🔑 顯示 BACKEND／APIKEY（交 ADMIN）」，抄下 **BACKEND（`/exec` URL）**
-   與 **APIKEY**（首次讀取時自動生成並存 Script Properties）。
+   與 **APIKEY**（首次讀取時自動生成並存 Script Properties）。BACKEND **照選單顯示逐字抄**，包括
+   `/a/macros/<學校域名>/` 前綴（如有）——proxy 呼叫後端時會自動轉成標準 `/macros/` 形式，
+   人手改咗反而會令後端雜湊核對唔上。
 
 > **成員名單係可選（非前置條件）**：`apply` 只要求 10 位 YMIS、姓名、電郵格式正確＋唔可以同
 > `Users`／`成員名單`／待審批申請重覆——**唔需要**事先有名單。所以可以三條路任揀（可並用）：
@@ -45,7 +53,8 @@ TROOP_0082_APIKEY=Apps Script 既有 API Key
 後端 URL 與 API Key 僅由 Vercel 函式使用，不能放進前端程式、靜態 JSON、網址參數或 Git。重新部署後，首頁會從 `/api/troops` 取得只含編號與名稱的清單。
 
 > 三點實務：① **`NAME` 由你自填**（純顯示）；② `BACKEND`／`APIKEY` 要**逐字**一致（前後空格／換行、`/dev` 測試網址、
-> 「新增部署」產生嘅新 URL 都會對唔上）；③ 加完變數**一定要 Redeploy**（環境變數唔會熱生效），
+> 「新增部署」產生嘅新 URL 都會對唔上；`/a/macros/<學校域名>/` 前綴屬逐字一致一部分，照抄唔使轉）；
+> ③ 加完變數**一定要 Redeploy**（環境變數唔會熱生效），
 > 之後該團卡片才會出現在首頁。要一次確認登記正確，喺該團 Apps Script 跑一次 `testTrustedTicketVerifier`：
 > 三項 `troop_known`／`key_ok`／`backend_matches` 都 true 就係全對。
 
