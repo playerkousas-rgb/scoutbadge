@@ -12,6 +12,22 @@ TROOP_0082_APIKEY
 
 後端必須是有效的 `https://script.google.com/.../exec` URL。重新部署後開啟 `/api/troops`；回應應只包含編號與名稱。系統不會將 `82` 補為 `0082`，兩者須各自正確登記。
 
+## 剛登記完，唔知用咩帳號第一次登入
+
+全新旅團部署完成後，Sheet 入面只有一個 `initializeSheets()` 自動建立嘅**預設管理員**：
+
+- 揀該旅團卡片 → 「👤 成員」分頁（用 YMIS 登入，唔好用「領袖＝Email」分頁）
+- YMIS：`1111111111`　密碼：`changeme`
+- 登入後系統會即時強制改密碼（至少 4 位），改完先入到 App
+
+之後用呢個帳號審批申請／開戶，再開返各領袖自己真 YMIS 嘅帳號。完整步驟見
+`TROOP_ONBOARDING.md` §C「首次登入（預設管理員帳號）」。
+
+出「找不到此帳號」即係該 Sheet 從未跑過 `initializeSheets()`（見 §A），或者 `Users` 表
+第 2 行預設管理員被人手刪咗；出「密碼錯誤」通常係已經有人登入改過密碼——搵改過嘅人攞新密碼，
+或者用中央 `sheep` 登入重設。呢個帳號係**旅團管理員（admin）**，同中央帳號 `sheep`
+（密碼存 Vercel `SUPER_KEY`）係兩回事。
+
 ## 後端服務沒有回應
 
 確認既有 Apps Script Web App 的 `/exec` URL、部署存取權及 Apps Script 授權狀態。使用 Apps Script 編輯器的 `diagnoseSheets()` 只讀檢查既有工作表狀態。
