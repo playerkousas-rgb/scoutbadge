@@ -284,6 +284,9 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
   body *{visibility:hidden}
   .print-area, .print-area *{visibility:visible}
   .print-area{position:absolute;left:0;top:0;width:100%;box-shadow:none;border:none}
+  .print-area input,.print-area textarea{border:none!important;border-bottom:1px solid #999!important;background:transparent!important;color:#000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .print-area table{page-break-inside:auto}
+  .print-area tr{page-break-inside:avoid}
   .no-print{display:none!important}
 }
 
@@ -425,7 +428,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
           <h2 style="font-size:16px;color:var(--maroon)" data-i18n="home_awards_title">童軍支部進度獎章</h2>
         </div>
         <div class="level-structure">
-          <div class="level-box"><div class="level-num">L1</div><div class="level-name" data-i18n="lv1">會員章</div><div class="level-desc" data-i18n="lv1d">2大項 • 含保護兒童</div></div>
+          <div class="level-box"><div class="level-num">L1</div><div class="level-name" data-i18n="lv1">會員章</div><div class="level-desc" data-i18n="lv1d">11項 • 含保護兒童</div></div>
           <div class="level-box"><div class="level-num">L2</div><div class="level-name" data-i18n="lv2">探索獎章</div><div class="level-desc" data-i18n="lvd">逐項記錄及審批</div></div>
           <div class="level-box"><div class="level-num">L3</div><div class="level-name" data-i18n="lv3">標準獎章</div><div class="level-desc" data-i18n="lvd">逐項記錄及審批</div></div>
           <div class="level-box"><div class="level-num">L4</div><div class="level-name" data-i18n="lv4">高級獎章</div><div class="level-desc" data-i18n="lvd">逐項記錄及審批</div></div><div class="level-box"><div class="level-num">L5</div><div class="level-name" data-i18n="lv5">總領袖獎章</div><div class="level-desc" data-i18n="lv5d">最高進度獎章</div></div>
@@ -465,7 +468,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
           <!-- [主系統暫時隱藏 2026-10] 軌道B（接上主系統）未開放，完成後解除註解並自行重排步驟號（而家 4=首次登入、5=私隱選擇）：
           <div class="step"><div class="step-number">4</div><div class="step-content"><h4 data-i18n="s4h">軌道B：有主系統並想接上 - 額外提交給主系統管理員</h4><p data-i18n="s4p">將同一組 URL+Key 交主系統管理員，填入旅團設定→元件設定 scoutbadge 卡片 backend+apikey。之後成員點 Dashboard 卡片自動帶入 ?u=0082&role=&ymis=&from=portal&embed=1，無需密碼</p></div></div>
           -->
-          <div class="step"><div class="step-number">5</div><div class="step-content"><h4 data-i18n="s5h">私隱選擇</h4><p data-i18n="s5p">若旅團重私隱，成員預設只看自己；若想互相鼓勵，團長可在用戶管理→系統設定開啟「允許成員互相查看進度」</p></div></div>
+          <div class="step"><div class="step-number">5</div><div class="step-content"><h4 data-i18n="s5h">私隱選擇</h4><p data-i18n="s5p">若旅團重私隱，成員預設只看自己；若想互相鼓勵，旅長可在用戶管理→系統設定開啟「允許成員互相查看進度」</p></div></div>
         </div>
       </div>
       <div class="info-card" style="border-color:var(--blue);background:var(--blue-light)" data-i18n-html="setup_submit_card"></div>
@@ -619,7 +622,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
     <h3 data-i18n="fp_title">🔑 忘記密碼</h3>
     <div id="fpTroop" class="troop-info-box" style="margin-bottom:10px">—</div>
     <div style="font-size:12.5px;line-height:1.8;color:var(--text)" data-i18n-html="fp_body">
-      本系統唔會以電郵自動重設密碼。請聯絡你旅團嘅領袖／團長，由佢哋喺 APP 內「👥 用戶管理 → 重設密碼」幫你重發臨時密碼，首次登入後再自行更改。
+      本系統唔會以電郵自動重設密碼。請聯絡你旅團嘅領袖／旅長，由佢哋喺 APP 內「👥 用戶管理 → 重設密碼」幫你重發臨時密碼，首次登入後再自行更改。
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('forgotPwModal')" data-i18n="close">關閉</button>
@@ -651,7 +654,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
 <div id="permissionModal" class="modal">
   <div class="modal-content" style="max-width:650px">
     <h3><span data-i18n="perm_title">⚙️ 設定可勾選權限 - </span><span id="permUserName"></span></h3>
-    <p style="font-size:12px;color:var(--text-light);margin-bottom:10px" data-i18n="perm_desc">設定該用戶可勾選之權限範圍。領袖默認全部 (*)，團長/管理員可設定及更改可考核之項目範圍。</p>
+    <p style="font-size:12px;color:var(--text-light);margin-bottom:10px" data-i18n="perm_desc">設定該用戶可勾選之權限範圍。領袖默認全部 (*)，旅長／管理員可設定及更改可考核之項目範圍。</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-height:50vh;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px">
       <div>
         <b style="font-size:12px" data-i18n="perm_prog">進度性獎章 (進度項目層級)</b>
@@ -722,7 +725,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
   </div>
 </div>
 
-<div id="accountApplyModal" class="modal"><div class="modal-content"><h3 data-i18n="apply_title">📝 申請帳戶</h3><div style="font-size:12px;background:var(--blue-light);border:1px solid var(--blue);color:var(--blue);padding:8px 10px;border-radius:8px;margin-bottom:12px"><span data-i18n="apply_troop">📍 旅團：</span><b id="applyTroopName">—</b><br><span style="font-size:11px" data-i18n="apply_hint">支部＝童軍、單位＝所屬旅團，系統自動帶入，毋須填寫。提交後由團長／領袖在「審批中心」批准。</span></div><div class="form-group"><label data-i18n="apply_role">申請身份 *</label><select id="applyRole" onchange="syncApplyRole()"><option value="member" data-i18n="apply_member">童軍成員</option><option value="branch_leader" data-i18n="apply_leader">領袖（童軍團長）</option></select><div style="font-size:10px;color:var(--text-light);margin-top:3px" data-i18n="apply_role_hint">成員、領袖都可自行申請；團長／管理員須由現任團長在「用戶管理」直接開立。</div></div><div class="form-group" id="applyYmisGroup"><label><span data-i18n="apply_ymis">YMIS（10位數字）*</span></label><input id="applyYmis" maxlength="10" inputmode="numeric"></div><div class="form-group"><label data-i18n="apply_name">姓名 *</label><input id="applyName"></div><div class="form-group" id="applySquadGroup"><label data-i18n="apply_squad">小隊（可留空）</label><input id="applySquad"></div><div class="form-group"><label><span data-i18n="apply_email">聯絡電郵</span> <span id="applyEmailReq" style="color:var(--red);display:none" data-i18n="apply_email_req">* 領袖必填</span></label><input id="applyEmail" type="email"></div><div style="font-size:11px;color:var(--text-light);background:var(--bg);padding:8px 10px;border-radius:6px;margin-bottom:12px" data-i18n="apply_pw_notice">💡 申請經批核後，初始密碼預設為 1234；首次登入時系統會強制要求設定新密碼。</div><div id="applyMsg" class="login-msg"></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal('accountApplyModal')" data-i18n="cancel">取消</button><button class="btn btn-primary" id="btnAccountApply" onclick="submitAccountApply()" data-i18n="submit">提交申請</button></div></div></div>
+<div id="accountApplyModal" class="modal"><div class="modal-content"><h3 data-i18n="apply_title">📝 申請帳戶</h3><div style="font-size:12px;background:var(--blue-light);border:1px solid var(--blue);color:var(--blue);padding:8px 10px;border-radius:8px;margin-bottom:12px"><span data-i18n="apply_troop">📍 旅團：</span><b id="applyTroopName">—</b><br><span style="font-size:11px" data-i18n="apply_hint">支部＝童軍、單位＝所屬旅團，系統自動帶入，毋須填寫。提交後由旅長／領袖在「審批中心」批准。</span></div><div class="form-group"><label data-i18n="apply_role">申請身份 *</label><select id="applyRole" onchange="syncApplyRole()"><option value="member" data-i18n="apply_member">童軍成員</option><option value="branch_leader" data-i18n="apply_leader">領袖（童軍團長）</option></select><div style="font-size:10px;color:var(--text-light);margin-top:3px" data-i18n="apply_role_hint">成員、領袖都可自行申請；旅長／管理員須由現任旅長在「用戶管理」直接開立。</div></div><div class="form-group" id="applyYmisGroup"><label><span data-i18n="apply_ymis">YMIS（10位數字）*</span></label><input id="applyYmis" maxlength="10" inputmode="numeric"></div><div class="form-group"><label data-i18n="apply_name">姓名 *</label><input id="applyName"></div><div class="form-group" id="applySquadGroup"><label data-i18n="apply_squad">小隊（可留空）</label><input id="applySquad"></div><div class="form-group"><label><span data-i18n="apply_email">聯絡電郵</span> <span id="applyEmailReq" style="color:var(--red);display:none" data-i18n="apply_email_req">* 領袖必填</span></label><input id="applyEmail" type="email"></div><div style="font-size:11px;color:var(--text-light);background:var(--bg);padding:8px 10px;border-radius:6px;margin-bottom:12px" data-i18n="apply_pw_notice">💡 申請經批核後，初始密碼預設為 1234；首次登入時系統會強制要求設定新密碼。</div><div id="applyMsg" class="login-msg"></div><div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal('accountApplyModal')" data-i18n="cancel">取消</button><button class="btn btn-primary" id="btnAccountApply" onclick="submitAccountApply()" data-i18n="submit">提交申請</button></div></div></div>
 
 <div id="savingOverlay" class="saving-overlay">
   <div class="spinner"></div>
@@ -755,8 +758,8 @@ zh:{
   retry:'重試', cancel:'取消', close:'關閉', save:'💾 儲存', submit:'提交申請', refresh:'🔄 刷新', all:'全部',
   api_no_troop:'未選擇旅團 (No troop selected)', api_bad_response:'伺服器回應格式錯誤', api_failed:'操作失敗', api_timeout:'請求逾時，請檢查網絡後重試',
   offline_cache:'⚠️ 離線模式：顯示快取資料',
-  role_super_admin:'超管', role_admin:'管理員', role_group_leader:'團長', role_branch_leader:'童軍團長', role_member:'童軍成員', role_member_short:'成員', role_leader_short:'領袖',
-  demo_word:'示範', demo_member_name:'示範成員', demo_leader_name:'示範團長', demo_troop_name:'第82旅 DEMO (示範)',
+  role_super_admin:'超管', role_admin:'管理員', role_group_leader:'旅長（GSL）', role_branch_leader:'童軍團長', role_member:'童軍成員', role_member_short:'成員', role_leader_short:'領袖',
+  demo_word:'示範', demo_member_name:'示範成員', demo_leader_name:'示範旅長', demo_troop_name:'第82旅 DEMO (示範)',
   member_mode_toast:'成員模式：只能查看自己進度，其他獎章及申請',
   progress_items:'進度項目',
   /* login */
@@ -776,7 +779,7 @@ zh:{
   tick_by_leader:'由領袖剔', note_ph:'證明／備註', cert_ph:'證書編號', btn_done:'✅ 已完成', btn_apply:'📝 申請', expand:'▶ 展開', collapse:'▼ 收合',
   syllabus_content:'綱要內容：', syllabus_req:'要求：', syllabus_assess:'評核：', syllabus_tip:'提示：', syllabus_proof:'證明：', ref_link:'參考連結', official_src:'官方原文',
   syllabus_default:'請參考所屬獎章整體要求。',
-  no_perm_tick:'你沒有勾選權限，請使用申請功能', no_perm_item:'你的權限不可勾選此項目 ({0})，請聯絡團長/管理員設定', no_perm_other:'無權限勾選此其他獎章', no_perm:'無權限', no_perm_generic:'沒有權限',
+  no_perm_tick:'你沒有勾選權限，請使用申請功能', no_perm_item:'你的權限不可勾選此項目 ({0})，請聯絡旅長／管理員設定', no_perm_other:'無權限勾選此其他獎章', no_perm:'無權限', no_perm_generic:'沒有權限',
   /* save bar */
   pending_fmt:'{0} 項未保存 (已暫存於瀏覽器)', discard_confirm:'確定捨棄 {0} 項未保存變更？', discarded:'已捨棄未保存變更',
   save_none:'沒有需要保存的變更', saving:'正在寫入雲端...', saving_prep:'準備寫入 {0} 項', save_ok:'✅ 寫入成功！', save_done_n:'已處理 {0} 項',
@@ -784,7 +787,7 @@ zh:{
   load_fail:'載入失敗', error_colon:'錯誤：',
   /* request modal */
   req_pick_date:'請選擇完成日期', req_sent:'✅ 申請已送出，待領袖確認', req_submit_fail:'提交失敗', req_submit_fail_colon:'提交失敗：', req_title:'📝 申請完成',
-  req_closed_toast:'⚠️ 團長已關閉「成員提交完成申請」功能，請直接聯絡領袖協助填寫進度。',
+  req_closed_toast:'⚠️ 旅長已關閉「成員提交完成申請」功能，請直接聯絡領袖協助填寫進度。',
   /* overview */
   squad_unset:'未分配小隊', squad_snapshot_hint:'可於下方小隊篩選器查看各小隊逐項進度。', squad_title:'🧭 小隊概況', squad_empty:'<span style="font-size:11px">尚未設定小隊</span>',
   batch_title:'🚀 考驗營 / 集體活動 批量完成 (領袖專用)',
@@ -814,14 +817,15 @@ zh:{
   /* other badges */
   other_done_chip:'已完成', other_update:'更新', other_done:'完成', other_badge_updated:'✅ 其他獎章已更新', other_write_fail:'寫入失敗：', other_save_fail:'寫入其他獎章失敗：',
   /* forms */
-  forms_auto_title:'🖨️ 表格自動填寫功能', forms_auto_desc:'系統會根據進度自動填寫 PT/18 及 PT/120A 表格所需完成日期，領袖/成員可修改後直接列印。支援雙面列印，符合總會要求。',
+  forms_auto_title:'🖨️ 表格自動填寫功能', forms_auto_desc:'系統會依《童軍支部訓練綱要》進度自動填寫 PT/18 及 P120A1 表格的完成日期，領袖／成員可修改後直接列印。支援雙面列印，符合總會要求。',
   forms_auto_pts:'<li>自動帶入姓名、YMIS、旅團、進度項目完成日期</li><li>可手動編輯補充服務時數、證書編號</li><li>一鍵列印，隱藏操作按鈕</li>',
   forms_guide_title:'📋 表格說明',
-  forms_guide_desc:'<b>PT/18 總領袖獎章</b>：完成訓練綱要所列進度項目後申請。<br><b>PT/120A 專科徽章</b>：按現行童軍支部訓練綱要完成要求及服務紀錄，交由領袖核實後遞交。<br><b>PT/65 考驗計劃</b>：開展進度性獎章考驗前提交計劃書。',
-  forms_gen_pt18:'🖨️ 產生 PT/18 總領袖獎章申請表', forms_gen_pt120a:'🐉 產生 PT/120A 專科徽章申請表', forms_gen_interest:'⭐ 直出興趣章紀錄/證書清單',
+  forms_guide_desc:'<b>PT/18 總領袖獎章及證書申請表</b>：完成總領袖獎章全部項目後，經旅長／童軍團長提名、區總監推薦、地域總監確認，交青少年活動署批核。<br><b>P120A1 童軍專科徽章／獎章考驗申請表</b>：報考興趣／技能／服務／教導組專科徽章時，由申請人填甲部、童軍團長副署、主考填乙丙部、獲授權人士簽發（丁部）。<br><b>P120A2 附加資料表格</b>：多位成員同時報考同一徽章時附加。<br><span style="font-size:10px;color:var(--text-light)">本 APP 只列童軍支部表格；PT/65、PT/19 等屬深資／樂行童軍支部，不適用。</span>',
+  forms_gen_pt18:'🖨️ 產生 PT/18 總領袖獎章及證書申請表', forms_gen_p120a1:'🎖️ 產生 P120A1 專科徽章考驗申請表', forms_gen_interest:'⭐ 直出興趣章紀錄/證書清單',
+  forms_pick_badge:'報考專科徽章：', forms_no_other_badges:'（未記錄其他獎章）',
   service_hours_title:'⏱️ 服務時數紀錄', service_panel_hint:'服務紀錄可由領袖在此管理。',
   form_gen_first:'請先產生表格', dl_html:'⬇️ 下載 HTML', print_btn:'🖨️ 列印 (官方格式)', print_btn2:'🖨️ 列印', dl_btn:'⬇️ 下載', print_double:'🖨️ 列印 (官方格式 雙面)',
-  cert_title:'童軍支部興趣章紀錄及證書清單', cert_name:'姓名：', cert_ymis:'YMIS：', cert_unit:'單位：', cert_col_id:'編號', cert_col_name:'興趣章名稱', cert_col_date:'完成日期', cert_col_cert:'證書編號', cert_col_verify:'領袖核實',
+  cert_title:'童軍支部興趣章紀錄及證書清單', cert_name:'姓名：', cert_ymis:'YMIS：', cert_unit:'單位：', cert_col_id:'編號', cert_col_name:'獎章名稱', cert_col_group:'組別', cert_col_date:'完成日期', cert_col_cert:'證書編號', cert_col_verify:'領袖核實',
   cert_verify_line:'領袖核實：____________', cert_none:'尚未記錄興趣章', cert_sign:'童軍團長簽署：________________　日期：____________',
   srv_add_fail:'新增失敗：', srv_missing:'請填寫活動名稱及時數', srv_added:'服務紀錄已加入', srv_total:'總時數：', srv_hours_unit:'小時', srv_none:'尚無服務紀錄',
   srv_act_ph:'活動名稱', srv_hours_ph:'時數', srv_place_ph:'機構／地點', srv_add:'新增', srv_cannot_load:'服務紀錄暫時無法載入 ',
@@ -830,9 +834,9 @@ zh:{
   help_member_btn:'👤 成員教學', help_leader_btn:'👨‍💼 領袖教學', help_docs:'📚 完整文件 (vercel.json已開放docs/，若仍404請重新部署)', help_member_md:'成員MD', help_leader_md:'領袖MD',
   /* info tab */
   info_roles_title:'👥 登入後各功能教學 - 成員 / 領袖',
-  info_member_can:'👤 成員 (member) 可以做什麼', info_member_pts:'<li>只能看自己的進度，不能看全團</li><li>不能直接剔，只能按「📝申請完成」提交日期+證據</li><li>可在「📝待批」查看自己申請是否已批</li><li>可查看「⭐其他獎章」中自己的其他獎章</li><li>可使用「🖨️表格列印」自動填PT/18/PT/120A後列印</li><li>可查看「📚資料庫」內綱要、保護兒童、安全指引</li>',
+  info_member_can:'👤 成員 (member) 可以做什麼', info_member_pts:'<li>只能看自己的進度，不能看全團</li><li>不能直接剔，只能按「📝申請完成」提交日期+證據</li><li>可在「📝待批」查看自己申請是否已批</li><li>可查看「⭐其他獎章」中自己的其他獎章</li><li>可使用「🖨️表格列印」自動填 PT/18、P120A1 後列印</li><li>可查看「📚資料庫」內綱要、保護兒童、安全指引</li>',
   info_leader_can:'👨‍💼 領袖 (branch_leader / group_leader / admin) 可以做什麼',
-  info_leader_pts:'<li>所有成員功能</li><li>可在「我的進度」選任何成員看其所有紀錄</li><li>可在「👥全團總覽」一眼睇邊個已完成會員章/肩章等（卡片百分比+會員章✓標籤）</li><li>可使用「🚀考驗營批量完成」：選成員+選項目+日期，一鍵幫全團剔，不用逐個跳轉</li><li>可直接勾選+輸入日期，離線暫存按確認批量寫入，過程有提示</li><li>可在「📝待批」批量批准/拒絕成員申請</li><li>可在「👥用戶管理」設定個別成員可考核什麼（會員章/活動進度項目/其他獎章逐個勾）</li><li>領袖默認全部權限，團長/管理員可更改低層級可勾選範圍</li><li>團長/管理員可在「👥用戶管理」授權/收回勾選權限，設定細緻權限</li><li>團長/管理員可在「📋審批申請」審批新帳號</li>',
+  info_leader_pts:'<li>所有成員功能</li><li>可在「我的進度」選任何成員看其所有紀錄</li><li>可在「👥全團總覽」一眼睇邊個已完成會員章／探索／標準／高級／總領袖獎章等（卡片百分比+會員章✓標籤）</li><li>可使用「🚀考驗營批量完成」：選成員+選項目+日期，一鍵幫全團剔，不用逐個跳轉</li><li>可直接勾選+輸入日期，離線暫存按確認批量寫入，過程有提示</li><li>可在「📝待批」批量批准/拒絕成員申請</li><li>可在「👥用戶管理」設定個別成員可考核什麼（會員章/活動進度項目/其他獎章逐個勾）</li><li>領袖默認全部權限，旅長／管理員可更改低層級可勾選範圍</li><li>旅長／管理員可在「👥用戶管理」授權/收回勾選權限，設定細緻權限</li><li>旅長／管理員可在「📋審批申請」審批新帳號</li>',
   info_method:'訓練方法：', info_expected:'預期成果：', info_flow:'進度流程：', info_assess:'評估原則：', info_scheme:'訓練綱要：',
   info_inline_note:'已直接列在本頁下方，不再彈窗', info_jump:'📖 跳到本頁完整綱要', info_online:'官方網上資源（需要網絡時才用）：',
   info_mandatory_course:'必修課程：', info_prevention:'預防方法：', info_handling:'處理方法：', info_hotline:'求助熱線：', info_go:'前往',
@@ -843,11 +847,11 @@ zh:{
   info_wearing_points:'<b>佩戴重點（2024新指引）：</b><br>• 和平使者章佩戴左胸袋中央，取代會員章<br>• 急救章統一左袖上方AYP下方<br>• 拯溺布章佩戴左袖上方中央<br>• 世界童軍獎章最多右袖平行4枚<br>• 童軍支部徽章須按現行制服及佩戴指引佩戴',
   /* users */
   users_role_title:'👥 角色說明：USER vs 成員',
-  users_role_body:'<b>USER (系統使用者)</b> = 所有在 Users 表的人，包括：<br>• <span class="role-badge role-member">團員 member</span> = 純成員，不包括領袖<br>• <span class="role-badge role-branch_leader">童軍團領袖 branch_leader</span> = 領袖<br>• <span class="role-badge role-group_leader">團長 group_leader</span> = 領袖<br>• <span class="role-badge role-admin">管理員 admin</span> = 領袖<br><b>成員</b> = role=member 的人，不包括領袖。<br><b>領袖</b> = 團長/支部領袖/管理員，可勾選及管理。<br><b>USER 總數</b> = 成員 + 領袖 全部。',
+  users_role_body:'<b>USER (系統使用者)</b> = 所有在 Users 表的人，包括：<br>• <span class="role-badge role-member">成員 member</span> = 純成員，不包括領袖<br>• <span class="role-badge role-branch_leader">童軍團長 branch_leader</span> = 領袖<br>• <span class="role-badge role-group_leader">旅長 group_leader</span> = 領袖<br>• <span class="role-badge role-admin">管理員 admin</span> = 領袖<br><b>成員</b> = role=member 的人，不包括領袖。<br><b>領袖</b> = 旅長／童軍旅長／管理員，可勾選及管理。<br><b>USER 總數</b> = 成員 + 領袖 全部。',
   users_super_line:'', users_super_suffix:'',
   mock_title:'🧪 測試工具', mock_desc:'一鍵載入 10個 MOCK 成員到前端快取，方便測試全團批量剔、會員章一眼睇等。示範資料只存瀏覽器快取，不會寫入正式 Google Sheet，除非你按確認寫入。',
   mock_load_btn:'🧪 載入示範成員到全團', mock_clear_btn:'🗑️ 清除示範資料快取', mock_view_json:'📄 查看示範資料 JSON', mock_dl_csv:'📄 下載 CSV 匯入 Sheet',
-  privacy_title:'🔒 私隱設定 (僅團長/管理員可見)', privacy_desc:'普通成員預設只看自己，能否看其他成員由團長開放。有些旅團重私隱，有些想互相鼓勵，領袖及小隊長要按進度策劃活動。',
+  privacy_title:'🔒 私隱設定 (僅旅長／管理員可見)', privacy_desc:'普通成員預設只看自己，能否看其他成員由旅長開放。有些旅團重私隱，有些想互相鼓勵，領袖及小隊長要按進度策劃活動。',
   ca_title:'🔑 中央登入設定（領袖以上可見）', ca_note:'中央登入採純單向驗證，無需設定回調。下方欄位僅保留舊版相容用途，不影響新版登入。「模式說明」不會檢查 Vercel 登記或後端一致性。',
   ca_url_label:'驗證端點', ca_id_label:'旅團編號', ca_save:'儲存設定', ca_test:'模式說明',
   ca_saved:'設定已儲存', ca_test_ok:'純單向模式；未檢查 Vercel 登記', ca_test_fail:'無法讀取模式說明',
@@ -859,13 +863,13 @@ zh:{
   privacy_note:'說明：「只限隊長／副隊長」模式須在 Users 填寫 squad_role；隊員仍只能看自己。關閉時成員「我的進度」不能選其他人，全團總覽隱藏；開啟時成員可看全團 but 不能編輯。',
   privacy_scope:'成員可查看範圍：', scope_private:'只看自己', scope_team:'全隊（同小隊）', scope_leaders:'只限隊長／副隊長查看小隊', scope_troop:'全團', squad_compare:'開啟小隊完成率比較',
   req_allow:'允許成員提交進度完成申請（考核項目）', req_allow_on:'已開啟 - 成員可按「📝申請完成」提交進度', req_allow_off:'已關閉 - 成員不能提交進度申請，需領袖直接剔',
-  req_allow_note:'說明：此開關只控制「📝 申請完成」（進度考核項目），由團長按旅團情況決定成員是否夠成熟使用。關閉後成員在「我的進度」看不到申請按鈕，所有進度需由領袖直接勾選。⚠️「📅 活動履歷」的團員自行申報（服務／活動／訓練班）恆常開放、不受此開關影響——因為是成員自己參與的活動，提交後一律由領袖審批。已提交但尚未批准的申請不受影響。',
+  req_allow_note:'說明：此開關只控制「📝 申請完成」（進度考核項目），由旅長按旅團情況決定成員是否夠成熟使用。關閉後成員在「我的進度」看不到申請按鈕，所有進度需由領袖直接勾選。⚠️「📅 活動履歷」的成員自行申報（服務／活動／訓練班）恆常開放、不受此開關影響——因為是成員自己參與的活動，提交後一律由領袖審批。已提交但尚未批准的申請不受影響。',
   users_bulk_btn:'📥 批量開戶', users_add_btn:'➕ 新增成員', users_report_btn:'⬇️ 小隊報表', users_audit_btn:'🧾 操作紀錄', users_history_btn:'✅ 審批歷史', users_import_btn:'📥 匯入 CSV', users_search_ph:'搜尋姓名/ YMIS/ Email',
   users_empty:'尚無成員。請用「➕ 新增成員」或「📥 批量開戶」加入，加入後可在此刪除或修改。',
   users_count_fmt:'共 {0} 人（成員 {1}／領袖 {2}）',
   users_roster_chip:'未開登入',
   can_tick_chip:'可勾選', perms_label:'權限: ', perms_none:'無', perms_all:'全部(*)',
-  role_opt_member:'團員', role_opt_branch:'支部領袖', role_opt_group:'團長', role_opt_admin:'管理員',
+  role_opt_member:'成員', role_opt_branch:'童軍團長（SL）', role_opt_group:'旅長（GSL）', role_opt_admin:'管理員',
   tick_revoke:'收回勾選', tick_grant:'授權勾選', perm_btn:'⚙️ 權限', reset_pw_btn:'🔑 改密碼', squad_btn:'🧭 小隊', deactivate_btn:'🗑️ 停用',
   reset_pw_confirm:'確定把此成員的登入密碼改成你剛輸入的新密碼？請親自告知該成員（沒有電郵無法自行找回）。', reset_pw_result:'一次性密碼：', reset_pw_fail:'重設失敗：',
   reset_pw_prompt:'請輸入新密碼（至少4位）。留空則設為 1234。請把密碼親自告知該成員。',
@@ -875,7 +879,7 @@ zh:{
   audit_search:'輸入搜尋字詞（可留空）', audit_fail:'讀取操作紀錄失敗：', approval_search:'搜尋 YMIS／姓名／項目／狀態', approval_fail:'讀取審批歷史失敗：', no_records:'沒有紀錄',
   bulk_json_bad:'JSON 格式錯誤', bulk_no_valid:'沒有有效資料（成員 YMIS 須為10位數字；領袖須填姓名＋電郵）', bulk_err_title:'以下開戶失敗（原因）：', bulk_done:'批量開戶完成：成功 {0} 筆，略過 {1} 筆', fail_word:'失敗',
   deactivate_confirm:'確定停用此帳號？停用後將無法登入，資料會保留。', deactivated:'已停用 ', deactivate_fail:'停用失敗：',
-  gsl_only_one:'團長只能有一位，全團已有現任團長。如需更換，請先將現任團長轉為其他角色。', gsl_opt_taken:'團長（已有現任：{0}）', login_email_pw:'登入方式：電郵 ＋ 密碼', gsl_demote_warn:'此人是全團唯一的團長，轉走後全團將暫時沒有團長。確定繼續嗎？', gsl_deactivate_warn:'此人是全團唯一的團長，停用後全團將暫時沒有團長。確定繼續嗎？',
+  gsl_only_one:'旅長只能有一位，全團已有現任旅長。如需更換，請先將現任旅長轉為其他角色。', gsl_opt_taken:'旅長（已有現任：{0}）', login_email_pw:'登入方式：電郵 ＋ 密碼', gsl_demote_warn:'此人是全團唯一的旅長，轉走後全團將暫時沒有旅長。確定繼續嗎？', gsl_deactivate_warn:'此人是全團唯一的旅長，停用後全團將暫時沒有旅長。確定繼續嗎？',
   addm_pw:'成員 YMIS（10位數字）', addm_name:'成員姓名', addm_squad:'小隊（可留空）', addm_done:'成員已新增', addm_fail:'新增失敗：',
   squad_prompt:'小隊名稱（留空代表未分配）', squad_role_prompt:'小隊職務：隊長／副隊長／member', squad_updated:'小隊及職務已更新', update_fail:'更新失敗：',
   role_updated:'角色已更新', tick_granted:'已授權勾選', tick_revoked:'已收回權限',
@@ -885,7 +889,7 @@ zh:{
   template_dl:'已下載成員範本 CSV',
   /* logs */
   logs_upgrade_title:'📅 活動履歷（服務／活動／訓練班紀錄）',
-  logs_upgrade_desc:'⚠️ 此旅團後端尚未升級至 <b>v5.2</b>，暫未能使用活動履歷／團員申報。進度、審批、用戶管理等現有功能完全不受影響。',
+  logs_upgrade_desc:'⚠️ 此旅團後端尚未升級至 <b>v5.2</b>，暫未能使用活動履歷／成員申報。進度、審批、用戶管理等現有功能完全不受影響。',
   logs_upgrade_how:'升級方法（約 5 分鐘）：Apps Script 貼上最新 Code.gs → 執行 initializeSheets() 補建「活動履歷」及「待批履歷」工作表 → 部署 → 管理部署 → 編輯 → 版本選「新版本」→ 部署。URL 不變。',
   logs_recheck:'🔄 重新檢查',
   log_service:'服務', log_activity:'活動', log_training:'訓練班', log_total_hours:'服務總時數', log_add_btn:'➕ 新增紀錄',
@@ -899,7 +903,7 @@ zh:{
   log_save_fail:'儲存失敗：', log_backend_old_err:'旅團後端未升級 v5.2：請通知管理員更新 Code.gs 並執行 initializeSheets()（補建「活動履歷」及「待批履歷」）', log_save_fail2:'儲存失敗',
   log_del_confirm:'確定刪除「{0}」？此操作不能復原。', log_only_leader_del:'只有領袖可以刪除紀錄', log_deleted_demo:'已刪除（DEMO 本機模式）', log_deleted:'✅ 已刪除紀錄', log_del_fail:'刪除失敗：', log_del_fail2:'刪除失敗',
   log_type_service:'服務紀錄', log_type_activity:'活動紀錄', log_type_training:'訓練班紀錄',
-  /* v5.2 履歷申報（團員自行申報 → 領袖審批） */
+  /* v5.2 履歷申報（成員自行申報 → 領袖審批） */
   log_self_add:'📝 申報紀錄', log_empty_self:'，可按上方「📝 申報紀錄」自行申報（需領袖批准）',
   log_pending_h:'待領袖審批的申報', log_req_new:'新增申報', log_req_edit:'修改申報',
   log_cancel_req:'↩️ 取消申報', log_cancel_confirm:'確定取消申報「{0}」？', log_cancelled:'✅ 已取消申報',
@@ -928,7 +932,7 @@ zh:{
   /* ---- 靜態頁面 ---- */
   app_h1:'童軍進度追蹤系統', app_tagline:'Scout Progress Tracker v5.1 • 總領袖獎章 + 第11版綱要（中英對照）', app_subtitle:'童軍支部訓練綱要及進度管理 • 成員紀錄 • 領袖審批 • 表格自動填寫 • 中英一鍵切換',
   tab_enter:'🏠 進入系統', tab_setup:'📋 新旅團部署', tab_guide:'📖 使用教學',
-  home_awards_title:'童軍支部進度獎章', lv1:'會員章', lv1d:'2大項 • 含保護兒童', lv2:'探索獎章', lv3:'標準獎章', lv4:'高級獎章', lv5:'總領袖獎章', lvd:'逐項記錄及審批', lv5d:'最高進度獎章',
+  home_awards_title:'童軍支部進度獎章', lv1:'會員章', lv1d:'11項 • 含保護兒童', lv2:'探索獎章', lv3:'標準獎章', lv4:'高級獎章', lv5:'總領袖獎章', lvd:'逐項記錄及審批', lv5d:'最高進度獎章',
   home_pick_troop:'📍 請選擇您的旅團', home_reload:'🔄 重新載入', home_demo_l:'👀 示範：領袖功能', home_demo_m:'👤 示範：成員功能',
   home_tip:'💡 提示：若您的旅團不在列表，請到「新旅團部署」查看10分鐘自助部署教學。<br>🎬 <b>未登入試用：</b>可選擇「示範：領袖功能」或「示範：成員功能」，免登入體驗兩種角色的介面差異。<br>🌐 <b>中英切換：</b>右上角按「🌐 English」可全站轉英文（內容相通，後端紀錄相同，適合英語旅團）。',
   // [主系統暫時隱藏 2026-10] setup_portal_card／setup_map_card／s4h／s4p 對應元素已在 HTML 註解隱藏（主系統未開發完成）；
@@ -942,7 +946,7 @@ zh:{
   s_fl_h:'首次登入（預設管理員帳號）',
   s_fl_p:'登記完成後，首頁揀該旅團卡片 → 用「<b>👤 成員</b>」分頁登入：<br>YMIS <b>1111111111</b>　密碼 <b>changeme</b>（初始化時自動建立嘅預設管理員，唔好用「領袖=Email」分頁）<br>首次登入會<b>強制改密碼</b>（至少4位）。之後喺「審批中心」批成員申請、喺「用戶管理」開返各領袖自己真YMIS嘅帳號並設權限',
   s4h:'軌道B：有主系統並想接上 - 額外提交給主系統管理員', s4p:'將同一組 URL+Key 交主系統管理員，填入旅團設定→元件設定 scoutbadge 卡片 backend+apikey。之後成員點 Dashboard 卡片自動帶入 ?u=0082&role=&ymis=&from=portal&embed=1，無需密碼',
-  s5h:'私隱選擇', s5p:'若旅團重私隱，成員預設只看自己；若想互相鼓勵，團長可在用戶管理→系統設定開啟「允許成員互相查看進度」',
+  s5h:'私隱選擇', s5p:'若旅團重私隱，成員預設只看自己；若想互相鼓勵，旅長可在用戶管理→系統設定開啟「允許成員互相查看進度」',
   setup_submit_card:'<h3 style="color:var(--blue)">📧 完成後提交</h3><p style="font-size:11px">將旅團編號、名稱、URL、API Key 交 scoutbadge 管理員登記<br>登記完成後首頁會出現旅團卡片，選團即可登入<br>成員可直接 bookmark 本系統連結使用</p>',
   submit_contact:'📧 提交旅團接入申請給 ADMIN APP',
   guide_h2:'📖 使用教學',
@@ -952,33 +956,33 @@ zh:{
   g5h:'其他功能', g5p:'全團總覽：按進度項目篩選，避免卡死；按項目統計：百分比+人數；其他獎章已併入我的進度；表格列印：童軍支部表格格式自動填入後列印。',
   guide_roles_h3:'👥 角色功能教學（登入後）',
   guide_member_card:'<b>👤 成員 member</b><ul style="font-size:11px;margin:6px 0 0 16px"><li>只能看自己進度</li><li>不能直接剔，按📝申請</li><li>待批查看自己申請</li><li>其他獎章只讀自己</li><li>表格列印官方格式</li><li>資料庫看綱要及安全指引</li></ul>',
-  guide_leader_card:'<b>👨‍💼 領袖 leader</b><ul style="font-size:11px;margin:6px 0 0 16px"><li>全部功能</li><li>我的進度選任何成員看紀錄</li><li>全團一眼睇會員章+百分比</li><li>考驗營批量一鍵幫全團剔</li><li>離線暫存確認寫入</li><li>待批批量批准</li><li>用戶管理及⚙️權限設定</li><li>領袖默認全部，團長/管理員可改低層級</li><li>審批新帳號</li></ul>',
+  guide_leader_card:'<b>👨‍💼 領袖 leader</b><ul style="font-size:11px;margin:6px 0 0 16px"><li>全部功能</li><li>我的進度選任何成員看紀錄</li><li>全團一眼睇會員章+百分比</li><li>考驗營批量一鍵幫全團剔</li><li>離線暫存確認寫入</li><li>待批批量批准</li><li>用戶管理及⚙️權限設定</li><li>領袖默認全部，旅長／管理員可改低層級</li><li>審批新帳號</li></ul>',
   login_h2:'🔐 登入系統', login_member_tab:'👤 成員<br><small style="font-weight:normal">YMIS 10位</small>', login_leader_tab:'👨‍💼 領袖<br><small style="font-weight:normal">Email</small>',
   login_pw_label:'密碼', login_pw_ph:'請輸入密碼', login_apply:'🆕 申請帳戶（成員／領袖）', login_join:'旅團接入', login_forgot:'🔑 忘記密碼', fp_title:'🔑 忘記密碼', fp_contact:'🐛💬 聯絡支援',
-  fp_body:'本系統唔會以電郵自動重設密碼。請聯絡你旅團嘅領袖／團長，由佢哋喺 APP 內「👥 用戶管理 → 重設密碼」幫你重發臨時密碼，首次登入後再自行更改。', login_back:'← 返回首頁', login_page_h1:'童軍進度追蹤 v5.1',
+  fp_body:'本系統唔會以電郵自動重設密碼。請聯絡你旅團嘅領袖／旅長，由佢哋喺 APP 內「👥 用戶管理 → 重設密碼」幫你重發臨時密碼，首次登入後再自行更改。', login_back:'← 返回首頁', login_page_h1:'童軍進度追蹤 v5.1',
   nav_progress:'📊 我的進度', nav_overview:'👥 全團總覽', nav_requests:'✅ 審批中心', nav_logs:'📅 活動履曆', nav_forms:'🖨️ 表格列印', nav_help:'❓ 教學', nav_info:'📚 資料庫', nav_users:'👥 用戶管理', logout:'登出',
   pending_hint:'已暫存於瀏覽器', savebar_discard:'捨棄', savebar_confirm:'✅ 確認寫入雲端',
   cm_title:'📧 提交旅團接入申請', cm_tid:'旅團編號 *', cm_tname:'旅團名稱', cm_tname_ph:'第 82 旅', cm_url:'Apps Script URL (…/exec) *', cm_key:'API Key *', cm_note:'聯絡 Email / 備註', cm_note_ph:'請留下聯絡方式...',
   dm_title:'考驗說明', sm_title:'📚 訓練綱要',
-  perm_title:'⚙️ 設定可勾選權限 - ', perm_desc:'設定該用戶可勾選之權限範圍。領袖默認全部 (*)，團長/管理員可設定及更改可考核之項目範圍。', perm_prog:'進度性獎章 (進度項目層級)', perm_other:'其他獎章 (逐個勾)', perm_all:'全選', perm_none:'全不選', perm_set_all:'設為領袖全部 (*)', perm_save_btn:'💾 儲存權限', perm_saved:'✅ 權限已更新', perm_fail:'儲存失敗：', perm_other_all:'其他獎章 全部',
+  perm_title:'⚙️ 設定可勾選權限 - ', perm_desc:'設定該用戶可勾選之權限範圍。領袖默認全部 (*)，旅長／管理員可設定及更改可考核之項目範圍。', perm_prog:'進度性獎章 (進度項目層級)', perm_other:'其他獎章 (逐個勾)', perm_all:'全選', perm_none:'全不選', perm_set_all:'設為領袖全部 (*)', perm_save_btn:'💾 儲存權限', perm_saved:'✅ 權限已更新', perm_fail:'儲存失敗：', perm_other_all:'其他獎章 全部',
   reqm_date:'完成日期 *', reqm_evidence:'現場核實備註（例如：證書編號、服務時數、活動日期）', reqm_evidence_ph:'例如：2026-05-01 區際服務，服務 4 小時；證書編號 ABC123，正本已交領袖現場核實',
   reqm_note:'💡 本系統只作登記及進度紀錄，不儲存相片或 PDF；證書正本及現場證明請交領袖核實。提交後領袖會在「待批」頁看到，可批准即自動寫入進度。',
   logm_type:'類型 *', logm_member:'成員 *', logm_batch:'📥 批量：同一活動套用到多個成員', logm_batch_hint:'按住 Ctrl（電腦）或逐點（手機）可多選成員', logm_date:'日期 *', logm_role:'崗位／身份', logm_opt:'選填', logm_cert:'證書編號', logm_detail:'內容／備註', logm_detail_ph:'地點、主辦單位、內容摘要……（選填）', logm_hours_ph:'例如 6', logm_title_ph:'例如：全港童軍大露營 2026',
   apply_title:'📝 申請帳戶', apply_desc:'提交後由旅團領袖在 APP 內審批，批准後會建立帳戶。',
-  apply_troop:'📍 旅團：', apply_hint:'支部＝童軍、單位＝所屬旅團，系統自動帶入，毋須填寫。提交後由團長／領袖在「審批中心」批准。',
+  apply_troop:'📍 旅團：', apply_hint:'支部＝童軍、單位＝所屬旅團，系統自動帶入，毋須填寫。提交後由旅長／領袖在「審批中心」批准。',
   apply_role:'申請身份 *', apply_member:'童軍成員', apply_leader:'領袖（童軍團長）',
-  apply_role_hint:'成員、領袖都可自行申請（領袖用電郵登入、毋須 YMIS）；團長／管理員須由現任管理層在「用戶管理」直接開立。',
+  apply_role_hint:'成員、領袖都可自行申請（領袖用電郵登入、毋須 YMIS）；旅長／管理員須由現任管理層在「用戶管理」直接開立。',
   apply_ymis:'YMIS（10位數字）*', apply_ymis_opt:'（領袖選填）', apply_name:'姓名 *', apply_squad:'小隊（可留空）', apply_email:'聯絡電郵', apply_email_req:'* 領袖必填',
   apply_need_mail:'領袖申請必須填寫聯絡電郵', apply_need_ymis_leader:'領袖 YMIS 如填寫須為 10 位數字', apply_bad_mail:'Email 格式不正確',
   apply_pick_troop:'請先選擇旅團', apply_sending:'提交中...', apply_fail:'提交失敗',
   appv_ok:'✅ 帳戶已建立', appv_as:'已按申請開立為 {0} 帳戶。', appv_member:'帳戶角色：成員。',
-  appv_fallback:'申請人要求 {0}，但你的權限未能設定該角色，已建立為成員，請由團長在「用戶管理」調整。',
+  appv_fallback:'申請人要求 {0}，但你的權限未能設定該角色，已建立為成員，請由旅長在「用戶管理」調整。',
   appv_temp:'臨時密碼（首次登入須更改）：', appv_ymis:'登入帳號（YMIS）：', appv_loginmail:'登入方式：電郵＋臨時密碼（領袖毋須 YMIS）。',
   footer_line1:'COPYRIGHT 2026 Scout System • 童軍進度追蹤系統 v5.1',
   footer_line2:'基於 2026年第11版《童軍訓練綱要》，內置官方英文版對照 | 支援離線暫存 • 批量寫入 • 活動履歷（服務／活動／訓練班） • 保護兒童 Safe from Harm',
   /* dynamic JS additions */
   not_loaded:'資料未載入', no_detail:'暫無詳細說明。', show_full_syllabus:'📚 在頁面內顯示完整綱要',
-  no_perm_tick_item:'你的權限不可勾選此項目 ({0})，請聯絡團長/管理員設定',
+  no_perm_tick_item:'你的權限不可勾選此項目 ({0})，請聯絡旅長／管理員設定',
   note_ph:'證明／備註', req_apply_word:'📝 申請', req_done_word:'✅ 已完成',
   discard_confirm:'確定捨棄 {0} 項未保存變更？', discard_done:'已捨棄未保存變更',
   saving:'正在寫入雲端...', saving_prep:'準備寫入 {0} 項', saving_syncing:'同步伺服器回應...',
@@ -1013,12 +1017,12 @@ zh:{
   hist_search_prompt:'搜尋 YMIS／姓名／項目／狀態', hist_fail:'讀取審批歷史失敗：', hours_word:'小時',
   info_member_title:'👤 成員 (member) 可以做什麼',
   info_m1:'只能看自己的進度，不能看全團', info_m2:'不能直接剔，只能按「📝申請完成」提交日期+證據', info_m3:'可在「📝待批」查看自己申請是否已批',
-  info_m4:'可查看「⭐其他獎章」中自己的其他獎章', info_m5:'可使用「🖨️表格列印」自動填PT/18/PT/120A後列印', info_m6:'可查看「📚資料庫」內綱要、保護兒童、安全指引',
+  info_m4:'可查看「⭐其他獎章」中自己的其他獎章', info_m5:'可使用「🖨️表格列印」自動填 PT/18、P120A1 後列印', info_m6:'可查看「📚資料庫」內綱要、保護兒童、安全指引',
   info_leader_title:'👨‍💼 領袖 (branch_leader / group_leader / admin) 可以做什麼',
-  info_l1:'所有成員功能', info_l2:'可在「我的進度」選任何成員看其所有紀錄', info_l3:'可在「👥全團總覽」一眼睇邊個已完成會員章/肩章等（卡片百分比+會員章✓標籤）',
+  info_l1:'所有成員功能', info_l2:'可在「我的進度」選任何成員看其所有紀錄', info_l3:'可在「👥全團總覽」一眼睇邊個已完成會員章／探索／標準／高級／總領袖獎章等（卡片百分比+會員章✓標籤）',
   info_l4:'可使用「🚀考驗營批量完成」：選成員+選項目+日期，一鍵幫全團剔，不用逐個跳轉', info_l5:'可直接勾選+輸入日期，離線暫存按確認批量寫入，過程有提示',
   info_l6:'可在「📝待批」批量批准/拒絕成員申請', info_l7:'可在「👥用戶管理」設定個別成員可考核什麼（會員章/活動進度項目/其他獎章逐個勾）',
-  info_l8:'領袖默認全部權限，團長/管理員可更改低層級可勾選範圍', info_l9:'團長/管理員可在「👥用戶管理」授權/收回勾選權限，設定細緻權限', info_l10:'團長/管理員可在「📋審批申請」審批新帳號',
+  info_l8:'領袖默認全部權限，旅長／管理員可更改低層級可勾選範圍', info_l9:'旅長／管理員可在「👥用戶管理」授權/收回勾選權限，設定細緻權限', info_l10:'旅長／管理員可在「📋審批申請」審批新帳號',
   inline_listed:'已直接列在本頁下方，不再彈窗', items_count_fmt:'{0}/{1} 項', jump_syllabus:'📖 跳到本頁完整綱要',
   log_srv_word:'服務', log_act_word:'活動', log_trn_word:'訓練班', log_total_hours:'服務總時數', log_add_btn:'➕ 新增紀錄',
   log_hours_service:'服務時數', log_hours_general:'時數', log_none_tail:'，可按上方「➕ 新增紀錄」補登',
@@ -1036,26 +1040,25 @@ zh:{
   no_items_found:'無符合搜尋的項目', no_permission:'沒有權限', no_records:'沒有紀錄',
   ob_load:'🔄 載入', ob_done:'已完成', ob_update:'更新', ob_complete:'完成', ob_no_perm:'無權限勾選此其他獎章',
   ob_updated:'✅ 其他獎章已更新', ob_save_fail:'寫入其他獎章失敗：',
+  ob_legacy_title:'🗂️ 舊版紀錄（未對應現行綱要）：{0} 項', ob_legacy_hint:'這些紀錄沿用舊版（VSBADGE／舊制）編號，現行 2026 綱要沒有對應項目，因此不計入完成度。如已由領袖核實，請在上方以現行獎章重新記錄一次；舊紀錄保留不刪。',
   official_res_label:'官方網上資源（需要網絡時才用）：', options_count:'{0}選項',
   perm_prefix:'權限: ', perm_all_word:'全部(*)', perm_none_word:'無', perm_btn:'⚙️ 權限',
-  perm_b_l1:'會員章 (全部12項)', perm_b_l1cp:'會員章-保護兒童 (必修)', perm_b_l2:'肩章 (基礎技能23項)',
-  perm_b_l3self:'活動策劃進度項目 (舊自立)', perm_b_l3resp:'社會服務進度項目 (舊責任)', perm_b_l3sc:'多元技能-範疇一 童軍技能',
-  perm_b_l3sp:'多元技能-範疇二 康樂體育', perm_b_l3int:'多元技能-範疇三 新體驗 (個人興趣)', perm_b_l3exp:'戶外探險進度項目',
-  perm_b_l4:'總領袖獎章 全部進度項目', perm_b_l4act:'活動策劃／多元技能進度項目',
+  perm_item_count:'{0}項', perm_cat_A:'戶外挑戰', perm_cat_B:'個人發展', perm_cat_C:'領導才與靈性發展',
+  perm_cat_D:'服務與環境', perm_cat_E:'國際視野', perm_cat_F:'探索新知', perm_cat_M:'會員章項目',
   ppl:'{0}人', privacy_done_fmt:'已{0}成員互看進度 (鼓勵/私隱模式)',
   privacy_on:'已開啟 - 成員可看全團', privacy_off:'已關閉 - 成員只看自己 (私隱)',
   privacy_scope_note:'說明：「只限隊長／副隊長」模式須在 Users 填寫 squad_role；隊員仍只能看自己。關閉時成員「我的進度」不能選其他人，全團總覽隱藏；開啟時成員可看全團但不能編輯。',
   scope_private:'只看自己', scope_team:'全隊（同小隊）', scope_leaders:'只限隊長／副隊長查看小隊', scope_troop:'全團',
-  pt18_title:'PT/18 總領袖獎章申請表', pt120a_title:'PT/120A 專科徽章申請表', pt_official:'官方空白表格（亦可於「表格列印」自動填寫）',
+  pt18_title:'PT/18 總領袖獎章及證書申請表', p120a1_title:'P120A1 童軍專科徽章／獎章考驗申請表', p120a2_title:'P120A2 專科徽章考驗附加資料表格', pt_official:'官方空白表格（亦可於「表格列印」自動填寫）',
   pw_reset_btn:'🔑 改密碼', reset_pw_prefix:'新密碼：', reset_pw_fail:'改密碼失敗：',
   req_allow_done_fmt:'已{0}成員提交完成申請功能', req_allow_on:'已開啟 - 成員可按「📝申請完成」提交進度', req_allow_off:'已關閉 - 成員不能提交申請，需領袖直接剔',
   req_cleared_fmt:'⚠️ 已清空 {0} 筆本地待提交申請，請聯絡領袖協助',
   role_body_begin:'<b>USER (系統使用者)</b> = 所有在 Users 表的人，包括：<br>',
-  role_line_member:'團員 member = 純成員，不包括領袖', role_line_branch:'童軍團領袖 branch_leader = 領袖',
-  role_line_group:'團長 group_leader = 領袖', role_line_admin:'管理員 admin = 領袖', role_line_super:'超管 super_admin = 超管',
-  role_body_end:'<b>成員</b> = role=member 的人，不包括領袖。<br><b>領袖</b> = 團長/支部領袖/管理員，可勾選及管理。<br><b>USER 總數</b> = 成員 + 領袖 全部。',
+  role_line_member:'成員 member = 純成員，不包括領袖', role_line_branch:'童軍團長 branch_leader = 領袖',
+  role_line_group:'旅長 group_leader = 領袖', role_line_admin:'管理員 admin = 領袖', role_line_super:'超管 super_admin = 超管',
+  role_body_end:'<b>成員</b> = role=member 的人，不包括領袖。<br><b>領袖</b> = 旅長／童軍旅長／管理員，可勾選及管理。<br><b>USER 總數</b> = 成員 + 領袖 全部。',
   role_super_word:'',
-  role_opt_member:'團員', role_opt_branch:'支部領袖', role_opt_group:'團長', role_opt_admin:'管理員',
+  role_opt_member:'成員', role_opt_branch:'童軍團長（SL）', role_opt_group:'旅長（GSL）', role_opt_admin:'管理員',
   sfh_courses:'必修課程：', sfh_prevention:'預防方法：', sfh_handling:'處理方法：', sfh_hotlines:'求助熱線：',
   srv_fill:'請填寫活動名稱及時數', srv_added:'服務紀錄已加入', srv_add_fail_colon:'新增失敗：', srv_load_fail:'服務紀錄暫時無法載入',
   srv_total:'總時數：', srv_none:'尚無服務紀錄', srv_hours_ph:'時數', srv_place_ph:'機構／地點', srv_add:'新增',
@@ -1145,7 +1148,7 @@ zh:{
   legacy_none_selected:'請先選擇已考獲並核實的舊獎章。', legacy_queued:'✅ 已加入 {0} 項過渡紀錄；按底部「確認寫入雲端」保存。',
   legacy_recorded:'已記錄', legacy_pending:'待寫入', legacy_unknown_date:'未提供日期',
   legacy_remove:'撤回紀錄', legacy_remove_confirm:'確定撤回「{0}」的這項舊獎章過渡紀錄？不會更改任何清單細項。',
-  legacy_remove_queued:'已將撤回過渡紀錄加入待寫入清單。', legacy_no_permission:'你沒有此獎章的直接寫入權限，請聯絡團長。',
+  legacy_remove_queued:'已將撤回過渡紀錄加入待寫入清單。', legacy_no_permission:'你沒有此獎章的直接寫入權限，請聯絡旅長。',
   legacy_no_transfers:'目前沒有可轉換的舊獎章紀錄。',
   legacy_eligibility:'我確認此成員於2026年8月15日前宣誓，並已核實所選舊獎章確已完成。',
   legacy_activity_note:'過渡等同紀錄不計入新制完成百分比；新版細項須另行逐項核實及勾選。',
@@ -1209,21 +1212,22 @@ en:{
   batch_approve_first:'Select the items to approve first', batch_approve_confirm:'Batch-approve {0} item(s)?', batch_approve_added:'Added {0} item(s) to pending — press confirm to write to cloud',
   applied_role:'Requested role: ',
   other_done_chip:'Completed', other_update:'Update', other_done:'Done', other_badge_updated:'✅ Other badge updated', other_write_fail:'Write failed: ', other_save_fail:'Failed to save other badge: ',
-  forms_auto_title:'🖨️ Auto-filled Forms', forms_auto_desc:'The system fills in completion dates required by PT/18 and PT/120A based on progress. Leaders/members can edit before printing. Duplex printing supported, per Association requirements.',
+  forms_auto_title:'🖨️ Auto-filled Forms', forms_auto_desc:'Completion dates for PT/18 and P120A1 are filled from Scout Section progress. Leaders/members can edit before printing. Duplex printing supported, per Association requirements.',
   forms_auto_pts:'<li>Auto-fills name, YMIS, troop and item completion dates</li><li>Manually add service hours and certificate numbers</li><li>One-click printing with controls hidden</li>',
   forms_guide_title:'📋 About the Forms',
-  forms_guide_desc:'<b>PT/18 Chief Scout\'s Award</b>: apply after completing the required progress items in the training scheme.<br><b>PT/120A Proficiency Badges</b>: complete the requirements per the current Scout Section Training Scheme; leader verifies and submits.<br><b>PT/65 Assessment Plan</b>: submit the plan before starting progressive award assessments.',
-  forms_gen_pt18:'🖨️ Generate PT/18 Chief Scout\'s Award Form', forms_gen_pt120a:'🐉 Generate PT/120A Proficiency Badge Form', forms_gen_interest:'⭐ Interest badges record/certificate list',
+  forms_guide_desc:'<b>PT/18 Chief Scout\'s Award and Certificate</b>: after completing all Chief Scout\'s Award items, nominated by the SL/GSL, recommended by the DC, confirmed by the RC and approved by Programme Branch.<br><b>P120A1 Proficiency / Activity Badge Assessment</b>: to take a Proficiency Badge (Interest / Pursuit / Service / Instructor) — Part A by the applicant and Scout Leader, Parts B–C by the examiner, Part D issued by the authorised person.<br><b>P120A2 Supplementary Information Sheet</b>: attached when several members take the same badge.<br><span style="font-size:10px;color:var(--text-light)">Only Scout Section forms are listed. PT/65, PT/19 etc. belong to the Venture/Rover Sections and do not apply.',
+  forms_gen_pt18:'🖨️ Generate PT/18 Chief Scout\'s Award Form', forms_gen_p120a1:'🎖️ Generate P120A1 Proficiency Badge Assessment Form', forms_gen_interest:'⭐ Interest badges record/certificate list',
+  forms_pick_badge:'Badge applied for: ', forms_no_other_badges:'(no other badges recorded)',
   service_hours_title:'⏱️ Service Hours', service_panel_hint:'Leaders can manage service records here.',
   form_gen_first:'Please generate a form first', dl_html:'⬇️ Download HTML', print_btn:'🖨️ Print (official format)', print_btn2:'🖨️ Print', dl_btn:'⬇️ Download', print_double:'🖨️ Print (official, duplex)',
-  cert_title:'Scout Section Interest Badges Record & Certificate List', cert_name:'Name: ', cert_ymis:'YMIS: ', cert_unit:'Unit: ', cert_col_id:'ID', cert_col_name:'Badge Name', cert_col_date:'Completion Date', cert_col_cert:'Certificate No.', cert_col_verify:'Leader Verification',
+  cert_title:'Scout Section Interest Badges Record & Certificate List', cert_name:'Name: ', cert_ymis:'YMIS: ', cert_unit:'Unit: ', cert_col_id:'ID', cert_col_name:'Badge Name', cert_col_group:'Group', cert_col_date:'Completion Date', cert_col_cert:'Certificate No.', cert_col_verify:'Leader Verification',
   cert_verify_line:'Leader verified: ____________', cert_none:'No interest badges recorded yet', cert_sign:'Scout Leader signature: ________________　Date: ____________',
   srv_add_fail:'Add failed: ', srv_missing:'Please fill in activity name and hours', srv_added:'Service record added', srv_total:'Total hours: ', srv_hours_unit:'hrs', srv_none:'No service records yet',
   srv_act_ph:'Activity name', srv_hours_ph:'Hours', srv_place_ph:'Organisation / venue', srv_add:'Add', srv_cannot_load:'Service records unavailable ',
   help_title:'❓ Guides — by role', help_you_are:'You are: ', help_desc:'This page only shows what matters to your role; members never see complex leader operations. Embedded version — no more NOT_FOUND or 404.',
   help_member_btn:'👤 Member guide', help_leader_btn:'👨‍💼 Leader guide', help_docs:'📚 Full documents (docs/ is published in vercel.json; redeploy if 404)', help_member_md:'Member MD', help_leader_md:'Leader MD',
   info_roles_title:'👥 Feature guide after sign-in — Members / Leaders',
-  info_member_can:'👤 What members can do', info_member_pts:'<li>View own progress only, not the whole troop</li><li>Cannot tick directly — use "📝 Apply for Completion" with date + evidence</li><li>Track own applications in "📝 Approvals"</li><li>View own other badges in "⭐ Other Badges"</li><li>Use "🖨️ Forms" to auto-fill PT/18 / PT/120A and print</li><li>Read the syllabus, Safe from Harm and safety guides in "📚 Library"</li>',
+  info_member_can:'👤 What members can do', info_member_pts:'<li>View own progress only, not the whole troop</li><li>Cannot tick directly — use "📝 Apply for Completion" with date + evidence</li><li>Track own applications in "📝 Approvals"</li><li>View own other badges in "⭐ Other Badges"</li><li>Use "🖨️ Forms" to auto-fill PT/18 / P120A1 and print</li><li>Read the syllabus, Safe from Harm and safety guides in "📚 Library"</li>',
   info_leader_can:'👨‍💼 What leaders (branch_leader / group_leader / admin) can do',
   info_leader_pts:'<li>Everything members can do</li><li>View any member\'s full records in "My Progress"</li><li>See at a glance who finished the Membership Badge etc. in "👥 Troop Overview" (card % + Membership✓ label)</li><li>Use "🚀 Assessment-camp batch completion": pick members + items + date, tick the whole troop in one go</li><li>Tick directly with dates; offline cache, then batch-write with progress feedback</li><li>Batch approve / reject member applications in "📝 Approvals"</li><li>Scope what each leader may assess in "👥 User Management" (Membership / sections / other badges, item by item)</li><li>Leaders default to full permission; GSL/admins can narrow lower levels</li><li>GSL/admins can grant or revoke ticking permission with fine-grained settings</li><li>GSL/admins approve new accounts in "📋 Applications"</li>',
   info_method:'Training Method: ', info_expected:'Expected Outcomes: ', info_flow:'Progression: ', info_assess:'Assessment Principles: ', info_scheme:'Training Scheme: ',
@@ -1257,7 +1261,7 @@ en:{
   users_count_fmt:'{0} people ({1} members / {2} leaders)',
   users_roster_chip:'No login',
   can_tick_chip:'Can tick', perms_label:'Scope: ', perms_none:'None', perms_all:'All (*)',
-  role_opt_member:'Member', role_opt_branch:'Section Leader', role_opt_group:'GSL', role_opt_admin:'Admin',
+  role_opt_member:'Member', role_opt_branch:'Scout Leader (SL)', role_opt_group:'GSL (Group Scout Leader)', role_opt_admin:'Admin',
   tick_revoke:'Revoke ticking', tick_grant:'Grant ticking', perm_btn:'⚙️ Scope', reset_pw_btn:'🔑 Reset PW', squad_btn:'🧭 Patrol', deactivate_btn:'🗑️ Deactivate',
   reset_pw_confirm:'Set this member\'s login password to the one you just entered? Tell them in person (no email recovery).', reset_pw_result:'One-time password: ', reset_pw_fail:'Reset failed: ',
   reset_pw_prompt:'Enter a new password (min 4 characters). Leave blank to use 1234. Tell the member in person.',
@@ -1317,7 +1321,7 @@ en:{
   /* ---- static pages ---- */
   app_h1:'Scout Progress Tracker', app_tagline:'Scout Progress Tracker v5.1 • Chief Scout\'s Award + 11th ed. Scheme (bilingual 中/EN)', app_subtitle:'Scout Section Training Scheme & Progress • Member Records • Leader Approvals • Auto-filled Forms • One-click 中/EN toggle',
   tab_enter:'🏠 Enter System', tab_setup:'📋 New Troop Setup', tab_guide:'📖 User Guide',
-  home_awards_title:'Scout Section Progressive Awards', lv1:'Membership Badge', lv1d:'2 areas • incl. Safe from Harm', lv2:'Pathfinder Award', lv3:'Standard Award', lv4:'Advanced Award', lv5:'Chief Scout\'s Award', lvd:'Item-by-item records & approval', lv5d:'Highest progressive award',
+  home_awards_title:'Scout Section Progressive Awards', lv1:'Membership Badge', lv1d:'11 items • incl. Safe from Harm', lv2:'Pathfinder Award', lv3:'Standard Award', lv4:'Advanced Award', lv5:'Chief Scout\'s Award', lvd:'Item-by-item records & approval', lv5d:'Highest progressive award',
   home_pick_troop:'📍 Select Your Troop', home_reload:'🔄 Reload', home_demo_l:'👀 Demo: Leader Features', home_demo_m:'👤 Demo: Member Features',
   home_tip:'💡 Tip: if your troop is not listed, see "New Troop Setup" for the 10-minute self-service deployment guide.<br>🎬 <b>Try without login:</b> pick "Demo: Leader" or "Demo: Member" to experience both roles.<br>🌐 <b>中/EN:</b> tap "🌐 中文" at the top-right to switch the whole interface (same content, same backend records — ideal for English-speaking troops).',
   // [主系統暫時隱藏 2026-10] setup_portal_card／setup_map_card／s4h／s4p kept unused while the main platform intro is hidden.
@@ -1400,7 +1404,7 @@ en:{
   hist_search_prompt:'Search YMIS / name / item / status', hist_fail:'Failed to load approval history: ', hours_word:'hours',
   info_member_title:'👤 What a Member can do',
   info_m1:'View own progress only, not the whole troop', info_m2:'Cannot tick directly — presses "Submit completion" with date + evidence', info_m3:'Can track own requests under "Pending Requests"',
-  info_m4:'Can view own items under "Other Badges"', info_m5:'Can auto-fill PT/18 & PT/120A via "Forms" and print', info_m6:'Can browse syllabus, Safe from Harm and safety guides in "Info Hub"',
+  info_m4:'Can view own items under "Other Badges"', info_m5:'Can auto-fill PT/18 & P120A1 via "Forms" and print', info_m6:'Can browse syllabus, Safe from Harm and safety guides in "Info Hub"',
   info_leader_title:'👨‍💼 What Leaders (branch_leader / group_leader / admin) can do',
   info_l1:'Everything a member can do', info_l2:"View any member's full record via 'My Progress'", info_l3:'See who has finished Membership Badge / Shoulder Badge etc. at a glance in "Troop Overview" (card % + ✓ tag)',
   info_l4:'Use "Batch tick for camp": pick members + items + date and tick the whole group at once', info_l5:'Tick directly with dates; drafts save offline and write in bulk with progress indicators',
@@ -1423,17 +1427,16 @@ en:{
   no_items_found:'No matching items', no_permission:'No permission', no_records:'No records',
   ob_load:'🔄 Load', ob_done:'Done', ob_update:'Update', ob_complete:'Complete', ob_no_perm:'No permission to tick this other badge',
   ob_updated:'✅ Other badges updated', ob_save_fail:'Failed to write other badge: ',
+  ob_legacy_title:'🗂️ Legacy records (no current-scheme match): {0}', ob_legacy_hint:'These records use legacy (VSBADGE / old scheme) IDs with no counterpart in the 2026 scheme, so they are not counted towards completion. Once a leader has verified them, re-record the badge above using the current badge; the old record is kept and never deleted.',
   official_res_label:'Official online resources (for use with network):', options_count:'{0} options',
   perm_prefix:'Permissions: ', perm_all_word:'All(*)', perm_none_word:'None', perm_btn:'⚙️ Perms',
-  perm_b_l1:'Membership Badge (all 12 items)', perm_b_l1cp:'Membership Badge - Child Protection (mandatory)', perm_b_l2:'Shoulder Badge (23 basic skill items)',
-  perm_b_l3self:'Activity Planner items (formerly Self-reliance)', perm_b_l3resp:'Community Service items (formerly Responsibility)', perm_b_l3sc:'Multi-Skills — Area 1 Scoutcraft',
-  perm_b_l3sp:'Multi-Skills — Area 2 Sports & Recreation', perm_b_l3int:'Multi-Skills — Area 3 New Experience (personal interest)', perm_b_l3exp:'Outdoor Adventure items',
-  perm_b_l4:"Chief Scout's Award — all items", perm_b_l4act:'Planner / Multi-Skills items',
+  perm_item_count:'{0} items', perm_cat_A:'Outdoor Challenge', perm_cat_B:'Personal Development', perm_cat_C:'Leadership & Spiritual Development',
+  perm_cat_D:'Service & Environment', perm_cat_E:'Global Understanding', perm_cat_F:'New Experience', perm_cat_M:'Membership Badge items',
   ppl:'{0} people', privacy_done_fmt:'Member progress-sharing {0} (encourage/privacy mode)',
   privacy_on:'On — members can view the whole troop', privacy_off:'Off — members see themselves only (privacy)',
   privacy_scope_note:'Note: the "Patrol leaders only" mode requires squad_role to be filled in Users; ordinary members still see only themselves. When off, members cannot pick others in "My Progress" and Troop Overview is hidden; when on, members may view but not edit.',
   scope_private:'Own only', scope_team:'Whole patrol', scope_leaders:'Patrol leaders/seconds only', scope_troop:'Whole troop',
-  pt18_title:"PT/18 Chief Scout's Award application", pt120a_title:'PT/120A proficiency badge application', pt_official:'Official blank forms (also auto-fillable via "Forms")',
+  pt18_title:"PT/18 Chief Scout's Award and Certificate application", p120a1_title:'P120A1 Proficiency / Activity Badge Assessment application', p120a2_title:'P120A2 Supplementary Information Sheet', pt_official:'Official blank forms (also auto-fillable via "Forms")',
   pw_reset_btn:'🔑 Set password', reset_pw_prefix:'New password: ', reset_pw_fail:'Set password failed: ',
   req_allow_done_fmt:'Member request-submission {0}', req_allow_on:'On — members may submit completion requests', req_allow_off:'Off — members cannot submit; leaders tick directly',
   req_cleared_fmt:'⚠️ Cleared {0} local pending request(s); please contact a leader',
@@ -1442,7 +1445,7 @@ en:{
   role_line_group:'group_leader = leader', role_line_admin:'admin = leader', role_line_super:'super_admin = system admin',
   role_body_end:'<b>Members</b> = users with role=member (leaders excluded).<br><b>Leaders</b> = group/branch leaders/admins{0}; they can tick and manage.<br><b>USER total</b> = members + leaders.',
   role_super_word:'/super_admin', role_member_short:'member', role_leader_short:'leader',
-  role_opt_member:'Member', role_opt_branch:'Branch Leader', role_opt_group:'Group Leader', role_opt_admin:'Admin',
+  role_opt_member:'Member', role_opt_branch:'Scout Leader (SL)', role_opt_group:'GSL (Group Scout Leader)', role_opt_admin:'Admin',
   sfh_courses:'Mandatory courses:', sfh_prevention:'Prevention:', sfh_handling:'Handling:', sfh_hotlines:'Hotlines:',
   srv_fill:'Please enter activity name and hours', srv_added:'Service record added', srv_add_fail_colon:'Add failed: ', srv_load_fail:'Service records temporarily unavailable',
   srv_total:'Total hours:', srv_none:'No service records yet', srv_hours_ph:'Hours', srv_place_ph:'Organisation / place', srv_add:'Add',
@@ -1969,7 +1972,7 @@ let selectedProgressYmis=null; // 領袖查看他人進度
 let appConfig={allow_member_view_others:'false',member_progress_scope:'private',allow_squad_comparison:'false',allow_member_requests:'true'}; // 系統設定
 // v5.0 活動履歷：服務／活動／訓練班紀錄
 let logRecords=[],logRecordsSupported=false,logFilterType='all';
-let logRequests=[],logRequestsSupported=false; // v5.2 履歷申報（團員自行申報 → 領袖審批）/ log claims
+let logRequests=[],logRequestsSupported=false; // v5.2 履歷申報（成員自行申報 → 領袖審批）/ log claims
 let editingLogRecordId=null,logModalMemberMode=false; // v5.2：團員模式=申報（不直接寫入）/ member mode = claim, not direct write
 const LOG_TYPES_CONFIG={
   service:{icon:'🤝',labelKey:'log_type_service',color:'var(--green)',roleHints:['服務員','統籌','站崗','工作人員','領隊'],roleHintsEn:['Volunteer','Coordinator','Marshal','Staff','Leader'],showHours:true,showCert:false},
@@ -2188,7 +2191,7 @@ function setupTabsByRole(){
   const isMember = currentUser.role==='member';
   const isSquadLeader=['隊長','副隊長','patrol_leader','patrol_assistant'].includes((currentUser.squad_role||'').toLowerCase()) || ['隊長','副隊長'].includes(currentUser.squad_role||'');
   const canMemberViewOthers = appConfig.member_progress_scope!=='private' && appConfig.allow_member_view_others==='true' && (appConfig.member_progress_scope!=='team_leaders' || isSquadLeader);
-  // 領袖顯示全部，成員預設只看自己，能否看其他成員由團長開放
+  // 領袖顯示全部，成員預設只看自己，能否看其他成員由旅長開放
   setNavTabVisible('overview', isLeader || (isMember && canMemberViewOthers));
   setNavTabVisible('byitem', false);
   setNavTabVisible('other', false);
@@ -2259,7 +2262,8 @@ function canCurrentUserTickItem(itemId){
   for(const a of list){
     if(itemId.startsWith(a)) return true;
     // OTHER 匹配其他獎章
-    if(a==='OTHER' && (itemId.startsWith('OT-') || itemId.startsWith('L5') || !itemId.startsWith('L'))) return true;
+    // 「其他獎章」只涵蓋專科／興趣／服務等徽章，不可涵蓋進度性獎章（L1–L5）
+    if(a==='OTHER' && (itemId.startsWith('OT-') || itemId.startsWith('INT-') || !/^L[1-5]/.test(itemId))) return true;
   }
   return false;
 }
@@ -3478,7 +3482,7 @@ async function renderRequestsTab(){
       if(d2.success) userApplications=d2.applications||[];
     }catch(e){ console.warn(e); }
   }
-  // v5.2 載入履歷申報：領袖見全部待批；團員只見自己的（可取消）
+  // v5.2 載入履歷申報：領袖見全部待批；成員只見自己的（可取消）
   // Load log claims: leaders see all pending; members see only their own (cancellable).
   let logReqList=[];
   const isLogReviewer=canUserTickRole(currentUser.role);
@@ -3698,6 +3702,16 @@ function renderOtherBadgesTab(){
     </div>`;
   });
   html+='</div>';
+  // 舊版（VSBADGE 時代）以 INT-／OT- 等編號儲存的紀錄：現行綱要沒有對應 ID，
+  // 仍照樣列出，避免領袖以為紀錄消失；不計入完成度，需領袖逐項核實後重新記錄。
+  const knownIds=new Set((itemsData.otherBadges||[]).map(o=>o.id));
+  const recMap=otherBadgesMap[targetYmis]||{};
+  const legacyIds=Object.keys(recMap).filter(id=>!knownIds.has(id));
+  if(legacyIds.length){
+    html+=`<div class="info-section" style="border-left-color:var(--orange);background:#FFFBEB;margin-top:14px"><h3>${tf('ob_legacy_title',legacyIds.length)}</h3><p style="font-size:11px;color:var(--text-light);line-height:1.7">${t('ob_legacy_hint')}</p><ul style="font-size:11px">`+
+      legacyIds.map(id=>`<li><code>${escapeHtmlText(id)}</code>　${escapeHtmlText(recMap[id]?.name||'')}${recMap[id]?.date?'　'+escapeHtmlText(recMap[id].date):''}${recMap[id]?.cert?'　證書 '+escapeHtmlText(recMap[id].cert):''}</li>`).join('')+
+      `</ul></div>`;
+  }
   c.innerHTML=html;
 }
 function onOtherMemberChange(ymis){ selectedProgressYmis=ymis; renderOtherBadgesTab(); }
@@ -3761,27 +3775,61 @@ function handleOtherBadgeCert(badgeId, name, targetYmis, certVal){
 }
 
 /* ================== Forms Tab ================== */
+/* 童軍支部官方表格：
+   - PT/18 總領袖獎章及證書申請表（FORM PT/18 10/2025）
+   - P120A1 童軍專科徽章／獎章考驗申請表（10/2009）+ P120A2 附加資料表格
+   表格結構依總會表格分甲／乙／丙／丁部，日期由本系統進度及「其他獎章」帶入。 */
+let formSelectedBadgeId='';
+function formMember(ymis){
+  const y=ymis||document.getElementById('formMemberSelect')?.value||currentUser.ymis;
+  return {ymis:y, name:(members.find(m=>m.ymis===y)||{}).name||currentUser.name};
+}
+function formItemDate(ids, flat){
+  const ds=(ids||[]).map(id=>flat[id]).filter(Boolean).sort();
+  return ds.length?ds[ds.length-1]:'';
+}
+function formBadgeItems(bId){
+  const b=(itemsData.badges||[]).find(x=>x.id===bId);
+  return b?getBadgeItemIds(b):[];
+}
+function formBadgeDate(flat,bId){ return formItemDate(formBadgeItems(bId),flat); }
+/* 某一章內指定字母段（A 戶外挑戰、B 個人發展…）的完成日期：以細項 ID 前綴比對 */
+function formPartDate(flat,bId,letters){
+  const b=(itemsData.badges||[]).find(x=>x.id===bId);
+  if(!b) return '';
+  const ids=getBadgeItemIds(b).filter(id=>letters.split('').some(L=>id.startsWith(bId+'-'+L)));
+  return formItemDate(ids,flat);
+}
+function formOtherBadgeList(ymis){
+  const map=otherBadgesMap[ymis]||{};
+  return Object.keys(map).map(id=>{
+    const ob=findItemById(id)||{};
+    return {id, name:map[id].name||ob.name||id, date:map[id].date||'', cert:map[id].cert||'', group:ob.group||''};
+  });
+}
+function formRecordedHint(ymis){
+  const list=formOtherBadgeList(ymis);
+  if(!list.length) return t('forms_no_other_badges');
+  return list.map(r=>`${otherGroupLabel(r.group)}・${r.name}${r.date?'（'+r.date+'）':''}${r.cert?'（證書 '+r.cert+'）':''}`).join('；');
+}
 function renderFormsTab(){
   const c=document.getElementById('tab-forms');
   const isLeader=canUserTickRole(currentUser.role);
   const targetYmis=isLeader? (selectedProgressYmis||currentUser.ymis) : currentUser.ymis;
-  const member=members.find(m=>m.ymis===targetYmis)||{name:currentUser.name,ymis:targetYmis};
-  const flat=progressFlat[targetYmis]||{};
-  // compute badge completion dates
-  const badgeDates={};
-  itemsData.badges.forEach(b=>{
-    const ids=getBadgeItemIds(b);
-    const dates=ids.map(id=>flat[id]).filter(Boolean).sort();
-    badgeDates[b.id]=dates.length? dates[dates.length-1] : '';
-  });
+  const obs=(itemsData&&itemsData.otherBadges)||[];
+  if(!formSelectedBadgeId||!obs.some(o=>o.id===formSelectedBadgeId)) formSelectedBadgeId=obs.length?obs[0].id:'';
+  const obOptions=obs.map(o=>`<option value="${o.id}" ${o.id===formSelectedBadgeId?'selected':''}>${otherGroupLabel(o.group)}・${obName(o)}</option>`).join('');
   c.innerHTML=`<div class="info-grid">
     <div class="info-card"><h3>${t('forms_auto_title')}</h3><p>${t('forms_auto_pts')}</p></div>
     <div class="info-card" style="border-color:var(--blue)"><h3 style="color:var(--blue)">${t('forms_guide_title')}</h3><p>${t('forms_guide_desc')}</p></div>
   </div>
-  <div class="filter-bar"><label>${t('forms_pick_member')}</label><select id="formMemberSelect" onchange="selectedProgressYmis=this.value;renderFormsTab()">${members.map(m=>`<option value="${m.ymis}" ${m.ymis===targetYmis?'selected':''}>${m.name} (${m.ymis})</option>`).join('')}</select></div>
+  <div class="filter-bar" style="flex-wrap:wrap">
+    <label>${t('forms_pick_member')}</label><select id="formMemberSelect" onchange="selectedProgressYmis=this.value;renderFormsTab()">${members.map(m=>`<option value="${m.ymis}" ${m.ymis===targetYmis?'selected':''}>${m.name} (${m.ymis})</option>`).join('')}</select>
+    <label style="margin-left:8px">${t('forms_pick_badge')}</label><select id="formBadgeSelect" onchange="formSelectedBadgeId=this.value">${obOptions}</select>
+  </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
     <button class="btn btn-primary" onclick="generatePrintableForm('PT18')">${t('forms_gen_pt18')}</button>
-    <button class="btn btn-warning" onclick="generatePrintableForm('PT120A')">${t('forms_gen_pt120a')}</button>
+    <button class="btn btn-warning" onclick="generatePrintableForm('P120A1')">${t('forms_gen_p120a1')}</button>
     <button class="btn btn-secondary" onclick="generateInterestCertificate()">${t('forms_gen_cert')}</button>
   </div>
   <div class="info-section" style="margin-top:12px;border-left-color:var(--green)"><h3>${t('service_hours_title')}</h3><div id="servicePanel"><p style="font-size:11px">${t('service_panel_hint')}</p></div></div>
@@ -3795,121 +3843,194 @@ function downloadPrintableArea(){
 }
 
 function generateInterestCertificate(){
-  const ymis=document.getElementById('formMemberSelect')?.value||currentUser.ymis;
-  const member=members.find(m=>m.ymis===ymis)||{name:currentUser.name,ymis};
-  const records=Object.entries(otherBadgesMap[ymis]||{}).filter(([id])=>id.startsWith('INT-')||id.startsWith('OT-'));
-  const rows=records.length?records.map(([id,v])=>`<tr><td>${id}</td><td>${displayNameForId(id, v.name||id)}</td><td>${v.date||''}</td><td>${v.cert||''}</td><td>${t('cert_verify_line')}</td></tr>`).join(''):`<tr><td colspan="5">${t('cert_none')}</td></tr>`;
-  document.getElementById('printableArea').innerHTML=`<div class="print-area"><h2 style="text-align:center">${t('cert_title')}</h2><p>${t('cert_name')}${member.name}　${t('cert_ymis')}${member.ymis}　${t('cert_unit')}${currentTroopName}</p><table class="print-table"><tr><th>${t('cert_col_id')}</th><th>${t('cert_col_name')}</th><th>${t('cert_col_date')}</th><th>${t('cert_col_cert')}</th><th>${t('cert_col_verify')}</th></tr>${rows}</table><p style="margin-top:30px">${t('cert_sign')}</p><div class="no-print" style="text-align:center;margin-top:14px"><button class="btn btn-primary" onclick="downloadPrintableArea()">${t('download_btn')}</button><button class="btn btn-primary" onclick="window.print()">${t('print_btn2')}</button></div></div>`;
-}
-
-async function addServiceFromApp(ymis){
-  const r={ymis,name:(members.find(m=>m.ymis===ymis)||{}).name,activity:document.getElementById('srvActivity')?.value,date:document.getElementById('srvDate')?.value,hours:document.getElementById('srvHours')?.value,place:document.getElementById('srvPlace')?.value};
-  if(!r.activity||!r.hours){showToast(t('srv_fill'),'warning');return;}
-  try{
-    const d = await apiRequest('addServiceRecord', { record: r });
-    if(d.success){ showToast(t('srv_added'),'success'); loadServicePanel(ymis); }
-    else showToast(d.error||t('srv_add_fail'),'error');
-  }catch(e){
-    showToast(t('srv_add_fail_colon')+e.message,'error');
-  }
-}
-
-async function loadServicePanel(ymis){
-  const el=document.getElementById('servicePanel'); if(!el)return;
-  try{
-    const d = await apiRequest('getServiceRecords', { target_ymis: ymis });
-    el.innerHTML='<p>'+t('srv_total')+'<b>'+(d.totalHours||0)+'</b> '+t('hours_word')+'</p><ul style="font-size:11px">'+((d.records||[]).map(x=>'<li>'+ (x.date||'')+' '+(x.activity||'')+' — '+(x.hours||0)+' '+t('hours_word')+' '+(x.place||'')+'</li>').join('')||'<li>'+t('srv_none')+'</li>')+'</ul>';
-    if(canUserTickRole(currentUser.role)) el.innerHTML += `<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px"><input id="srvActivity" placeholder="${t('srv_act_ph')}"><input id="srvDate" type="date" value="${todayISO()}"><input id="srvHours" type="number" step="0.5" placeholder="${t('srv_hours_ph')}" style="width:70px"><input id="srvPlace" placeholder="${t('srv_place_ph')}"><button class="btn btn-sm btn-success" onclick="addServiceFromApp('${ymis}')">${t('srv_add')}</button></div>`;
-  }catch(e){el.innerHTML='<p>'+t('srv_load_fail')+' ('+e.message+')</p>';}
+  const member=formMember();
+  const ymis=member.ymis;
+  const all=formOtherBadgeList(ymis);
+  // 興趣章優先；如未分類，列出全部已記錄的其他獎章，避免舊資料（VSBADGE 時代的 INT-／OT- 編號）整份空白
+  const interest=all.filter(r=>r.group==='interest');
+  const records=interest.length?interest:all;
+  const rows=records.length?records.map(r=>`<tr><td>${r.id}</td><td>${obName(findItemById(r.id)||{name:r.name})||r.name}</td><td>${otherGroupLabel(r.group)}</td><td>${r.date||''}</td><td>${r.cert||''}</td><td>${t('cert_verify_line')}</td></tr>`).join(''):`<tr><td colspan="6">${t('cert_none')}</td></tr>`;
+  document.getElementById('printableArea').innerHTML=`<div class="print-area"><h2 style="text-align:center">${t('cert_title')}</h2><p>${t('cert_name')}${member.name}　${t('cert_ymis')}${member.ymis}　${t('cert_unit')}${currentTroopName}</p><table class="print-table"><tr><th>${t('cert_col_id')}</th><th>${t('cert_col_name')}</th><th>${t('cert_col_group')}</th><th>${t('cert_col_date')}</th><th>${t('cert_col_cert')}</th><th>${t('cert_col_verify')}</th></tr>${rows}</table><p style="margin-top:30px">${t('cert_sign')}</p><div class="no-print" style="text-align:center;margin-top:14px"><button class="btn btn-primary" onclick="downloadPrintableArea()">${t('download_btn')}</button><button class="btn btn-primary" onclick="window.print()">${t('print_btn2')}</button></div></div>`;
 }
 
 function generatePrintableForm(type){
-  const targetYmis=document.getElementById('formMemberSelect')?.value||selectedProgressYmis||currentUser.ymis;
-  const member=members.find(m=>m.ymis===targetYmis)||{name:currentUser.name,ymis:targetYmis};
-  const flat=progressFlat[targetYmis]||{};
-  const other=otherBadgesMap[targetYmis]||{};
-  const today=todayISO();
-  function getDoneDate(ids){ const ds=ids.map(id=>flat[id]).filter(Boolean).sort(); return ds.length?ds[ds.length-1]:''; }
-  function badgeIds(bId){ const b=itemsData.badges.find(x=>x.id===bId); return b?getBadgeItemIds(b):[]; }
+  const member=formMember();
+  const flat=progressFlat[member.ymis]||{};
+  if(type==='PT18') document.getElementById('printableArea').innerHTML=renderPT18Form(member,flat);
+  else document.getElementById('printableArea').innerHTML=renderP120A1Form(member);
+}
 
-  let html='';
-  if(type==='PT18'){
-    const l1Done=getDoneDate(badgeIds('L1'));
-    const l2Done=getDoneDate(badgeIds('L2'));
-    const l3=itemsData.badges.find(b=>b.id==='L3');
-    const segDates={};
-    if(l3){ l3.segments.forEach(seg=>{ segDates[seg.code]=getDoneDate(getSegmentItemIds(seg)); }); }
-    html=`<div class="print-area" id="officialPT18">
-      <div style="text-align:center;border-bottom:3px double #000;padding-bottom:10px;margin-bottom:12px">
-        <div style="font-size:12px;font-weight:700">香港童軍總會 Scout Association of Hong Kong</div>
-        <div style="font-size:15px;font-weight:800;margin-top:4px">童軍獎章及證書申請表 (PT/18)</div>
-        <div style="font-size:11px">Application Form for the Scout Award and Certificate</div>
-      </div>
-      <div style="font-size:12px;font-weight:700;background:#F0F0F0;padding:4px 8px;border:1px solid #000">(1) 個人摘要 Personal Particulars</div>
-      <table class="print-table" style="font-size:11px">
-        <tr><td style="width:22%">姓名 (中文)<br>Name (Chinese)</td><td style="width:30%"><input value="${member.name}" style="width:95%"></td><td style="width:22%">姓名 (英文)<br>Name (English)</td><td><input placeholder="Same as HKID" style="width:90%"></td><td rowspan="4" style="width:90px;text-align:center">近照 Recent Photo<div style="width:80px;height:100px;border:1px dashed #999;margin:4px auto"></div></td></tr>
-        <tr><td>出生日期 Date of Birth</td><td><input type="date" style="width:60%"> Age <input style="width:30px"></td><td>性別 Gender / HKID首4位*</td><td><select style="width:50px"><option>男</option><option>女</option></select> <input style="width:50px" placeholder="A123"></td></tr>
-        <tr><td>童軍成員編號 Scout ID</td><td><input value="${member.ymis}" style="width:95%"></td><td>發證日期 Issue Date / 肩章簽發日期</td><td><input type="date" style="width:45%"> <input value="${l2Done}" style="width:45%"></td></tr>
-        <tr><td>所屬單位 Unit</td><td colspan="3"><input value="${currentTroopName}" style="width:30%"> 區 District <input placeholder="九龍城區" style="width:18%"> 地域 Region <input placeholder="九龍地域" style="width:18%"></td></tr>
-        <tr><td>通訊地址 Address (中文)</td><td colspan="4"><input style="width:98%" placeholder="中文地址"></td></tr>
-        <tr><td>通訊地址 (英文)</td><td colspan="4"><input style="width:98%" placeholder="English Address"></td></tr>
-        <tr><td>聯絡電話 Contact No.</td><td><input style="width:95%"></td><td>電郵 E-mail</td><td colspan="2"><input style="width:90%"></td></tr>
-      </table>
-      <div style="font-size:12px;font-weight:700;background:#F0F0F0;padding:4px 8px;border:1px solid #000;margin-top:10px">(2) 完成項目 Completed Items</div>
-      <table class="print-table" style="font-size:11px">
-        <tr><th style="width:13%">進度項目</th><th style="width:13%">項目</th><th style="width:28%">單元編號及名稱 Module Code & Name</th><th>所選擇考驗之內容</th><th style="width:12%">完成日期</th></tr>
-        <tr><td>自立<br>Self-reliance</td><td>人際關係<br>Interpersonal</td><td>S-A1 (S-A101~106)</td><td>團外活動/活動支援/交流/執委研習/會議程序/社區參與 選1</td><td><input value="${segDates['L3-SELF']||''}" style="width:90px"></td></tr>
-        <tr><td></td><td>生活探討<br>Life Exploration</td><td>S-A2 (S-A201~214)</td><td>生活教育/職業/專上學院/宗教/社會議題等 選1</td><td><input style="width:90px"></td></tr>
-        <tr><td>責任<br>Responsibility</td><td>A組 Group A</td><td>R-A1 急救/拯溺I/II/手語/精神健康/SOUL/共融 選1</td><td>${Object.keys(other).length?Object.keys(other).join(', '):''}</td><td><input value="${segDates['L3-RESP']||''}" style="width:90px"></td></tr>
-        <tr><td>活動<br>Activity</td><td>童軍技能<br>Scoutcraft</td><td>A-101 原野生活<br>A-102 先鋒工程知識及技巧</td><td></td><td><input style="width:90px"></td></tr>
-        <tr><td></td><td>個人興趣<br>Personal Interest</td><td>A-2 (A-203~A-240&A-999)</td><td>需2項不同類型(第11版)</td><td><input style="width:90px"></td></tr>
-        <tr><td></td><td>體育技能<br>Sports</td><td>A-3 (A-301~A-312)</td><td></td><td><input style="width:90px"></td></tr>
-        <tr><td>探險<br>Exploration</td><td>必修 Compulsory</td><td>E-A001 地圖閱讀<br>E-A002 遠足訓練</td><td>訓練班</td><td><input value="${getDoneDate(['L3-EXP-01','L3-EXP-02'])}" style="width:90px"></td></tr>
-        <tr><td></td><td>選修 Elective</td><td>E-A003~E-A009 40km等</td><td>3日2夜</td><td><input value="${segDates['L3-EXP']||''}" style="width:90px"></td></tr>
-      </table>
-      <div style="margin-top:12px;font-size:11px;display:grid;grid-template-columns:1fr 1fr;gap:20px"><div>申請者簽署 Applicant’s Signature<br><br>簽署 Signature：__________________ 日期 Date：${today}</div><div>提名 Nomination 旅長/童軍團長 GSL/SL<br>姓名 Name：__________ 日期 Date：__________<br>旅印 Group Stamp</div></div>
-      <div style="margin-top:12px;font-size:11px;display:grid;grid-template-columns:1fr 1fr;gap:20px;border-top:1px solid #000;padding-top:8px"><div>推薦 Recommendation 區總監 District Commissioner<br>姓名：__________ 日期：__________<br>區印 District Stamp</div><div>批核 Approval 地域總監 Regional Commissioner / 青少年活動總監<br>姓名：__________ 日期：__________<br>地域印/署印</div></div>
-      <div style="margin-top:10px;font-size:9px;color:#666">同一張紙雙面列印，附紀錄冊影印及證書，經地域交總會。表格2年後銷毀。</div>
-      <div class="no-print" style="margin-top:14px;text-align:center"><button class="btn btn-primary" onclick="downloadPrintableArea()">⬇️ 下載 HTML</button><button class="btn btn-primary" onclick="window.print()">🖨️ 列印 (官方格式)</button></div>
-    </div>`;
-  }else{
-    const standardBadgeAwardDate=getDoneDate(badgeIds('L3'));
-    html=`<div class="print-area" id="officialPT120A">
-      <div style="text-align:center;border-bottom:3px double #000;padding-bottom:10px;margin-bottom:12px">
-        <div style="font-size:12px;font-weight:700">香港童軍總會 Scout Association of Hong Kong</div>
-        <div style="font-size:15px;font-weight:800;margin-top:4px">童軍專科徽章紀錄／申請表 (PT/120A)</div>
-      </div>
-      <div style="font-size:12px;font-weight:700;background:#F0F0F0;padding:4px 8px;border:1px solid #000">(1) 個人摘要 Personal Particulars</div>
-      <table class="print-table" style="font-size:11px">
-        <tr><td style="width:20%">姓名 Name (中/英)</td><td colspan="2"><input value="${member.name}" style="width:95%"></td><td rowspan="3" style="width:90px;text-align:center">近照<div style="width:80px;height:100px;border:1px dashed #999;margin:4px auto"></div></td></tr>
-        <tr><td>出生日期/年齡/性別<br>Scout ID ${member.ymis}</td><td><input type="date" style="width:100px"> Age <input style="width:30px"> Gender <select style="width:50px"><option>男</option><option>女</option></select></td><td>單位 Unit ${currentTroopName}</td></tr>
-        <tr><td>地址 Address / 電話 Contact</td><td colspan="2"><input style="width:95%"></td></tr>
-        <tr><td>童軍獎章證書號碼 Cert No. / 發出日期</td><td><input style="width:50%"> Date <input value="${standardBadgeAwardDate}" style="width:80px"></td><td colspan="2">HKID首4位* <input placeholder="A123" style="width:60px"></td></tr>
-      </table>
-      <div style="font-size:12px;font-weight:700;background:#F0F0F0;padding:4px 8px;border:1px solid #000;margin-top:10px">(2) 完成項目 Completed Items</div>
-      <table class="print-table" style="font-size:11px">
-        <tr><th>進度項目 Progress Items</th><th>項目 Items / 單元 Module Code & Name</th><th>完成日期</th></tr>
-        <tr><td>自立 Self-reliance</td><td>S-B101 活動策劃 Activity Planning / S-B201 專題研究</td><td><input style="width:90px" value="${getDoneDate(['L4-PRJ-01'])}"></td></tr>
-        <tr><td>責任 Responsibility</td><td>R-B201 志願服務 / R-B202 專門技能 / R-B203 童軍及社區 (48小時)</td><td><input style="width:90px" value=""></td></tr>
-        <tr><td>活動 Activity</td><td>A-103 露營技藝 Campcraft & A-104 先鋒工程實踐 Pioneering (Practice) / A-2 進階興趣 / A-3 進階體育</td><td><input style="width:90px" value=""></td></tr>
-        <tr><td>探險 Exploration</td><td>E-B001~E-B007 60km徒步/240km單車/80km海上 四日三夜</td><td><input style="width:90px" value=""></td></tr>
-      </table>
-      <div style="margin-top:12px;font-size:11px">
-        <div>申請者簽署 Applicant’s Signature：__________________ 日期 Date：${today}</div>
-        <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:20px;border-top:1px solid #000;padding-top:8px">
-          <div>提名 Nomination 旅長 GSL/VSL 姓名：__________ 日期：__________</div>
-          <div>推薦 Recommendation 區總監 DC 姓名：__________ 日期：__________</div>
-        </div>
-        <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:20px;border-top:1px solid #000;padding-top:8px">
-          <div>批核 Approval 地域總監 RC 姓名：__________ 日期：__________</div>
-          <div>青少年活動總監 PC 姓名：__________ 日期：__________</div>
-        </div>
-        <div style="margin-top:10px;font-size:9px;background:#FFF3CD;padding:6px;border:1px solid #FFE69C">全年接受申請，9月15日前交總會，證書安排當年大會操頒發，逾期翌年。需附紀錄冊及證書影印。</div>
-      </div>
-      <div class="no-print" style="margin-top:14px;text-align:center"><button class="btn btn-primary" onclick="downloadPrintableArea()">⬇️ 下載 HTML</button><button class="btn btn-primary" onclick="window.print()">🖨️ 列印 (官方格式 雙面)</button></div>
-    </div>`;
-  }
-  document.getElementById('printableArea').innerHTML=html;
+/* ---------- PT/18 總領袖獎章及證書申請表（依 FORM PT/18 10/2025） ---------- */
+function renderPT18Form(member,flat){
+  const today=todayISO();
+  const inp=(v,w)=>`<input value="${v||''}" style="width:${w||'95%'};border:none;border-bottom:1px solid #999;font-size:11px">`;
+  const dateInp=(v)=>`<input type="date" value="${v||''}" style="width:110px;border:none;border-bottom:1px solid #999;font-size:11px">`;
+  const l2=formBadgeDate(flat,'L2'), l3=formBadgeDate(flat,'L3'), l4=formBadgeDate(flat,'L4');
+  const outA=b=>formPartDate(flat,b,'A');
+  const otherHint=formRecordedHint(member.ymis);
+  // 丁部：官方 PT/18 的訓練紀錄分組 → 對應 2026 修訂版 L5 項目
+  const groups=[
+    ['A. 戶外挑戰 Outdoor Challenge',[
+      ['1. 營藝 Campcraft','a 計劃及實行一次露營／b 教授基本露營技巧／c 製作露營報告','L5-A1'],
+      ['2. 歷險 Adventure','a 策劃、進行及記錄郊野旅程／b 教授基本郊野旅程技巧／c 野外求生技能','L5-A2'],
+      ['3. 先鋒工程 Pioneering','a 計劃及帶領不少於三種編結之先鋒工程／b 教授基本先鋒工程技巧','L5-A3'],
+      ['4. 戶外活動（選修1）Outdoor Activity','a 完成高級獎章戶外活動部分／b 策劃和參與全日小隊戶外活動','L5-A4'],
+      ['5. 海上活動（選修2）Sea Activity','a 完成高級獎章海上活動部分／b 策劃及參與不少於六小時海上旅程','L5-A5'],
+      ['6. 航空活動（選修3）Air Activity','a 完成高級獎章航空活動部分／b 兩項從未進行過之自選航空活動','L5-A6'],
+    ]],
+    ['B. 個人發展 Personal Development',[
+      ['1. 體適能 Fitness','a 考獲體適能有關專科徽章／b 策劃及執行運動或體能競技小隊活動','L5-B1'],
+      ['2. 藝術、創意及科技 Art, Creativity & Technology','a 創作及帶領營火會／營燈會表演／b 其他事工','L5-B2'],
+      ['3. 領導才 Leadership','a 考獲領導才獎章','L5-C1'],
+      ['4. 靈性發展 Spiritual Development','a 介紹誓詞、規律及銘言／b 其他事工','L5-C2'],
+    ]],
+    ['C. 社會 Society',[
+      ['1. 服務他人 Service','a 考獲指定服務組專科徽章／b 探討社區參與活動／c 協助策劃及參與服務','L5-D1'],
+      ['2. 社區及本土認識 Community & Local Understanding','a 探討本地時事話題／b 其他事工','L5-D2'],
+      ['3. 世界認識 Global Understanding','a 探討國際問題／b 其他事工','L5-E1'],
+    ]],
+    ['D. 環境 Environment',[
+      ['1. 生態環境 Ecological Environment','a 考獲生態環境有關專科徽章或獎章','L5-D3'],
+      ['2. 氣象 Meteorology','a 教授一項氣象知識／b 其他事工','L5-D4'],
+      ['3. 危機及保護 Hazard & Protection','a 介紹人類活動對環境的影響／b 計劃及帶領環境保育工作','L5-D5'],
+    ]],
+    ['E. 新體驗 New Experience',[
+      ['1. 參與一項從未嘗試之活動並向團內成員介紹','Participate in an unfamiliar activity and share with the Patrol','L5-F1'],
+      ['2. 考獲一個教導組專科徽章','Gain a Proficiency Badge (Instructor)',''],
+    ]],
+  ];
+  const dRows=groups.map(([title,rows])=>`<tr><td colspan="3" style="background:#F7F7F7;font-weight:700">${title}</td></tr>`+
+    rows.map(([label,desc,id])=>`<tr><td style="width:38%">${label}<br><span style="font-size:9px;color:#555">${desc}${id?'　['+id+']':''}</span></td><td style="width:14%">${dateInp(id?flat[id]:'')}</td><td style="font-size:9px">${id||''}</td></tr>`).join('')
+  ).join('');
+  return `<div class="print-area" id="officialPT18">
+    <div style="text-align:center;border-bottom:3px double #000;padding-bottom:8px;margin-bottom:10px">
+      <div style="font-size:12px;font-weight:700">香港童軍總會 Scout Association of Hong Kong</div>
+      <div style="font-size:15px;font-weight:800;margin-top:4px">總領袖獎章及證書申請表</div>
+      <div style="font-size:10px">Application Form for The Chief Scout's Award and Certificate　（FORM PT/18 10/2025）</div>
+    </div>
+
+    <div style="font-size:11px;font-weight:700;background:#F0F0F0;padding:3px 8px;border:1px solid #000">甲部－個人資料 Section A－Personal Particulars</div>
+    <table class="print-table" style="font-size:10px">
+      <tr><td style="width:18%">姓名 Name（中文）</td><td style="width:26%">${inp(member.name)}</td><td style="width:18%">姓名 Name（英文）</td><td>${inp('')}</td>
+          <td rowspan="4" style="width:80px;text-align:center">近照<br>Photo<div style="width:70px;height:88px;border:1px dashed #999;margin:4px auto"></div></td></tr>
+      <tr><td>出生日期 Date of Birth</td><td>${dateInp('')}　年齡 Age ${inp('','40px')}</td><td>性別 Gender</td><td>${inp('','60px')}　HKID* ${inp('','60px')}</td></tr>
+      <tr><td>童軍成員編號 Scout ID</td><td>${inp(member.ymis)}</td><td>所屬單位 Unit</td><td>地域 ${inp('','70px')} 區 ${inp('','70px')} 旅 ${inp(currentTroopName,'90px')}</td></tr>
+      <tr><td>通訊地址 Address</td><td colspan="3">中文 ${inp('')}<br>英文 ${inp('')}</td></tr>
+      <tr><td>聯絡電話 Contact No.</td><td>${inp('')}</td><td>電郵地址 Email</td><td colspan="2">${inp('')}</td></tr>
+    </table>
+    <div style="font-size:8px;color:#666;margin:2px 0 8px">*只需填寫香港身份證首四位（如 A123）　Only the first 4 characters of the HKID are required.</div>
+
+    <div style="font-size:11px;font-weight:700;background:#F0F0F0;padding:3px 8px;border:1px solid #000">乙部－選修項目紀錄 Section B－Elective Item Record</div>
+    <table class="print-table" style="font-size:10px">
+      <tr><th style="width:20%">選修項目 Elective Item</th><th>選修 ☐ 戶外活動 ☐ 海上活動 ☐ 航空活動</th><th style="width:15%">完成日期 Date Completed</th><th style="width:15%">戶外挑戰完成日期</th><th style="width:15%">獎章簽發日期 Award Issue Date</th><th style="width:12%">備註 Remarks</th></tr>
+      <tr><td>童軍探索獎章<br>Scout Pathfinder Award</td><td>${inp('','98%')}</td><td>${dateInp(l2)}</td><td>${dateInp(outA('L2'))}</td><td>${dateInp('')}</td><td>${inp('','90%')}</td></tr>
+      <tr><td>童軍標準獎章<br>Scout Standard Award</td><td>${inp('','98%')}</td><td>${dateInp(l3)}</td><td>${dateInp(outA('L3'))}</td><td>${dateInp('')}</td><td>${inp('','90%')}</td></tr>
+      <tr><td>童軍高級獎章<br>Scout Advanced Award</td><td>${inp('','98%')}</td><td>${dateInp(l4)}</td><td>${dateInp(outA('L4'))}</td><td>${dateInp('')}</td><td>${inp('','90%')}</td></tr>
+    </table>
+
+    <div style="font-size:11px;font-weight:700;background:#F0F0F0;padding:3px 8px;border:1px solid #000;margin-top:8px">丙部－專科／活動徽章考驗紀錄 Section C－Proficiency / Activity Badge Assessment Record</div>
+    <table class="print-table" style="font-size:10px">
+      <tr><th style="width:18%">所屬獎章 Award</th><th>徽章類別／名稱 Classification & Name of Badge</th><th style="width:18%">證書日期 Certificate Date</th></tr>
+      <tr><td>童軍標準獎章</td><td>與戶外活動有關之專科徽章 ／ 艇工章 ／ 初級航空活動章</td><td>${dateInp('')}</td></tr>
+      <tr><td>童軍高級獎章</td><td>指定兩個技能組專科徽章或水手章 及 一個海上活動有關之專科徽章或中級航空活動章</td><td>${dateInp('')}</td></tr>
+      <tr><td>童軍高級獎章</td><td>與藝術／創意／科技有關之專科徽章</td><td>${dateInp('')}</td></tr>
+      <tr><td>總領袖獎章</td><td>指定服務組專科徽章</td><td>${dateInp('')}</td></tr>
+      <tr><td>總領袖獎章</td><td>與體適能有關之專科徽章</td><td>${dateInp('')}</td></tr>
+      <tr><td>總領袖獎章</td><td>童軍領導才訓練班證書（屆別 Course code：${inp('','60px')}）</td><td>${dateInp('')}</td></tr>
+      <tr><td>總領袖獎章</td><td>教導組專科徽章</td><td>${dateInp('')}</td></tr>
+      <tr><td>總領袖獎章</td><td>與生態環境有關之專科徽章</td><td>${dateInp('')}</td></tr>
+    </table>
+    <div style="font-size:8px;color:#555;margin-top:2px">本系統已記錄的專科／其他獎章：${otherHint}</div>
+
+    <div style="font-size:11px;font-weight:700;background:#F0F0F0;padding:3px 8px;border:1px solid #000;margin-top:8px">丁部－總領袖獎章訓練紀錄 Section D－Chief Scout's Award Training Record</div>
+    <div style="font-size:8px;color:#555;margin-top:2px">分項依總會 FORM PT/18（10/2025）；第三欄［］為 2026 修訂版《童軍支部訓練綱要》項目編號，方便對照紀錄冊。</div>
+    <table class="print-table" style="font-size:10px">
+      <tr><th style="width:38%">項目內容 Description</th><th style="width:14%">完成日期 Date Completed</th><th style="width:12%">本系統項目</th></tr>
+      ${dRows}
+    </table>
+
+    <table class="print-table" style="font-size:10px;margin-top:8px">
+      <tr><th style="width:50%">申請者簽署 Signature of Applicant</th><th>提名 Nomination</th></tr>
+      <tr><td>茲證明上述資料正確無訛。<br>I hereby declare that the above information is true.<br><br>簽署 Signature：__________　日期 Date：${today}</td>
+          <td>茲經核證上述資料正確無誤，並提名申請人獲取總領袖獎章。<br><br>旅長／童軍團長 GSL / SL　姓名 Name：__________<br>簽署 Signature：__________　日期 Date：__________<br>旅／團印章 Group / Troop Stamp</td></tr>
+      <tr><th>推薦 Recommendation</th><th>確認 Confirmation</th></tr>
+      <tr><td>區總監 District Commissioner<br>姓名 Name：__________　日期 Date：__________<br>區印章 District Stamp</td>
+          <td>地域總監 Regional Commissioner<br>姓名 Name：__________　日期 Date：__________<br>地域印章 Regional Stamp</td></tr>
+      <tr><th>批核 Approval</th><th>青少年活動署專用 Programme Branch Use Only</th></tr>
+      <tr><td>青少年活動總監 Programme Commissioner<br>姓名 Name：__________　日期 Date：__________<br>青少年活動署印章 Programme Branch Stamp</td>
+          <td style="font-size:9px">收表日期 Received Date：__________<br>證書號碼 Certificate No.：__________<br>覆核 Verified by：__________<br>通知信日期 Date of Notification Letter：__________<br>證書日期 Date of Certificate：__________</td></tr>
+    </table>
+
+    <div style="margin-top:6px;font-size:8.5px;line-height:1.6;border-top:1px solid #000;padding-top:4px">
+      <b>辦理程序 Handling Procedures</b>：① 申請人親身將申請表（一式兩份）及證明文件正本／副本送交童軍區辦理。② 區於一個月內核實，區總監簽署推薦後送交地域辦事處。③ 地域於一個月內覆核，地域總監確認後送交總會青少年活動署。④ 青少年活動署一個月內發出道賀信及領取布章券，證書於香港童軍大會操頒發。<br>
+      <b>查閱清單 Checklist</b>：☐ 香港身份證／護照　☐ 童軍紀錄冊第 1、2、3、6、7 頁（個人及會員資格）　☐ 總領袖獎章考驗紀錄（紀錄冊第 50–62 頁）　☐ 各進度性獎章考驗紀錄　☐ 丙部所列專科／活動徽章證書　☐ 童軍領導才訓練班證書　☐ 證明文件正本及副本<br>
+      <b>備註</b>：請以雙面列印；表格一般於審批完成後兩年銷毀。本頁由 ScoutBadge 依系統進度自動填入，遞交前請以總會最新表格核對。
+    </div>
+    <div class="no-print" style="margin-top:14px;text-align:center"><button class="btn btn-primary" onclick="downloadPrintableArea()">⬇️ 下載 HTML</button><button class="btn btn-primary" onclick="window.print()">🖨️ 列印（雙面）</button></div>
+  </div>`;
+}
+
+/* ---------- P120A1 童軍專科徽章／獎章考驗申請表（10/2009） ---------- */
+function renderP120A1Form(member){
+  const bId=document.getElementById('formBadgeSelect')?.value||formSelectedBadgeId;
+  const ob=(itemsData.otherBadges||[]).find(o=>o.id===bId)||{};
+  const rec=(otherBadgesMap[member.ymis]||{})[bId]||null;
+  const groupName=otherGroupLabel(ob.group||'');
+  const groupShort={'interest':'興趣組','pursuit':'技能組','service':'服務組','instructor':'教導組','sea':'海上活動','air':'航空活動','other':'其他'}[ob.group]||'其他';
+  const inp=(v,w)=>`<input value="${v||''}" style="width:${w||'95%'};border:none;border-bottom:1px solid #999;font-size:11px">`;
+  const box=(label,checked)=>`<label style="display:inline-flex;gap:4px;align-items:center;margin-right:10px"><input type="checkbox" ${checked?'checked':''}> ${label}</label>`;
+  return `<div class="print-area" id="officialP120A1">
+    <div style="text-align:center;border-bottom:3px double #000;padding-bottom:8px;margin-bottom:10px">
+      <div style="font-size:12px;font-weight:700">香港童軍總會 Scout Association of Hong Kong</div>
+      <div style="font-size:15px;font-weight:800;margin-top:4px">童軍專科徽章／獎章考驗申請表</div>
+      <div style="font-size:10px">Scout Proficiency / Activity Badge Assessment Application　（P120A1 10/2009）</div>
+    </div>
+    <div style="font-size:11px;margin-bottom:6px">編號 Ref.：${inp('','120px')}　報考專科徽章／獎章名稱：<b>${obName(ob)||'__________'}</b>　（${groupName}）　<span style="font-size:9px;color:#555">請刪去不適用者</span></div>
+
+    <div style="font-size:11px;font-weight:700;background:#F0F0F0;padding:3px 8px;border:1px solid #000">甲部：基本資料（由申請人填寫及童軍團長副署確認）</div>
+    <table class="print-table" style="font-size:10px">
+      <tr><td style="width:20%">姓名 Name（中文）</td><td style="width:30%">${inp(member.name)}</td><td style="width:18%">姓名 Name（英文）</td><td>${inp('')}</td></tr>
+      <tr><td>聯絡電話 Contact No.</td><td>${inp('')}</td><td>童軍成員編號 Scout ID</td><td>${inp(member.ymis)}</td></tr>
+      <tr><td>電郵地址 Email</td><td>${inp('')}</td><td>所屬單位 Unit</td><td>${inp(currentTroopName,'60%')} 旅　${inp('','18%')} 區　${inp('','18%')} 地域</td></tr>
+      <tr><td>考驗安排 Assessment Arrangement</td><td colspan="3">${box('童軍成員自行報考',false)}${box('認可訓練班',false)}（名稱：${inp('','120px')}　主辦單位：${inp('','100px')}）<br>${box('專章考驗日',false)}（名稱：${inp('','120px')}　主辦單位：${inp('','100px')}）　${box('其他安排',false)}（詳細資料：${inp('','140px')}）</td></tr>
+    </table>
+    <table class="print-table" style="font-size:10px;margin-top:4px">
+      <tr><th style="width:16%">確認 Confirmation</th><th>童軍團長 Scout Leader</th></tr>
+      <tr><td>副署確認</td><td>簽署 Signature：__________　姓名 Name：__________<br>童軍團印鑑 Troop Stamp：__________　日期 Date：__________</td></tr>
+    </table>
+
+    <div style="font-size:11px;font-weight:700;background:#F0F0F0;padding:3px 8px;border:1px solid #000;margin-top:8px">乙部：考驗詳情（由主考人填寫及獲授權人士副署確認）</div>
+    <table class="print-table" style="font-size:10px">
+      <tr><td style="width:18%">主考姓名 Examiner</td><td style="width:32%">${inp('')}</td><td style="width:18%">聯絡電話 Contact No.</td><td>${inp('')}</td></tr>
+      <tr><td>主考資歷 Qualification</td><td colspan="3" style="line-height:1.9">
+        ${box('持有本會相關之領袖訓練／童軍技能評審局證書',false)}證書名稱：${inp('','90px')} 證書編號：${inp('','70px')}<br>
+        ${box('持有本會有效相關之教練員／審核員／導師委任',false)}委任名稱：${inp('','90px')} 委任編號：${inp('','70px')}<br>
+        ${box('持有其他機構／團體相關認可資格',false)}機構名稱：${inp('','90px')} 資格名稱：${inp('','90px')} 編號：${inp('','60px')}<br>
+        ${box('有相關經驗和知識',false)}詳細資料：${inp('','90%')}
+      </td></tr>
+      <tr><td>考驗內容 Assessment</td><td colspan="3" style="line-height:1.9">考驗模式：${inp('','40%')}　考驗安排：${inp('','40%')}<br>其他：${inp('','80%')}<br>考驗日期 Date：${inp('','110px')}　主考簽署 Signature：__________</td></tr>
+      <tr><td>確認 Confirmation</td><td colspan="3">獲授權人士 Authorised Person（☐ 總會 ☐ 地域 ☐ 區會）<br>簽署 Signature：__________　姓名 Name：__________　職位 Post：__________<br>獲授權單位印鑑 Stamp：__________　日期 Date：__________<br>${box('接納 Accepted',true)}${box('不接納 Not accepted',false)}　原因 Reason：${inp('','70%')}</td></tr>
+    </table>
+
+    <div style="font-size:11px;font-weight:700;background:#F0F0F0;padding:3px 8px;border:1px solid #000;margin-top:8px">丙部：考驗結果（由主考人填寫）</div>
+    <table class="print-table" style="font-size:10px">
+      <tr><td style="width:18%">主考評語 Remarks</td><td><textarea style="width:100%;min-height:52px;border:none;border-bottom:1px solid #999;font-size:11px" placeholder="簡略寫出應考者之水準、主考評語及考驗結果"></textarea></td></tr>
+      <tr><td>考驗成績 Result</td><td>${box('合格 Pass',true)}${box('不合格 Fail',false)}　主考簽署 Signature：__________　日期 Date：__________</td></tr>
+    </table>
+
+    <div style="font-size:11px;font-weight:700;background:#F0F0F0;padding:3px 8px;border:1px solid #000;margin-top:8px">丁部：確認和簽發徽章／獎章（由獲授權人士填寫）</div>
+    <table class="print-table" style="font-size:10px">
+      <tr><td colspan="2">經下列獲授權人士簽署確認，上述申請人已通過有關徽章／獎章考驗，特此簽發　<b>${obName(ob)||'________'}</b>　（${groupShort}），證書編號為　${inp(rec?.cert||'','160px')}。</td></tr>
+      <tr><td style="width:50%">姓名 Name：${inp('')}<br>職位 Post：${inp('')}</td><td>簽署 Signature：__________　日期 Date：${rec?.date||'__________'}<br>單位印鑑 Unit Stamp：__________</td></tr>
+    </table>
+
+    <div style="margin-top:8px;font-size:8.5px;line-height:1.6;border-top:1px solid #000;padding-top:4px">
+      <b>童軍專科徽章／獎章考驗申請程序</b>：① 申請人填寫甲部，由童軍團長副署確認；如主考由童軍團長安排，主考人同時填寫乙部並提供證明文件。② 申請人將申請表及主考證明文件副本送交區會。③ 區會於 2 星期內核實並回覆；如不接納主考安排，須在申請表註明原因並協助安排主考。④ 考驗完成後主考人填寫丙部，送回區會確認及簽發。⑤ 區會獲授權人士為合格者簽發徽章／獎章證書。<br>
+      <b>注意事項</b>：① 主考人須依《童軍訓練綱要》要求進行考驗。② 對主考人或考驗安排有疑問，可向所屬地域／青少年活動署查詢。③ 如多位申請人同時報考，請另填「P120A2 附加資料表格」。<br>
+      <b>備註</b>：本頁由 ScoutBadge 依系統資料預填，遞交前請以總會最新表格及《童軍訓練綱要》核對。
+    </div>
+    <div class="no-print" style="margin-top:14px;text-align:center"><button class="btn btn-primary" onclick="downloadPrintableArea()">⬇️ 下載 HTML</button><button class="btn btn-primary" onclick="window.print()">🖨️ 列印</button></div>
+  </div>`;
 }
 
 
@@ -3929,7 +4050,7 @@ const EMBEDDED_GUIDES={
   <h3>如何申請完成？</h3>
   <ol><li>我的進度找到項目</li><li>按📝申請</li><li>選日期+證據</li><li>提交，領袖在待批看到</li><li>批准後進度更新</li></ol>
   <h4>為何看不到其他成員？</h4>
-  <p>預設私隱，成員只看自己。團長可在用戶管理開啟「允許成員互相查看進度」。</p>
+  <p>預設私隱，成員只看自己。旅長可在用戶管理開啟「允許成員互相查看進度」。</p>
   <h4>活動履歷找不到？</h4>
   <p>若「📅 活動履歷」頁顯示升級提示，代表旅團後端還未更新至 v5.2 表格結構，可請領袖通知管理員更新 Code.gs 並執行 initializeSheets()。</p>
   <h4>如何申報活動履歷？（v5.2 新增）</h4>
@@ -3941,8 +4062,8 @@ const EMBEDDED_GUIDES={
   <h3>1. 我的進度</h3><ul><li>選任何成員看所有紀錄</li><li>直接勾選+日期，離線暫存確認寫入</li></ul>
   <h3>2. 全團總覽</h3><ul><li>卡片一眼睇會員章✓</li><li>表格矩陣最多30欄</li><li>🚀考驗營批量：選成員+選項目→一鍵標記→暫存→確認寫入</li><li>子切換：按成員/按項目</li></ul>
   <h3>3. 審批中心</h3><ul><li>🏅獎章審批+👤用戶審批合併</li></ul>
-  <h3>4. 📅 活動履歷（v5.0 新增；v5.2 加入團員申報）</h3><ul><li>領袖可為成員記錄服務、活動、訓練班三類活動，支援批量、編輯、刪除</li><li>v5.2 起團員可在「📅 活動履歷」按「📝 申報紀錄」自行申報；領袖在「✅ 審批中心 → 📅 履歷申報」批准／拒絕</li><li>團員對已批紀錄按 ✏️ 可提交「修改申報」，批准後以同一紀錄更新（即重批機制）；批准前團員可取消</li><li>進度獎章、其他獎章流程不變：批了只有領袖可改</li><li>後端需升級至 v5.2（執行 initializeSheets() 補建「待批履歷」表）</li></ul>
-  <h3>5. 表格列印</h3><p>自動填入，官方PT/18/PT/120A格式</p>
+  <h3>4. 📅 活動履歷（v5.0 新增；v5.2 加入成員申報）</h3><ul><li>領袖可為成員記錄服務、活動、訓練班三類活動，支援批量、編輯、刪除</li><li>v5.2 起成員可在「📅 活動履歷」按「📝 申報紀錄」自行申報；領袖在「✅ 審批中心 → 📅 履歷申報」批准／拒絕</li><li>成員對已批紀錄按 ✏️ 可提交「修改申報」，批准後以同一紀錄更新（即重批機制）；批准前成員可取消</li><li>進度獎章、其他獎章流程不變：批了只有領袖可改</li><li>後端需升級至 v5.2（執行 initializeSheets() 補建「待批履歷」表）</li></ul>
+  <h3>5. 表格列印</h3><p>自動填入，官方 PT/18、P120A1 童軍支部表格格式（PT/65、PT/19 屬深資童軍支部，本系統不提供）</p>
   <h3>6. 用戶管理</h3><ul><li>更變成員角色</li><li>⚙️權限設定：預設領袖全部 (*)，可按個別成員設定可考核範圍</li><li>🔒 系統設定：可控制是否開放成員提交完成申請</li></ul>
   <h3>7. 📥 批量開戶（YMIS 報表匯入）</h3>
   <p>用戶管理 → <b>📥 批量開戶</b>，最快是直接上載 YMIS 匯出的「自訂報表」PDF。</p>
@@ -3956,7 +4077,7 @@ const EMBEDDED_GUIDES={
     <li>回到 APP：輸入 PDF 密碼（如有）→ 上載 PDF → 檢查預覽（可即場修改 YMIS／姓名／電郵）→ 設定預設小隊、角色、初始密碼 → 按「確認批量開戶」。</li>
   </ol>
   <p>🔐 若 PDF 密碼解不開：用 Chrome／Edge 打開 PDF（輸入一次密碼）→ 列印 → 目的地「另存為 PDF」，新檔案就沒有密碼；亦可把報表文字複製，用「貼上文字」解析。詳見 <a href="docs/YMIS_EXPORT.md" target="_blank">YMIS 匯出教學</a>、<a href="docs/BULK_ONBOARD.md" target="_blank">批量開戶說明</a>。</p>
-  <h3>8. 系統設定</h3><p>允許成員互相查看進度：預設關，團長可開<br>允許成員提交完成申請：預設開，團長可關（關閉後成員不能提交申請，需領袖直接剔）</p>
+  <h3>8. 系統設定</h3><p>允許成員互相查看進度：預設關，旅長可開<br>允許成員提交完成申請：預設開，旅長可關（關閉後成員不能提交申請，需領袖直接剔）</p>
 `};
 // 🌐 英文版教學（與中文版內容相同之翻譯）
 const EMBEDDED_GUIDES_EN={
@@ -3986,7 +4107,7 @@ const EMBEDDED_GUIDES_EN={
   <h3>2. Troop Overview</h3><ul><li>Cards show Membership Badge ✓ at a glance</li><li>Matrix table up to 30 columns</li><li>🚀 Assessment camp batch: pick members + items → one-tap mark → staged → confirm</li><li>Sub-views: by member / by item</li></ul>
   <h3>3. Approval Centre</h3><ul><li>🏅 Badge approvals + 👤 user approvals combined</li></ul>
   <h3>4. 📅 Activity Log (v5.0; member claims added in v5.2)</h3><ul><li>Leaders record service, activities and training courses for members, with batch / edit / delete</li><li>From v5.2, members tap "📝 Claim a record" in "📅 Activity Log"; leaders approve/reject under "✅ Approval Centre → 📅 Log claims"</li><li>Members can tap ✏️ on an approved own record to submit an edit claim; on approval it updates the SAME record (re-approval flow); members may cancel while pending</li><li>Progressive badges and other awards are unchanged: once approved, only leaders may change them</li><li>Backend must be on v5.2 (run initializeSheets() to create the "待批履歷" sheet)</li></ul>
-  <h3>5. Forms</h3><p>Auto-filled, official PT/18 / PT/120A format</p>
+  <h3>5. Forms</h3><p>Auto-filled, official Scout Section PT/18 and P120A1 formats (PT/65 and PT/19 are Venture Scout forms and are not provided)</p>
   <h3>6. User Management</h3><ul><li>Change member roles</li><li>⚙️ Permission settings: leaders default to all (*); per-member assessable scope can be set</li><li>🔒 System settings: control whether members may submit completion requests</li></ul>
   <h3>7. 📥 Bulk onboarding (import the YMIS report)</h3>
   <p>User Management → <b>📥 Bulk onboarding</b>. The fastest route is uploading the YMIS "Custom Report" PDF.</p>
@@ -4119,8 +4240,9 @@ function renderInfoTab(){
 
   html+=`<div class="info-section"><h3>${t('forms_dl_title')}</h3>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <a href="https://www.scout.org.hk/uploads/tc/circulars/23262/p013-26.pdf" target="_blank" rel="noopener" class="link-card"><div class="link-icon">📄</div><div class="link-text"><div class="title">${t('pt18_title')}</div><div class="url">${t('pt_official')}</div></div></a>
-      <a href="https://www.scout.org.hk/uploads/tc/circulars/23262/p013-26.pdf" target="_blank" rel="noopener" class="link-card"><div class="link-icon">🐉</div><div class="link-text"><div class="title">${t('pt120a_title')}</div><div class="url">${t('pt_official')}</div></div></a>
+      <a href="https://www.scout.org.hk/uploads/tc/forms/14918/pt18.pdf" target="_blank" rel="noopener" class="link-card"><div class="link-icon">📄</div><div class="link-text"><div class="title">${t('pt18_title')}</div><div class="url">${t('pt_official')}</div></div></a>
+      <a href="https://www.scout.org.hk/article_attach/8045/p120a1-09.pdf" target="_blank" rel="noopener" class="link-card"><div class="link-icon">🎖️</div><div class="link-text"><div class="title">${t('p120a1_title')}</div><div class="url">${t('pt_official')}</div></div></a>
+      <a href="https://www.scout.org.hk/article_attach/16249/P120A2-09.pdf" target="_blank" rel="noopener" class="link-card"><div class="link-icon">📋</div><div class="link-text"><div class="title">${t('p120a2_title')}</div><div class="url">${t('pt_official')}</div></div></a>
       <a href="https://scoutsinfohub.org.hk/" target="_blank" class="link-card"><div class="link-icon">👕</div><div class="link-text"><div class="title">${t('wearing_guide')}</div><div class="url">${t('wearing_url')}</div></div></a>
       <button class="syllabus-launch" onclick="document.getElementById('fullSyllabusInline')?.scrollIntoView({behavior:'smooth',block:'start'})"><div class="link-icon">📖</div><div class="link-text"><div class="title">${t('syl_inline_card')}</div><div class="url">${t('syl_inline_card_sub')}</div></div></button>
     </div>
@@ -4232,7 +4354,7 @@ async function loadUsers(){
       const leaderCount=(d.users||[]).length-memberCount;
       h+=`<div style="font-size:12px;color:var(--text-light);margin:4px 0 10px">${tf('users_count_fmt',(d.users||[]).length,memberCount,leaderCount)}</div>`;
       if(!(d.users||[]).length) h+=`<p style="color:var(--text-light);padding:16px;background:var(--bg);border-radius:8px">${t('users_empty')}</p>`;
-      h+=d.users.map(u=>`<div class="user-item" data-search="${(u.name+u.ymis+(u.email||'')).toLowerCase()}" data-ymis="${escapeHtml(u.ymis||'')}" data-name="${escapeHtml(u.name||'')}" data-email="${escapeHtml(u.email||'')}" data-role="${escapeHtml(u.role||'')}" data-status="${escapeHtml(u.status||'')}" data-cantick="${u.can_tick?'true':'false'}" data-note="${escapeHtml(u.note||'')}"><div class="user-item-info"><b>${u.name}</b> ${u.ymis&&String(u.ymis).charAt(0)!=='L'?`(${u.ymis})`:''} ${u.email?` - ${u.email}`:''}<span class="role-badge role-${u.role}">${getRoleName(u.role)}</span> ${u.roster_only?`<span style="background:var(--orange);color:#fff;padding:1px 6px;border-radius:999px;font-size:9px;margin-left:4px">${t('users_roster_chip')}</span>`:''} ${u.can_tick?`<span style="background:var(--green-light);color:var(--green);padding:1px 6px;border-radius:999px;font-size:9px">${t('can_tick_chip')}</span>`:''}<br><small style="font-size:10px;color:var(--text-light)">${t('perm_prefix')}${u.allowed_badges|| (u.role==='member'?t('perm_none_word'):t('perm_all_word'))}</small></div><div class="user-item-actions">`+
+      h+=d.users.map(u=>`<div class="user-item" data-search="${(u.name+u.ymis+(u.email||'')).toLowerCase()}" data-ymis="${escapeHtml(u.ymis||'')}" data-name="${escapeHtml(u.name||'')}" data-email="${escapeHtml(u.email||'')}" data-role="${escapeHtml(u.role||'')}" data-status="${escapeHtml(u.status||'')}" data-cantick="${u.can_tick?'true':'false'}" data-note="${escapeHtml(u.note||'')}"><div class="user-item-info"><b>${u.name}</b> ${u.ymis&&String(u.ymis).charAt(0)!=='L'?`(${u.ymis})`:''} ${u.email?` - ${u.email}`:''}<span class="role-badge role-${u.role}">${getRoleName(u.role)}</span> ${u.roster_only?`<span style="background:var(--orange);color:#fff;padding:1px 6px;border-radius:999px;font-size:9px;margin-left:4px">${t('users_roster_chip')}</span>`:''} ${u.can_tick?`<span style="background:var(--green-light);color:var(--green);padding:1px 6px;border-radius:999px;font-size:9px">${t('can_tick_chip')}</span>`:''}<br><small style="font-size:10px;color:var(--text-light)">${t('perm_prefix')}${permDisplayText(u.allowed_badges,u.role)}</small></div><div class="user-item-actions">`+
         (['admin','group_leader','branch_leader','super_admin'].includes(currentUser.role)&&u.ymis!==currentUser.ymis?`<select onchange="updateUserRole('${u.ymis}',this.value,'${u.role}',${!!(gslHolder&&gslHolder.ymis!==u.ymis)},${u.role==='group_leader'&&gslCount<2})"><option value="member" ${u.role==='member'?'selected':''}>${t('role_opt_member')}</option><!-- 童軍無執委 --><option value="branch_leader" ${u.role==='branch_leader'?'selected':''}>${t('role_opt_branch')}</option><option value="group_leader" ${u.role==='group_leader'?'selected':''} ${gslHolder&&u.role!=='group_leader'?'disabled':''}>${gslHolder&&u.role!=='group_leader'?tf('gsl_opt_taken',gslHolder.name):t('role_opt_group')}</option><option value="admin" ${u.role==='admin'?'selected':''}>${t('role_opt_admin')}</option></select><button class="btn btn-sm ${u.can_tick?'btn-danger':'btn-success'}" onclick="toggleCanTick('${u.ymis}',${!u.can_tick})">${u.can_tick?t('tick_revoke'):t('tick_grant')}</button><button class="btn btn-sm btn-warning" onclick="openPermissionModal('${u.ymis}','${u.name.replace(/'/g,"\'") }','${u.role}','${(u.allowed_badges||'').replace(/'/g,"")}')">${t('perm_btn')}</button><button class="btn btn-sm btn-warning" onclick="resetMemberPassword('${u.ymis}')">${t('pw_reset_btn')}</button><button class="btn btn-sm btn-outline" onclick="editSquad('${u.ymis}','${(u.squad||'').replace(/'/g,"\'")}','${(u.squad_role||'member').replace(/'/g,"\'")}')">${t('squad_btn')}</button><button class="btn btn-sm btn-danger" onclick="deactivateUser('${u.ymis}',${u.role==='group_leader'&&gslCount<2})">${t('deactivate_btn')}</button>`:'' )+
         `</div></div>`).join('');
       h+='</div>';
@@ -4292,7 +4414,7 @@ async function loadAuditHistory(){
 }
 /* ================== Bulk Onboarding ================== */
 function downloadMembersTemplate(){
-  const csv='ymis,name,email,squad,squad_role,role,can_tick,password,note\n1234560001,王小明,wong@example.org,紅隊,member,member,false,,新團員\n1234560002,李小華,lee@example.org,藍隊,member,member,false,,轉隊\n,陳領袖,chan@example.org,,,branch_leader,true,1234,領袖免填YMIS用電郵登入\n';
+  const csv='ymis,name,email,squad,squad_role,role,can_tick,password,note\n1234560001,王小明,wong@example.org,紅隊,member,member,false,,新成員\n1234560002,李小華,lee@example.org,藍隊,member,member,false,,轉隊\n,陳領袖,chan@example.org,,,branch_leader,true,1234,領袖免填YMIS用電郵登入\n';
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='members_template.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   showToast(t('template_dl'),'success');
 }
@@ -4660,59 +4782,127 @@ let currentPermUser=null;
 function openPermissionModal(ymis, name, role, allowed){
   currentPermUser={ymis, name, role, allowed: allowed||''};
   document.getElementById('permUserName').textContent=`${name} (${ymis}) [${role}]`;
-  // badges list
-  const badges=[
-    {id:'L1', name:t('perm_b_l1')},
-    {id:'L1-CP', name:t('perm_b_l1cp')},
-    {id:'L2', name:t('perm_b_l2')},
-    {id:'L3-SELF', name:t('perm_b_l3self')},
-    {id:'L3-RESP', name:t('perm_b_l3resp')},
-    {id:'L3-ACT-SCOUT', name:t('perm_b_l3sc')},
-    {id:'L3-ACT-SP', name:t('perm_b_l3sp')},
-    {id:'L3-ACT-INT', name:t('perm_b_l3int')},
-    {id:'L3-EXP', name:t('perm_b_l3exp')},
-    {id:'L4', name:t('perm_b_l4')},
-    {id:'L4-ACT', name:t('perm_b_l4act')},
-  ];
-  const allowedArr = (allowed==='*'||allowed==='') ? (role==='member'?[]:badges.map(b=>b.id)) : allowed.split(',').map(s=>s.trim()).filter(Boolean);
-  // If allowed is * => all checked
-  const isAll = allowed==='*' || allowed==='';
-  let html='';
-  badges.forEach(b=>{
-    const checked = isAll || allowedArr.includes(b.id) || allowedArr.includes('*') || (role!=='member' && allowed==='');
-    html+=`<label style="display:flex;gap:6px;padding:4px 0;font-size:12px"><input type="checkbox" class="permCheck" value="${b.id}" ${checked?'checked':''}> ${b.name}</label>`;
-  });
-  document.getElementById('permBadgesList').innerHTML=html;
+  // 進度性獎章清單：一律由 data/items.json 的現行《童軍支部訓練綱要》即時產生
+  // （會員章／探索／標準／高級／總領袖獎章），不再寫死任何舊制或深資童軍支部名稱。
+  const allowedArr = permAllowedList(allowed, role);
+  renderPermBadgeList(allowedArr);
   // other badges
   const otherList=document.getElementById('permOtherList');
   if(otherList && itemsData && itemsData.otherBadges){
-    const otherAllowed = allowed==='*' ? itemsData.otherBadges.map(o=>o.id) : allowedArr;
     let ohtml='';
     // Add OTHER as group
-    ohtml+=`<label style="display:flex;gap:6px;padding:4px 0;font-size:12px;background:var(--bg);border-radius:4px"><input type="checkbox" class="permCheck" value="OTHER" ${isAll||allowedArr.includes('OTHER')?'checked':''}> <b>${t('perm_other_all')}</b></label>`;
+    ohtml+=`<label style="display:flex;gap:6px;padding:4px 0;font-size:12px;background:var(--bg);border-radius:4px"><input type="checkbox" class="permCheck permOtherCheck" value="OTHER" ${permGranted(allowedArr,'OTHER')?'checked':''}> <b>${t('perm_other_all')}</b></label>`;
     itemsData.otherBadges.forEach(ob=>{
-      const ck = isAll || otherAllowed.includes(ob.id) || otherAllowed.includes('OTHER');
-      ohtml+=`<label style="display:flex;gap:6px;padding:4px 0 4px 12px;font-size:11px"><input type="checkbox" class="permCheck" value="${ob.id}" ${ck?'checked':''}> ${ob.icon||''} ${obName(ob)}</label>`;
+      const ck = permGranted(allowedArr, ob.id);
+      ohtml+=`<label style="display:flex;gap:6px;padding:4px 0 4px 12px;font-size:11px"><input type="checkbox" class="permCheck permOtherCheck" value="${ob.id}" ${ck?'checked':''}> ${ob.icon||''} ${obName(ob)}</label>`;
     });
     otherList.innerHTML=ohtml;
+  } else if(otherList){
+    otherList.innerHTML='';
   }
   document.getElementById('permissionModal').classList.add('active');
 }
+
+/* 權限字串 → 陣列。'*' 或空白（領袖）＝全部；成員空白＝無。 */
+function permDisplayText(allowed, role){
+  if(!allowed) return role==='member'?t('perm_none_word'):t('perm_all_word');
+  if(allowed==='NONE') return t('perm_none_word');
+  if(allowed==='*') return t('perm_all_word');
+  return allowed;
+}
+function permAllowedList(allowed, role){
+  if(allowed==='*') return ['*'];
+  if(!allowed) return role==='member'?[]:['*'];
+  return String(allowed).split(',').map(s=>s.trim()).filter(Boolean);
+}
+/* allowed_badges 與項目 ID 的比對：支援 '*'、整章 'L3'、範圍 'L3-A'、單項 'L3-A1'、'OTHER' */
+function permGranted(list, id){
+  if(!list || !list.length) return false;
+  return list.some(a=>{
+    if(a==='*') return true;
+    if(a===id) return true;
+    if(id.startsWith(a)) return true;
+    if(a==='OTHER' && !String(id).startsWith('L')) return true;
+    return false;
+  });
+}
+/* 依項目編號的字母前綴分組（A 戶外挑戰、B 個人發展…），順序跟隨 items.json */
+function permCategories(badge){
+  const cats=[];
+  (badge.items||[]).forEach(it=>{
+    const rest=String(it.id||'').slice(String(badge.id||'').length).replace(/^-/,'');
+    const m=/^[A-Z]+/.exec(rest);
+    const key=m?m[0]:rest.charAt(0)||'X';
+    let c=cats.find(x=>x.key===key);
+    if(!c){ c={key:key, id:badge.id+'-'+key, items:[]}; cats.push(c); }
+    c.items.push(it);
+  });
+  return cats;
+}
+function permCatLabel(key){
+  const k='perm_cat_'+key;
+  const label=t(k);
+  return label===k?key:label;
+}
+function renderPermBadgeList(allowedArr){
+  const wrap=document.getElementById('permBadgesList');
+  if(!wrap) return;
+  if(!itemsData || !itemsData.badges || !itemsData.badges.length){
+    wrap.innerHTML=`<p style="font-size:11px;color:var(--text-light)">${t('loading')}</p>`;
+    return;
+  }
+  let html='';
+  itemsData.badges.forEach(b=>{
+    const cats=permCategories(b);
+    const total=cats.reduce((n,c)=>n+c.items.length,0);
+    const bChecked=permGranted(allowedArr, b.id);
+    html+=`<div style="margin:8px 0 3px"><label style="display:flex;gap:6px;align-items:flex-start;font-size:12px;font-weight:700"><input type="checkbox" class="permCheck permParent" value="${b.id}" data-perm-group="${b.id}" ${bChecked?'checked':''} onchange="permToggleGroup('${b.id}',this.checked)"> <span>${escapeHtml(bName(b))}<span style="font-weight:400;color:var(--text-light)"> (${tf('perm_item_count',total)})</span></span></label><div style="padding-left:18px">`;
+    // 只有一個項目範疇的獎章（如會員章）不再重複列出子項
+    if(cats.length<=1) { html+='</div></div>'; return; }
+    cats.forEach(c=>{
+      const cChecked=permGranted(allowedArr, c.id);
+      html+=`<label style="display:flex;gap:6px;align-items:flex-start;font-size:11px;padding:2px 0"><input type="checkbox" class="permCheck permChild" value="${c.id}" data-perm-parent="${b.id}" ${cChecked?'checked':''} onchange="syncPermParents()"> <span>${escapeHtml(permCatLabel(c.key))}<span style="color:var(--text-light)"> (${tf('perm_item_count',c.items.length)})</span></span></label>`;
+    });
+    html+='</div></div>';
+  });
+  wrap.innerHTML=html;
+  syncPermParents();
+}
+function permToggleGroup(badgeId, checked){
+  document.querySelectorAll(`.permChild[data-perm-parent="${badgeId}"]`).forEach(cb=>{ cb.checked=checked; });
+  syncPermParents();
+}
+function syncPermParents(){
+  document.querySelectorAll('.permParent').forEach(p=>{
+    const kids=[...document.querySelectorAll(`.permChild[data-perm-parent="${p.dataset.permGroup}"]`)];
+    if(kids.length) p.checked=kids.every(k=>k.checked);
+  });
+}
 function permSelectAll(checked){
   document.querySelectorAll('.permCheck').forEach(cb=>cb.checked=checked);
+  syncPermParents();
 }
 
 function permSetAll(){
   document.querySelectorAll('.permCheck').forEach(cb=>cb.checked=true);
+  syncPermParents();
 }
 async function savePermissions(){
   if(!currentPermUser) return;
-  const checks=document.querySelectorAll('.permCheck:checked');
-  const vals=[...checks].map(c=>c.value);
-  let allowedStr='';
-  const totalBadges=document.querySelectorAll('.permCheck').length;
-  if(vals.length===totalBadges) allowedStr='*';
-  else allowedStr=vals.join(',');
+  // 逐章整理：整章全選 → 記錄整章 ID；否則只記錄已勾選的範圍（例：L3-A）
+  const vals=[];
+  const groups=[...document.querySelectorAll('.permParent')].map(p=>p.dataset.permGroup);
+  groups.forEach(g=>{
+    const kids=[...document.querySelectorAll(`.permChild[data-perm-parent="${g}"]`)];
+    const picked=kids.filter(k=>k.checked);
+    if(!kids.length){ if(document.querySelector(`.permParent[data-perm-group="${g}"]`)?.checked) vals.push(g); return; }
+    if(picked.length===kids.length) vals.push(g);
+    else picked.forEach(k=>vals.push(k.value));
+  });
+  const others=[...document.querySelectorAll('.permOtherCheck')];
+  others.filter(c=>c.checked).forEach(c=>vals.push(c.value));
+  const totalUnits=groups.length+others.length;
+  const allowedStr = vals.length===0 ? 'NONE' : ((totalUnits>0 && vals.length===totalUnits) ? '*' : vals.join(','));
   try{
     const d=await apiRequest('updateUserRole', {
       target_ymis: currentPermUser.ymis,
@@ -4771,7 +4961,7 @@ async function enterDemoMode(demoRole='leader'){
         const m=demoY[i%demoY.length];
         logRecords.push({record_id:'DEMOLOG_seed_'+i,type:tp,ymis:m.y,name:m.n,date,title,role,hours,cert_no:tp==='training'?'CERT-N2305-'+m.y.slice(-4):'',detail:t('demo_log_detail'),recorder:'DEMO Leader',recorded_at:date});
       });
-    // v5.2：DEMO 範例履歷申報（團員自行申報 → 領袖審批，僅本機記憶體）
+    // v5.2：DEMO 範例履歷申報（成員自行申報 → 領袖審批，僅本機記憶體）
     logRequestsSupported=true;
     logRequests=[
       {request_id:'DEMOLREQ_seed_0',kind:'new',target_record_id:'',type:'service',ymis:demoY[0].y,name:demoY[0].n,date:todayISO(),title:inEn()?'Beach clean-up (self-reported)':'海灘清潔日（自行申報）',role:inEn()?'Volunteer':'義工',hours:'3',cert_no:'',detail:inEn()?'DEMO: member-submitted claim awaiting approval':'DEMO：成員自行申報，待領袖批准',status:'pending',created_at:todayISO()},
@@ -4906,7 +5096,7 @@ async function reviewApp(id,dec,requestedRole){
 function renderLogsTab(){
   const c=document.getElementById('tab-logs');
   const isLeader=canUserTickRole(currentUser.role);
-  // v5.2：團員可用「申報」（後端需升級 v5.2）；領袖沿用直接寫入
+  // v5.2：成員可用「申報」（後端需升級 v5.2）；領袖沿用直接寫入
   const canClaim=(logRequestsSupported||currentTroopId==='DEMO') && !isLeader;
   const needAny=logRecordsSupported||canClaim;
   const targetYmis=isLeader?(selectedProgressYmis||currentUser.ymis):currentUser.ymis;
@@ -5134,7 +5324,7 @@ async function submitLogRecord(){
   finally{ btn.disabled=false; btn.textContent=logModalMemberMode?t('log_req_submit'):t('save'); }
 }
 
-/* ===== v5.2 履歷申報：團員自行申報 → 領袖審批（批准後才寫入／更新活動履歷）=====
+/* ===== v5.2 履歷申報：成員自行申報 → 領袖審批（批准後才寫入／更新活動履歷）=====
    Log claims: members self-declare → leaders approve (only then written/updated). */
 // 後端錯誤訊息為中文；英文介面時把常見錯誤映射為英文，其餘保留原文（顯示在 t('op_fail')/t('log_req_fail') 之後）
 // Backend errors are Chinese; in EN mode map the known claim errors to English, else keep as-is.

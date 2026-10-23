@@ -1103,15 +1103,18 @@
  "forms": {
   "PT18": {
    "name_en": "Chief Scout's Award & Certificate Application Form",
-   "code": "PT/18"
+   "code": "PT/18",
+   "note_en": "FORM PT/18 10/2025; highest Scout Section award - nominated by the SL/GSL, recommended by the DC, confirmed by the RC and approved by Programme Branch."
   },
-  "PT120A": {
-   "name_en": "Scout Proficiency Badge Certificate / Application Form",
-   "code": "PT/120A"
+  "P120A1": {
+   "name_en": "Scout Proficiency / Activity Badge Assessment Application Form",
+   "code": "P120A1",
+   "note_en": "10/2009; Part A applicant and Scout Leader, Part B examiner, Part C result, Part D issue."
   },
-  "PT65": {
-   "name_en": "Scout Assessment Plan / Application Document",
-   "code": "PT/65"
+  "P120A2": {
+   "name_en": "Scout Proficiency / Activity Badge Assessment - Supplementary Information Sheet",
+   "code": "P120A2",
+   "note_en": "10/2009; attach when several members take the same badge."
   }
  }
 }
