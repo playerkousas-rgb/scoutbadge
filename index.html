@@ -448,19 +448,23 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
     </div>
 
     <div id="welcome-setup" class="welcome-section">
-      <h2 style="font-size:18px;color:var(--maroon);margin-bottom:12px" data-i18n="setup_h2">📋 新旅團部署指南 - 有主系統 / 無主系統 兩條路 (10分鐘)</h2>
-      
-      <div class="info-card" style="background:var(--blue-light);border-color:var(--blue);margin-bottom:12px" data-i18n-html="setup_portal_card"></div>
+      <h2 style="font-size:18px;color:var(--maroon);margin-bottom:12px" data-i18n="setup_h2">📋 新旅團部署指南 (10分鐘)</h2>
 
+      <!-- [主系統暫時隱藏 2026-10] 主系統（scoutsystem-2.0）未開發完成，暫停對外介紹；現階段只推廣進度追蹤系統。
+           完成後解除本註解（連同下面「軌道B」步驟）即可重啟，dict 內 setup_portal_card／setup_map_card／s4h／s4p 均保留未刪。
+      <div class="info-card" style="background:var(--blue-light);border-color:var(--blue);margin-bottom:12px" data-i18n-html="setup_portal_card"></div>
       <div class="info-card" style="background:var(--maroon-light);margin-bottom:12px" data-i18n-html="setup_map_card"></div>
+      -->
 
       <div class="tutorial">
         <div class="steps">
           <div class="step"><div class="step-number">1</div><div class="step-content"><h4 data-i18n="s1h">共通：下載後端程式碼 (單一檔案版)</h4><p data-i18n="s1p">包含待批、其他獎章、批量、資料修復、PNG、私隱開關</p><a href="apps-script/Code.gs" download="Code.gs" class="btn btn-primary btn-sm" style="margin-top:6px" data-i18n="s1btn">⬇️ 下載 Code.gs (最新)</a></div></div>
           <div class="step"><div class="step-number">2</div><div class="step-content"><h4 data-i18n="s2h">共通：建立 Google Sheet 並部署</h4><p data-i18n-html="s2p"><b>2.1</b> 建新試算表<br><b>2.2</b> 擴充功能→Apps Script，貼上 Code.gs<br><b>2.3</b> 儲存→執行 initializeSheets，授權，複製 API Key<br><b>2.4</b> 部署為網頁應用程式 (執行身分我，存取權任何人)，複製 URL (/exec)</p></div></div>
-          <div class="step"><div class="step-number">3</div><div class="step-content"><h4 data-i18n="s3h">軌道A：無主系統 - 提交給 scoutbadge 管理員</h4><p data-i18n="s3p">將旅團編號、名稱、URL、API Key 交 scoutbadge 管理員，透過受保護的部署設定登記後即可獨立使用</p></div></div>
+          <div class="step"><div class="step-number">3</div><div class="step-content"><h4 data-i18n="s3h">提交資料給 scoutbadge 管理員</h4><p data-i18n="s3p">將旅團編號、名稱、URL、API Key 交 scoutbadge 管理員，透過受保護的部署設定登記後即可使用；登記完成後首頁會出現旅團卡片</p></div></div>
+          <!-- [主系統暫時隱藏 2026-10] 軌道B（接上主系統）未開放，完成後解除註解並將下面「私隱選擇」改回第 5 步：
           <div class="step"><div class="step-number">4</div><div class="step-content"><h4 data-i18n="s4h">軌道B：有主系統並想接上 - 額外提交給主系統管理員</h4><p data-i18n="s4p">將同一組 URL+Key 交主系統管理員，填入旅團設定→元件設定 scoutbadge 卡片 backend+apikey。之後成員點 Dashboard 卡片自動帶入 ?u=0082&role=&ymis=&from=portal&embed=1，無需密碼</p></div></div>
-          <div class="step"><div class="step-number">5</div><div class="step-content"><h4 data-i18n="s5h">私隱選擇</h4><p data-i18n="s5p">有主系統不等於一定要接，可自由選擇獨立用。若旅團重私隱，成員預設只看自己；若想互相鼓勵，團長可在用戶管理→系統設定開啟「允許成員互相查看進度」</p></div></div>
+          -->
+          <div class="step"><div class="step-number">4</div><div class="step-content"><h4 data-i18n="s5h">私隱選擇</h4><p data-i18n="s5p">若旅團重私隱，成員預設只看自己；若想互相鼓勵，團長可在用戶管理→系統設定開啟「允許成員互相查看進度」</p></div></div>
         </div>
       </div>
       <div class="info-card" style="border-color:var(--blue);background:var(--blue-light)" data-i18n-html="setup_submit_card"></div>
@@ -926,15 +930,17 @@ zh:{
   home_awards_title:'童軍支部進度獎章', lv1:'會員章', lv1d:'2大項 • 含保護兒童', lv2:'探索獎章', lv3:'標準獎章', lv4:'高級獎章', lv5:'總領袖獎章', lvd:'逐項記錄及審批', lv5d:'最高進度獎章',
   home_pick_troop:'📍 請選擇您的旅團', home_reload:'🔄 重新載入', home_demo_l:'👀 示範：領袖功能', home_demo_m:'👤 示範：成員功能',
   home_tip:'💡 提示：若您的旅團不在列表，請到「新旅團部署」查看10分鐘自助部署教學。<br>🎬 <b>未登入試用：</b>可選擇「示範：領袖功能」或「示範：成員功能」，免登入體驗兩種角色的介面差異。<br>🌐 <b>中英切換：</b>右上角按「🌐 English」可全站轉英文（內容相通，後端紀錄相同，適合英語旅團）。',
-  setup_h2:'📋 新旅團部署指南 - 有主系統 / 無主系統 兩條路 (10分鐘)',
+  // [主系統暫時隱藏 2026-10] setup_portal_card／setup_map_card／s4h／s4p 對應元素已在 HTML 註解隱藏（主系統未開發完成）；
+  // 鍵值保留未刪，重啟時解除 HTML 註解即可。setup_h2／s3h／s3p／s5p／setup_submit_card 舊文案見 git 歷史。
+  setup_h2:'📋 新旅團部署指南 (10分鐘)',
   setup_portal_card:'<h3 style="color:var(--blue)">🌟 先了解一下：主系統平台是什麼？</h3><p style="font-size:12px">你而家用緊嘅 <b>童軍進度追蹤</b> 係一個 Tier 3 元件，可以獨立用，但其實屬於更龐大的 <b>scoutsystem-2.0 主系統平台</b>：</p><ul style="font-size:11px;margin:6px 0 0 16px"><li>📊 Dashboard 儀表板：全旅團人數、活動、財政一目了然</li><li>👥 成員管理、✅集會考勤 QR Code、💰財務、📅活動報名</li><li>🧩 插件市場：本系統是其中一個插件，可一鍵加入卡片</li><li>🔐 單一登入：點卡片自動帶入身份，唔使再輸 YMIS/密碼</li></ul><p style="font-size:11px;margin-top:8px;background:#fff;padding:6px;border-radius:6px"><b>重點：有主系統 ≠ 一定要接上本系統</b>，可自由選擇獨立用或接上，兩條路並存不衝突。藉此告訴用家有更大平台可用。</p>',
   setup_map_card:'<h3>🗺️ 部署地圖 - 兩條路</h3><p style="font-size:11px">共通：下載 Code.gs → 建 Sheet → 執行初始化 → 部署 → 交付 URL+API Key<br><b>軌道A 無主系統/有但想獨立用：</b> 將資料交 scoutbadge 管理員，以受保護部署設定登記 → 完成 → 用法：選擇旅團登入<br><b>軌道B 有主系統並想接上：</b> 同樣交資料給主系統管理員設定卡片 → 用法：主系統 Dashboard 點卡片 → 自動帶入旅團及嵌入模式</p>',
   s1h:'共通：下載後端程式碼 (單一檔案版)', s1p:'包含待批、其他獎章、批量、資料修復、PNG、私隱開關', s1btn:'⬇️ 下載 Code.gs (最新)',
   s2h:'共通：建立 Google Sheet 並部署', s2p:'<b>2.1</b> 建新試算表<br><b>2.2</b> 擴充功能→Apps Script，貼上 Code.gs<br><b>2.3</b> 儲存→執行 initializeSheets，授權，複製 API Key<br><b>2.4</b> 部署為網頁應用程式 (執行身分我，存取權任何人)，複製 URL (/exec)',
-  s3h:'軌道A：無主系統 - 提交給 scoutbadge 管理員', s3p:'將旅團編號、名稱、URL、API Key 交 scoutbadge 管理員，透過受保護的部署設定登記後即可獨立使用',
+  s3h:'提交資料給 scoutbadge 管理員', s3p:'將旅團編號、名稱、URL、API Key 交 scoutbadge 管理員，透過受保護的部署設定登記後即可使用；登記完成後首頁會出現旅團卡片',
   s4h:'軌道B：有主系統並想接上 - 額外提交給主系統管理員', s4p:'將同一組 URL+Key 交主系統管理員，填入旅團設定→元件設定 scoutbadge 卡片 backend+apikey。之後成員點 Dashboard 卡片自動帶入 ?u=0082&role=&ymis=&from=portal&embed=1，無需密碼',
-  s5h:'私隱選擇', s5p:'有主系統不等於一定要接，可自由選擇獨立用。若旅團重私隱，成員預設只看自己；若想互相鼓勵，團長可在用戶管理→系統設定開啟「允許成員互相查看進度」',
-  setup_submit_card:'<h3 style="color:var(--blue)">📧 完成後提交</h3><p style="font-size:11px">獨立用：交 scoutbadge 管理員<br>接入主系統：同時交主系統管理員（填 backend+apikey）<br>兩條路可同時用，領袖從主系統入，成員 bookmark 獨立連結</p>',
+  s5h:'私隱選擇', s5p:'若旅團重私隱，成員預設只看自己；若想互相鼓勵，團長可在用戶管理→系統設定開啟「允許成員互相查看進度」',
+  setup_submit_card:'<h3 style="color:var(--blue)">📧 完成後提交</h3><p style="font-size:11px">將旅團編號、名稱、URL、API Key 交 scoutbadge 管理員登記<br>登記完成後首頁會出現旅團卡片，選團即可登入<br>成員可直接 bookmark 本系統連結使用</p>',
   submit_contact:'📧 提交旅團接入申請給 ADMIN APP',
   guide_h2:'📖 使用教學',
   g1h:'選擇旅團', g1p:'首頁點擊旅團卡片（例如 0082 第82旅）', g2h:'登入', g2p:'成員：YMIS 10位數字 + 密碼；領袖：Email + 密碼。首次登入預設密碼請洽管理員。',
@@ -1311,15 +1317,16 @@ en:{
   home_awards_title:'Scout Section Progressive Awards', lv1:'Membership Badge', lv1d:'2 areas • incl. Safe from Harm', lv2:'Pathfinder Award', lv3:'Standard Award', lv4:'Advanced Award', lv5:'Chief Scout\'s Award', lvd:'Item-by-item records & approval', lv5d:'Highest progressive award',
   home_pick_troop:'📍 Select Your Troop', home_reload:'🔄 Reload', home_demo_l:'👀 Demo: Leader Features', home_demo_m:'👤 Demo: Member Features',
   home_tip:'💡 Tip: if your troop is not listed, see "New Troop Setup" for the 10-minute self-service deployment guide.<br>🎬 <b>Try without login:</b> pick "Demo: Leader" or "Demo: Member" to experience both roles.<br>🌐 <b>中/EN:</b> tap "🌐 中文" at the top-right to switch the whole interface (same content, same backend records — ideal for English-speaking troops).',
-  setup_h2:'📋 New Troop Deployment Guide — with / without the main platform (10 min)',
+  // [主系統暫時隱藏 2026-10] setup_portal_card／setup_map_card／s4h／s4p kept unused while the main platform intro is hidden.
+  setup_h2:'📋 New Troop Deployment Guide (10 min)',
   setup_portal_card:'<h3 style="color:var(--blue)">🌟 First: what is the main platform?</h3><p style="font-size:12px">This <b>Scout Progress Tracker</b> is a Tier-3 component. It works standalone, but it belongs to the larger <b>scoutsystem-2.0 platform</b>:</p><ul style="font-size:11px;margin:6px 0 0 16px"><li>📊 Dashboard: troop members, activities and finance at a glance</li><li>👥 Member management, ✅ meeting attendance QR codes, 💰 finance, 📅 activity sign-up</li><li>🧩 Plugin marketplace: this system is one of the plugins, added as a card in one click</li><li>🔐 Single sign-on: tap the card and your identity is carried over — no YMIS/password re-entry</li></ul><p style="font-size:11px;margin-top:8px;background:#fff;padding:6px;border-radius:6px"><b>Key point: having the main platform ≠ must integrate with this system</b> — standalone or integrated use both work side by side.</p>',
   setup_map_card:'<h3>🗺️ Deployment Map — two tracks</h3><p style="font-size:11px">Shared: download Code.gs → create a Sheet → initialise → deploy → provide URL + API key<br><b>Track A — standalone:</b> provide the details to the app administrator for protected deployment registration, then choose the troop and sign in.<br><b>Track B — with the main platform:</b> provide the same details to the main-platform administrator; the Dashboard card opens the selected troop in embedded mode.</p>',
   s1h:'Shared: download the backend code (single file)', s1p:'Includes pending approvals, other badges, batch tools, data repair, PNG, privacy switches', s1btn:'⬇️ Download Code.gs (latest)',
   s2h:'Shared: create a Google Sheet and deploy', s2p:'<b>2.1</b> Create a new spreadsheet<br><b>2.2</b> Extensions → Apps Script, paste Code.gs<br><b>2.3</b> Save → run initializeSheets, authorise, copy the API Key<br><b>2.4</b> Deploy as a web app (execute as me, access: anyone), copy the URL (/exec)',
-  s3h:'Track A: no main platform — submit to the scoutbadge admin', s3p:'Give the troop ID, name, URL and API Key to the scoutbadge administrator for protected deployment registration; it works standalone after redeployment',
+  s3h:'Submit the details to the scoutbadge admin', s3p:'Give the troop ID, name, URL and API Key to the scoutbadge administrator for protected deployment registration; the troop card then appears on the home page',
   s4h:'Track B: with main platform — also submit to the platform admin', s4p:'Give the same URL+Key to the main-platform admin and fill troop settings → component settings with the scoutbadge card backend+apikey. Members then tap the Dashboard card and are auto-carried in with ?u=0082&role=&ymis=&from=portal&embed=1 — no password needed',
-  s5h:'Privacy choice', s5p:'Having the main platform does not force integration — standalone use is fine. Privacy-first troops keep members seeing only themselves; for mutual encouragement, the GSL can enable "members may view each other\'s progress" in User Management → System Settings',
-  setup_submit_card:'<h3 style="color:var(--blue)">📧 Submit when done</h3><p style="font-size:11px">Standalone: send to the scoutbadge admin<br>Integrating: also send to the main-platform admin (backend+apikey)<br>Both tracks work together — leaders enter via the platform, members can bookmark the standalone link</p>',
+  s5h:'Privacy choice', s5p:'Privacy-first troops keep members seeing only themselves; for mutual encouragement, the GSL can enable "members may view each other\'s progress" in User Management → System Settings',
+  setup_submit_card:'<h3 style="color:var(--blue)">📧 Submit when done</h3><p style="font-size:11px">Send the troop ID, name, URL and API Key to the scoutbadge admin for registration<br>Once registered, the troop card appears on the home page — pick the troop and sign in<br>Members can bookmark the link directly</p>',
   submit_contact:'📧 Submit troop integration request to the ADMIN APP',
   guide_h2:'📖 User Guide',
   g1h:'Choose your troop', g1p:'Tap a troop card on the home page (e.g. 0082 Troop 82)', g2h:'Sign in', g2p:'Members: 10-digit YMIS + password; Leaders: Email + password. Ask the admin for the first-login default password.',
