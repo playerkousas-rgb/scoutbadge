@@ -3,6 +3,10 @@
 > 給領袖的說明：你擁有全部權限（考核、審批、用戶管理）。
 > APP 內 ❓ 教學也有同一份內容（會跟隨介面語言顯示中／英文版）。
 > 相關文件：[YMIS_EXPORT.md](YMIS_EXPORT.md)（YMIS 匯出教學）、[BULK_ONBOARD.md](BULK_ONBOARD.md)（批量開戶總覽）。
+>
+> 🆕 **新部署旅團第一次登入**：預設管理員帳號係 YMIS `1111111111`／密碼 `changeme`
+> （用「👤 成員」分頁以 YMIS 登入，首次登入會強制改密碼）。
+> 完整步驟見 [TROOP_ONBOARDING.md](../TROOP_ONBOARDING.md) §C「首次登入（預設管理員帳號）」。
 
 ---
 

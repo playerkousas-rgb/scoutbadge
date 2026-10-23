@@ -3,7 +3,9 @@
 ## A. 建立新旅團（僅新 Sheet）
 
 1. 建立 Google Sheet，開啟 Apps Script，貼上 `apps-script/Code.gs`。
-2. 只在這個全新的 Sheet 執行一次 `initializeSheets()` 並完成授權。
+2. 只在這個全新的 Sheet 執行一次 `initializeSheets()` 並完成授權。完成後會彈「✅ 初始化完成」視窗，
+   入面有 API Key、Web App URL，**仲有預設管理員帳號（YMIS `1111111111`／密碼 `changeme`）**——
+   呢個就係 §C 首次登入用嘅帳號。冇抄低都唔緊要：只要未登入改過密碼，預設值係固定嘅。
 3. 部署為 Web App：**執行身分「我」＋存取權「任何人」**（`Anyone`）。存取權收窄成「只有本人」的話，
    主系統 proxy 打唔入 `/exec`，該團在 App 內會直接失敗。部署後取得 `/exec` URL。
 
@@ -26,7 +28,7 @@
 
 > **新開團嘅次序天生係「GS 先、Vercel 後」**：未部署 Web App 係冇 `/exec` URL，未初始化係冇 API Key——
 > 即係下面 §B 要填嘅 `TROOP_<編號>_BACKEND`／`TROOP_<編號>_APIKEY` 一定係喺呢一步之後才有。相反，
-> **升級一個已經登記好嘅旅團**才係「Vercel 先、葉端後」（見 §G 及 `operations/TROOP_LINK_UPGRADE.md` 第 12 節）。
+> **升級一個已經登記好嘅旅團**才係「Vercel 先、葉端後」（見 §H 及 `operations/TROOP_LINK_UPGRADE.md` 第 12 節）。
 
 > 已投入使用的 Sheet 不要為本次 Vercel／驗證升級執行初始化。更新程式後部署既有 Web App 的新版本即可，原 `/exec` URL 不變。
 
@@ -58,7 +60,38 @@ TROOP_0082_APIKEY=Apps Script 既有 API Key
 > 之後該團卡片才會出現在首頁。要一次確認登記正確，喺該團 Apps Script 跑一次 `testTrustedTicketVerifier`：
 > 三項 `troop_known`／`key_ok`／`backend_matches` 都 true 就係全對。
 
-## C. 旅系統接駁（可選）
+## C. 首次登入（預設管理員帳號）
+
+§B 加好三個變數並 Redeploy 之後，首頁就會出現該團卡片——**第一個可以登入嘅帳號**係
+`initializeSheets()` 自動建立嘅預設旅團管理員：
+
+| 項目 | 值 |
+| --- | --- |
+| 登入分頁 | 「👤 成員」（用 YMIS 登入） |
+| YMIS | `1111111111` |
+| 密碼 | `changeme` |
+
+步驟：
+
+1. 開首頁 → 揀該旅團卡片。
+2. 揀「👤 成員」分頁，輸入 YMIS `1111111111`＋密碼 `changeme` → 登入。
+   （唔好俾「👨‍💼 領袖＝Email」分頁誤導——預設管理員嘅 `admin@example.com` 只係佔位電郵；
+   用 YMIS 登入最穩陣。）
+3. 系統會**即時強制改密碼**（彈出輸入框，至少 4 位）——改完先正式入到 App，之後用新密碼登入。
+4. 用呢個帳號做第一輪管理：喺「審批中心」批成員自行提交嘅申請、批量開戶（見
+   `docs/BULK_ONBOARD.md`），同埋喺「用戶管理」開返各領袖**自己真 YMIS 嘅帳號**並設為
+   `admin`／`group_leader`。
+
+> 注意：
+>
+> - 呢個係**旅團管理員（admin）**，同 §H 嘅中央帳號 `sheep`（super_admin，密碼存喺 Vercel
+>   `SUPER_KEY`）係兩回事；`sheep` 唔使、亦唔可以喺旅團 Sheet 開。
+> - `1111111111` 只係佔位 YMIS。開好真領袖帳號之後，建議將預設帳號留作後備（密碼已改），
+>   或者喺用戶管理停用佢（唔可以停用自己，要用另一個 admin 帳號做）。
+> - 如果連改完嘅密碼都唔記得：由另一個 admin／團長重設，或者用中央 `sheep` 登入（§H）
+>   喺用戶管理重設密碼——重設後首次登入會再強制改密。
+
+## D. 旅系統接駁（可選）
 
 如果這個旅團會被上層（旅／團管理系統）接入，同一份 `Code.gs` 就是上游節點：Sheet 選單
 「🔗 旅系統 → ➕ 登記下游（URL + SHEET KEY）」→「📡 測試下游連線（sig）」→（搬完舊數後）
@@ -67,18 +100,22 @@ TROOP_0082_APIKEY=Apps Script 既有 API Key
 完整規格、掣值表（`ALLOW_LOCAL_LOGIN` 未設定＝開啟）與接入步驟見
 [operations/TROOP_LINK_UPGRADE.md](operations/TROOP_LINK_UPGRADE.md)（維運文件，只留 Git，不部署）。
 
-## D. 回歸檢查
+## E. 回歸檢查
 
 1. 首頁只顯示已完整設定的旅團卡片。
-2. 選取旅團後，以既有一般成員及領袖帳號登入。
+2. 選取旅團後，以既有一般成員及領袖帳號登入（全新旅團用 §C 嘅預設管理員先行驗證）。
 3. 驗證讀取、進度寫入、帳戶申請與審批仍指向該旅團的既有資料。
 4. 確認跨旅團切換後，先前登入狀態不會被重用。
 
-## E. MOCK 測試
+## F. MOCK 測試
 
 MOCK 資料保留在 `data/mock_members.json` 與相關範例檔；只寫入瀏覽器快取，不會直接寫入正式 Sheet。
 
-## F. 主系統 Portal
+## G. 主系統 Portal
+
+> ⚠️ **暫停對外推廣（2026-10）**：主系統未開發完成，前端（`index.html`「新旅團部署」頁）嘅主系統介紹
+> 已用 `[主系統暫時隱藏]` 標記註解隱藏，向領袖推廣時**只講進度追蹤系統**。本節及 Portal 整合程式碼保留
+> 照常運作，僅供維運參考；主系統完成後搜尋該標記解除註解即可重啟。
 
 Portal 卡片可使用不帶後端憑證的連結，例如：
 
@@ -88,7 +125,7 @@ Portal 卡片可使用不帶後端憑證的連結，例如：
 
 連結會選取已登記的旅團並帶入嵌入模式；網址中的身分與角色只可作登入表單預填，不能建立 session 或授權。正式免登入整合必須使用主系統後端簽發、可驗證且短效的票據；不可把 URL／來源／角色參數當作身份驗證。
 
-## G. 中央登入（系統管理員帳號）
+## H. 中央登入（系統管理員帳號）
 
 系統管理員（super_admin）的密碼存在 Vercel 的 `SUPER_KEY`，不存入旅團 Sheet。
 
