@@ -1,6 +1,6 @@
 # 👤 成員使用教學 (Member Guide)
 
-> 給團員的說明：你只需關心自己的進度，其他功能由領袖處理。
+> 給童軍成員的說明：你只需關心自己的進度，其他功能由領袖處理。
 > APP 內 ❓ 教學也有同一份內容（會跟隨介面語言顯示中／英文版）。
 
 ---
@@ -25,7 +25,7 @@
 | **⭐ 其他獎章** | 已併入「我的進度」最底虛線卡片。 |
 | **📅 活動履歷** | 查看你的服務／活動／訓練班紀錄；可按「📝 申報紀錄」自行申報（v5.2 起，需領袖批准才寫入）。 |
 | **📝 待批** | 查看你提交的申請（進度申請＋履歷申報）是否已批，待批中可自行取消。 |
-| **🖨️ 表格列印** | 自動填入童軍支部進度日期，可編輯後列印官方格式（PT/18、PT/120A 等）。 |
+| **🖨️ 表格列印** | 自動填入童軍支部進度日期，可編輯後列印官方格式（PT/18、P120A1 等）。 |
 | **📚 資料庫** | 保護兒童課程連結、訓練綱要。 |
 
 ---
@@ -55,7 +55,7 @@
 ## 五、常見問題
 
 **為何看不到其他成員？**
-預設私隱，成員只看自己。團長可在用戶管理開啟「允許成員互相查看進度」。
+預設私隱，成員只看自己。旅長可在用戶管理開啟「允許成員互相查看進度」。
 
 **「📅 活動履歷」找不到／顯示升級提示？**
 代表旅團後端還未更新至 v5.2 表格結構，可請領袖通知管理員更新 [Code.gs](../apps-script/Code.gs) 並執行 `initializeSheets()`。
@@ -78,7 +78,7 @@
 - **⭐ Other Badges** — merged into the dashed card at the bottom of My Progress.
 - **📅 Activity Log** — your service / activity / training course records; tap "📝 Claim a record" to self-declare (from v5.2, written only after a leader approves).
 - **📝 Pending** — check your requests (progress claims + log claims); you may cancel them while pending.
-- **🖨️ Forms** — auto-filled with your progress dates; edit then print in the official format (PT/18, PT/120A).
+- **🖨️ Forms** — auto-filled with your progress dates; edit then print in the official format (PT/18, P120A1).
 - **📚 Library** — Safe from Harm course links and the training scheme.
 
 ### How to apply for completion?
