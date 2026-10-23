@@ -461,10 +461,11 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
           <div class="step"><div class="step-number">1</div><div class="step-content"><h4 data-i18n="s1h">共通：下載後端程式碼 (單一檔案版)</h4><p data-i18n="s1p">包含待批、其他獎章、批量、資料修復、PNG、私隱開關</p><a href="apps-script/Code.gs" download="Code.gs" class="btn btn-primary btn-sm" style="margin-top:6px" data-i18n="s1btn">⬇️ 下載 Code.gs (最新)</a></div></div>
           <div class="step"><div class="step-number">2</div><div class="step-content"><h4 data-i18n="s2h">共通：建立 Google Sheet 並部署</h4><p data-i18n-html="s2p"><b>2.1</b> 建新試算表<br><b>2.2</b> 擴充功能→Apps Script，貼上 Code.gs<br><b>2.3</b> 儲存→執行 initializeSheets，授權，複製 API Key<br><b>2.4</b> 部署為網頁應用程式 (執行身分我，存取權任何人)，複製 URL (/exec)</p></div></div>
           <div class="step"><div class="step-number">3</div><div class="step-content"><h4 data-i18n="s3h">提交資料給 scoutbadge 管理員</h4><p data-i18n="s3p">將旅團編號、名稱、URL、API Key 交 scoutbadge 管理員，透過受保護的部署設定登記後即可使用；登記完成後首頁會出現旅團卡片</p></div></div>
-          <!-- [主系統暫時隱藏 2026-10] 軌道B（接上主系統）未開放，完成後解除註解並將下面「私隱選擇」改回第 5 步：
+          <div class="step"><div class="step-number">4</div><div class="step-content"><h4 data-i18n="s_fl_h">首次登入（預設管理員帳號）</h4><p data-i18n-html="s_fl_p">登記完成後，首頁揀該旅團卡片 → 用「<b>👤 成員</b>」分頁登入：<br>YMIS <b>1111111111</b>　密碼 <b>changeme</b>（初始化時自動建立嘅預設管理員，唔好用「領袖=Email」分頁）<br>首次登入會<b>強制改密碼</b>（至少4位）。之後喺「審批中心」批成員申請、喺「用戶管理」開返各領袖自己真YMIS嘅帳號並設權限</p></div></div>
+          <!-- [主系統暫時隱藏 2026-10] 軌道B（接上主系統）未開放，完成後解除註解並自行重排步驟號（而家 4=首次登入、5=私隱選擇）：
           <div class="step"><div class="step-number">4</div><div class="step-content"><h4 data-i18n="s4h">軌道B：有主系統並想接上 - 額外提交給主系統管理員</h4><p data-i18n="s4p">將同一組 URL+Key 交主系統管理員，填入旅團設定→元件設定 scoutbadge 卡片 backend+apikey。之後成員點 Dashboard 卡片自動帶入 ?u=0082&role=&ymis=&from=portal&embed=1，無需密碼</p></div></div>
           -->
-          <div class="step"><div class="step-number">4</div><div class="step-content"><h4 data-i18n="s5h">私隱選擇</h4><p data-i18n="s5p">若旅團重私隱，成員預設只看自己；若想互相鼓勵，團長可在用戶管理→系統設定開啟「允許成員互相查看進度」</p></div></div>
+          <div class="step"><div class="step-number">5</div><div class="step-content"><h4 data-i18n="s5h">私隱選擇</h4><p data-i18n="s5p">若旅團重私隱，成員預設只看自己；若想互相鼓勵，團長可在用戶管理→系統設定開啟「允許成員互相查看進度」</p></div></div>
         </div>
       </div>
       <div class="info-card" style="border-color:var(--blue);background:var(--blue-light)" data-i18n-html="setup_submit_card"></div>
@@ -938,6 +939,8 @@ zh:{
   s1h:'共通：下載後端程式碼 (單一檔案版)', s1p:'包含待批、其他獎章、批量、資料修復、PNG、私隱開關', s1btn:'⬇️ 下載 Code.gs (最新)',
   s2h:'共通：建立 Google Sheet 並部署', s2p:'<b>2.1</b> 建新試算表<br><b>2.2</b> 擴充功能→Apps Script，貼上 Code.gs<br><b>2.3</b> 儲存→執行 initializeSheets，授權，複製 API Key<br><b>2.4</b> 部署為網頁應用程式 (執行身分我，存取權任何人)，複製 URL (/exec)',
   s3h:'提交資料給 scoutbadge 管理員', s3p:'將旅團編號、名稱、URL、API Key 交 scoutbadge 管理員，透過受保護的部署設定登記後即可使用；登記完成後首頁會出現旅團卡片',
+  s_fl_h:'首次登入（預設管理員帳號）',
+  s_fl_p:'登記完成後，首頁揀該旅團卡片 → 用「<b>👤 成員</b>」分頁登入：<br>YMIS <b>1111111111</b>　密碼 <b>changeme</b>（初始化時自動建立嘅預設管理員，唔好用「領袖=Email」分頁）<br>首次登入會<b>強制改密碼</b>（至少4位）。之後喺「審批中心」批成員申請、喺「用戶管理」開返各領袖自己真YMIS嘅帳號並設權限',
   s4h:'軌道B：有主系統並想接上 - 額外提交給主系統管理員', s4p:'將同一組 URL+Key 交主系統管理員，填入旅團設定→元件設定 scoutbadge 卡片 backend+apikey。之後成員點 Dashboard 卡片自動帶入 ?u=0082&role=&ymis=&from=portal&embed=1，無需密碼',
   s5h:'私隱選擇', s5p:'若旅團重私隱，成員預設只看自己；若想互相鼓勵，團長可在用戶管理→系統設定開啟「允許成員互相查看進度」',
   setup_submit_card:'<h3 style="color:var(--blue)">📧 完成後提交</h3><p style="font-size:11px">將旅團編號、名稱、URL、API Key 交 scoutbadge 管理員登記<br>登記完成後首頁會出現旅團卡片，選團即可登入<br>成員可直接 bookmark 本系統連結使用</p>',
@@ -1324,6 +1327,8 @@ en:{
   s1h:'Shared: download the backend code (single file)', s1p:'Includes pending approvals, other badges, batch tools, data repair, PNG, privacy switches', s1btn:'⬇️ Download Code.gs (latest)',
   s2h:'Shared: create a Google Sheet and deploy', s2p:'<b>2.1</b> Create a new spreadsheet<br><b>2.2</b> Extensions → Apps Script, paste Code.gs<br><b>2.3</b> Save → run initializeSheets, authorise, copy the API Key<br><b>2.4</b> Deploy as a web app (execute as me, access: anyone), copy the URL (/exec)',
   s3h:'Submit the details to the scoutbadge admin', s3p:'Give the troop ID, name, URL and API Key to the scoutbadge administrator for protected deployment registration; the troop card then appears on the home page',
+  s_fl_h:'First sign-in (default admin account)',
+  s_fl_p:'Once registered, pick the troop card on the home page → sign in via the "<b>👤 Member</b>" tab:<br>YMIS <b>1111111111</b>　password <b>changeme</b> (the default admin created at initialisation — do not use the "Leader = Email" tab)<br>The first sign-in <b>forces a password change</b> (min 4 chars). Then approve applications in the Approval Centre and create each leader\'s own real-YMIS account with roles in User Management',
   s4h:'Track B: with main platform — also submit to the platform admin', s4p:'Give the same URL+Key to the main-platform admin and fill troop settings → component settings with the scoutbadge card backend+apikey. Members then tap the Dashboard card and are auto-carried in with ?u=0082&role=&ymis=&from=portal&embed=1 — no password needed',
   s5h:'Privacy choice', s5p:'Privacy-first troops keep members seeing only themselves; for mutual encouragement, the GSL can enable "members may view each other\'s progress" in User Management → System Settings',
   setup_submit_card:'<h3 style="color:var(--blue)">📧 Submit when done</h3><p style="font-size:11px">Send the troop ID, name, URL and API Key to the scoutbadge admin for registration<br>Once registered, the troop card appears on the home page — pick the troop and sign in<br>Members can bookmark the link directly</p>',
