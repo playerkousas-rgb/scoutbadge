@@ -383,6 +383,13 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
   .tab-content{padding:10px}
   .badge-header h3 small{display:block;margin-top:2px}
 }
+.release-notice{border:2px solid #D97706;background:#FFFBEB;border-radius:12px;padding:12px 14px;margin:0 0 14px;box-shadow:var(--shadow);line-height:1.6}
+.release-notice.release-current{border-color:var(--green);background:#F0FFF4}.release-notice.release-checking{border-color:var(--blue);background:var(--blue-light)}
+.release-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;font-weight:800;color:#8B5A00}.release-current .release-head{color:var(--green)}
+.release-chip{display:inline-block;padding:2px 8px;border-radius:999px;background:#FEF3C7;color:#92400E;font-size:11px;font-weight:700}.release-chip.required{background:#FEE2E2;color:#991B1B}
+.release-summary{font-size:11.5px;color:var(--text-light);margin-top:5px}.release-status{font-size:12px;font-weight:650;margin-top:8px;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.78)}
+.release-notice details{margin-top:8px;font-size:11.5px;color:var(--text-light)}.release-notice summary{cursor:pointer;font-weight:700;color:#8B5A00}.release-notice ol{margin:7px 0 8px;padding-left:22px}.release-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+#mainReleaseNotice{padding:10px 12px 0}#mainReleaseNotice .release-notice{margin-bottom:0;box-shadow:none}
 </style>
 <script>
   window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
@@ -414,6 +421,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
     </div>
   </div>
   <div class="container">
+    <div id="homeReleaseNotice"></div>
     <div id="welcome-enter" class="welcome-section active">
       <!-- 已修復問題及V4.0新增已按要求移除，保留框架註解：未來多旅團用時可在此加新功能介紹 -->
       <div id="home-future-framework" style="display:none">
@@ -529,6 +537,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
     </div>
   </div>
   <div class="container">
+    <div id="loginReleaseNotice"></div>
     <div class="login-container">
       <h2 data-i18n="login_h2">🔐 登入系統</h2>
       <div class="troop-info-box" id="loginTroopInfo">—</div>
@@ -553,6 +562,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
 
 <!-- ===== Main App ===== -->
 <div id="mainApp" style="display:none">
+  <div id="mainReleaseNotice"></div>
   <div class="main-app-header">
     <div class="left">
       <div class="logo-mini" style="overflow:hidden"><img src="assets/chief-scout-award.avif" alt="總領袖獎章徽章" style="width:100%;height:100%;object-fit:cover" onerror="this.onerror=null;this.src='assets/chief-scout-award.png'"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:24px;height:24px;display:none"><path d="M30 85 L50 38 L70 85" fill="none" stroke="#FFD700" stroke-width="3" stroke-linecap="round"/><rect x="47" y="42" width="6" height="34" fill="#fff" rx="2"/><ellipse cx="50" cy="42" rx="9" ry="2.5" fill="none" stroke="#FFD700" stroke-width="1.2"/><path d="M45 46 Q42 36 48 28 Q50 24 50 20 Q50 16 52 13 Q55 18 54 24 Q53 28 55 32 Q58 38 55 46" fill="#FFD700"/></svg></div>
@@ -1862,7 +1872,7 @@ async function apiRequest(action, payload = {}, options = {}) {
   // Preserve the registered identifier exactly, including leading zeroes.
   reqBody.troopId = troopId;
 
-  if (!reqBody.token && typeof currentToken !== 'undefined' && currentToken) {
+  if (!reqBody.token && typeof currentToken !== 'undefined' && currentToken && action !== 'ecStatus') {
     reqBody.token = currentToken;
   }
   // ecportal v4.1.0 整合：無本地 token 時（家長 sig bearer 模式）隨請求附帶信任鏈 sig
@@ -1968,6 +1978,150 @@ async function portalSigLogin(){
   }
 }
 let itemsData=null,progressFlat={},progressRich={},members=[],pendingChanges=[],pendingRequestsQueue=[],otherBadgesMap={},currentRequestItem=null;
+
+/* ================== 最新版本公告（GS 版本核對） ==================
+ * GS_LATEST 是「本前端頁面所公告的最新後端版本」。發佈新版 Code.gs 時必須同步：
+ *   - apps-script/Code.gs 的 GS_VERSION／GS_RELEASE_DATE／GS_INIT_REQUIRED
+ *   - 本檔 GS_LATEST（test/release-version.test.js 會檢查兩者一致）
+ *
+ * 旅團 GS 回報（ecStatus 或 load）：
+ *   gsVersion              旅團 Apps Script 正在執行的版本（舊版無此欄位 ＝ 未更新）
+ *   initRequired           該版本是否要求執行一次 initializeSheets()
+ *   initializedGsVersion   initializeSheets() 最後一步寫入的版本標記（未執行過 ＝ 空字串）
+ *
+ * 三種狀態（statusOf）：
+ *   outdated    GS 未更新（沒有版本欄位，或版本低於 GS_LATEST.version）
+ *   needs_init  GS 已更新但未初始化（需要初始化，而標記不等於目前 GS 版本）
+ *   ok          全部完成（前端顯示綠色「已核對」）
+ *   unchecked   尚未核對（沒有任何回報）
+ */
+const GS_LATEST=Object.freeze({updated:'2026-10-23',gsVersion:'6.0.0',initializeRequired:true});
+let backendReleaseState={code:'unchecked',gsVersion:'',initializedGsVersion:''};
+
+function compareVersions(a, b) {
+  const x = String(a || '').trim().split('.').map(function (n) { return parseInt(n, 10) || 0; });
+  const y = String(b || '').trim().split('.').map(function (n) { return parseInt(n, 10) || 0; });
+  const n = Math.max(x.length, y.length);
+  for (let i = 0; i < n; i++) {
+    const d = (x[i] || 0) - (y[i] || 0);
+    if (d) return d < 0 ? -1 : 1;
+  }
+  return 0;
+}
+function gsReleaseStatusOf(info, latest) {
+  const L = latest || GS_LATEST;
+  if (!info) return { code: 'unchecked', gsVersion: '', initializedGsVersion: '', latestVersion: L.gsVersion };
+  const gsVersion = String(info.gsVersion || '');
+  const initialized = String(info.initializedGsVersion || '');
+  const base = { gsVersion: gsVersion, initializedGsVersion: initialized, latestVersion: L.gsVersion };
+  if (!gsVersion || compareVersions(gsVersion, L.gsVersion) < 0) return Object.assign({ code: 'outdated' }, base);
+  const needInit = info.initRequired !== undefined ? !!info.initRequired : !!L.initializeRequired;
+  if (needInit && initialized !== gsVersion) return Object.assign({ code: 'needs_init' }, base);
+  return Object.assign({ code: 'ok' }, base);
+}
+function gsReleaseInitNotice(info, latest) {
+  const L = latest || GS_LATEST;
+  const st = gsReleaseStatusOf(info, L);
+  return st.code === 'needs_init' || (st.code === 'outdated' && L.initializeRequired);
+}
+function applyBackendRelease(info) {
+  backendReleaseState = gsReleaseStatusOf(info);
+  renderReleaseNotices();
+}
+function resetBackendRelease() {
+  backendReleaseState = { code: 'unchecked', gsVersion: '', initializedGsVersion: '' };
+  renderReleaseNotices();
+}
+async function checkBackendRelease() {
+  if (currentTroopId === 'DEMO') { resetBackendRelease(); return; }
+  try {
+    const data = await apiRequest('ecStatus', { troopId: currentTroopId });
+    applyBackendRelease(data);
+  } catch (e) {
+    // ecStatus 可能因舊版後端未支援而失敗；保持 unchecked 狀態
+    console.warn('ecStatus check failed', e);
+  }
+}
+function renderReleaseNotices() {
+  const st = backendReleaseState;
+  const t = (k) => (typeof t === 'function' ? t(k) : k);
+  const inEn = () => currentLang === 'en';
+  const homeEl = document.getElementById('homeReleaseNotice');
+  const loginEl = document.getElementById('loginReleaseNotice');
+  const mainEl = document.getElementById('mainReleaseNotice');
+  if (!homeEl && !loginEl && !mainEl) return;
+  const homeHTML = renderHomeReleaseNotice(st, inEn);
+  const loginHTML = renderLoginReleaseNotice(st, inEn);
+  const mainHTML = renderMainReleaseNotice(st, inEn);
+  if (homeEl) homeEl.innerHTML = homeHTML;
+  if (loginEl) loginEl.innerHTML = loginHTML;
+  if (mainEl) mainEl.innerHTML = mainHTML;
+}
+function renderHomeReleaseNotice(st, inEn) {
+  const latest = GS_LATEST;
+  const head = inEn() ? '📦 Latest Update' : '📦 最新更新公告';
+  const updated = inEn() ? 'Updated' : '更新日期';
+  const gsLabel = inEn() ? 'GS' : 'GS';
+  const download = inEn() ? '⬇️ Download Code.gs' : '⬇️ 下載 Code.gs';
+  const stepsTitle = inEn() ? 'Update steps' : '更新步驟';
+  const initRequired = inEn() ? 'This version requires running initializeSheets() once.' : '此版本必須執行一次 initializeSheets()。';
+  const noPatch = inEn() ? 'No per-version patch list — install this latest version only.' : '不設逐級補丁清單，只需安裝此最新版本。';
+  const steps = inEn()
+    ? '1. Download and replace Code.gs → 2. Save → 3. Run initializeSheets() → 4. Deploy → Manage deployments → Edit → New version → Deploy (URL stays the same).'
+    : '1. 下載並取代 Code.gs → 2. 儲存 → 3. 執行 initializeSheets() → 4. 部署 → 管理部署 → 編輯 → 新版本 → 部署（URL 不變）。';
+  let statusHTML = '';
+  if (st.code === 'unchecked') {
+    statusHTML = '<div class="release-status">' + (inEn() ? '⏳ Checking backend version…' : '⏳ 正在核對後端版本…') + '</div>';
+  } else if (st.code === 'outdated') {
+    statusHTML = '<div class="release-status" style="color:var(--red)">⚠️ ' + (inEn() ? 'GS not updated' : 'GS 未更新') + ' — backend is on <b>' + (st.gsVersion || 'old') + '</b>, latest is <b>' + latest.gsVersion + '</b>.</div>';
+  } else if (st.code === 'needs_init') {
+    statusHTML = '<div class="release-status" style="color:#D97706">⚠️ ' + (inEn() ? 'GS updated but not initialized' : 'GS 已更新但未初始化') + ' — run initializeSheets() and press 重新檢查.</div>';
+  } else if (st.code === 'ok') {
+    statusHTML = '<div class="release-status" style="color:var(--green)">✅ ' + (inEn() ? 'Verified — GS version and initialization match.' : '已核對 — GS 版本與初始化版本一致。') + '</div>';
+  }
+  return '<div class="release-notice release-' + st.code + '">' +
+    '<div class="release-head"><span>' + head + '</span><span class="release-chip">' + updated + ': ' + latest.updated + '</span><span class="release-chip">' + gsLabel + ': ' + latest.gsVersion + '</span></div>' +
+    '<div class="release-summary">' + noPatch + '</div>' +
+    statusHTML +
+    '<details><summary>' + stepsTitle + '</summary><ol>' + steps.split('→').map(function(s){return '<li>'+s.trim()+'</li>';}).join('') + '</ol>' + (latest.initializeRequired ? '<p>' + initRequired + '</p>' : '') + '</details>' +
+    '<div class="release-actions"><a href="apps-script/Code.gs" download="Code.gs" class="btn btn-primary btn-sm">' + download + '</a></div>' +
+    '</div>';
+}
+function renderLoginReleaseNotice(st, inEn) {
+  return renderHomeReleaseNotice(st, inEn);
+}
+function renderMainReleaseNotice(st, inEn) {
+  const latest = GS_LATEST;
+  const head = inEn() ? '📦 Latest Update' : '📦 最新更新公告';
+  const updated = inEn() ? 'Updated' : '更新日期';
+  const gsLabel = inEn() ? 'GS' : 'GS';
+  const download = inEn() ? '⬇️ Download Code.gs' : '⬇️ 下載 Code.gs';
+  const recheck = inEn() ? '🔄 Re-check' : '🔄 重新檢查';
+  const stepsTitle = inEn() ? 'Update steps' : '更新步驟';
+  const initRequired = inEn() ? 'This version requires running initializeSheets() once.' : '此版本必須執行一次 initializeSheets()。';
+  const noPatch = inEn() ? 'No per-version patch list — install this latest version only.' : '不設逐級補丁清單，只需安裝此最新版本。';
+  const steps = inEn()
+    ? '1. Download and replace Code.gs → 2. Save → 3. Run initializeSheets() → 4. Deploy → Manage deployments → Edit → New version → Deploy (URL stays the same).'
+    : '1. 下載並取代 Code.gs → 2. 儲存 → 3. 執行 initializeSheets() → 4. 部署 → 管理部署 → 編輯 → 新版本 → 部署（URL 不變）。';
+  let statusHTML = '';
+  if (st.code === 'unchecked') {
+    statusHTML = '<div class="release-status">' + (inEn() ? '⏳ Checking backend version…' : '⏳ 正在核對後端版本…') + '</div>';
+  } else if (st.code === 'outdated') {
+    statusHTML = '<div class="release-status" style="color:var(--red)">⚠️ ' + (inEn() ? 'GS not updated' : 'GS 未更新') + ' — backend is on <b>' + (st.gsVersion || 'old') + '</b>, latest is <b>' + latest.gsVersion + '</b>.</div>';
+  } else if (st.code === 'needs_init') {
+    statusHTML = '<div class="release-status" style="color:#D97706">⚠️ ' + (inEn() ? 'GS updated but not initialized' : 'GS 已更新但未初始化') + ' — run initializeSheets() and press 重新檢查.</div>';
+  } else if (st.code === 'ok') {
+    statusHTML = '<div class="release-status" style="color:var(--green)">✅ ' + (inEn() ? 'Verified — GS version and initialization match.' : '已核對 — GS 版本與初始化版本一致。') + '</div>';
+  }
+  return '<div class="release-notice release-' + st.code + '">' +
+    '<div class="release-head"><span>' + head + '</span><span class="release-chip">' + updated + ': ' + latest.updated + '</span><span class="release-chip">' + gsLabel + ': ' + latest.gsVersion + '</span></div>' +
+    '<div class="release-summary">' + noPatch + '</div>' +
+    statusHTML +
+    '<details><summary>' + stepsTitle + '</summary><ol>' + steps.split('→').map(function(s){return '<li>'+s.trim()+'</li>';}).join('') + '</ol>' + (latest.initializeRequired ? '<p>' + initRequired + '</p>' : '') + '</details>' +
+    '<div class="release-actions"><a href="apps-script/Code.gs" download="Code.gs" class="btn btn-primary btn-sm">' + download + '</a><button class="btn btn-secondary btn-sm" onclick="checkBackendRelease()">' + recheck + '</button></div>' +
+    '</div>';
+}
+
 let selectedProgressYmis=null; // 領袖查看他人進度
 let appConfig={allow_member_view_others:'false',member_progress_scope:'private',allow_squad_comparison:'false',allow_member_requests:'true'}; // 系統設定
 // v5.0 活動履歷：服務／活動／訓練班紀錄
@@ -2022,6 +2176,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   const loginPwEl=document.getElementById('loginPassword');
   if(loginIdEl) loginIdEl.addEventListener('keypress', e=>{ if(e.key==='Enter') doLogin(); });
   if(loginPwEl) loginPwEl.addEventListener('keypress', e=>{ if(e.key==='Enter') doLogin(); });
+  // 最新版本公告：初始渲染（unchecked 狀態）
+  renderReleaseNotices();
 });
 
 async function handlePortalParams(){
@@ -2115,6 +2271,8 @@ async function selectTroop(id, options={}){
     document.getElementById('loginId').value=options.loginId||'';
     document.getElementById('loginPassword').value='';
     switchLoginType(options.loginType||'member');
+    // 最新版本公告：選旅團後核對後端 GS 版本
+    checkBackendRelease();
   }catch(e){
     console.warn('troop selection failed');
     showToast(t('troop_pick_fail'),'error');
@@ -2156,6 +2314,7 @@ async function doLogin(){
         refreshUserInfoChip();
         setupTabsByRole();
         loadItemsAndProgress();
+        checkBackendRelease();
       },600);
     }else{ msg.textContent=d.error||t('login_failed'); msg.className='login-msg error'; }
   }catch(e){ console.error(e); msg.textContent=e.message||t('login_failed_retry'); msg.className='login-msg error'; }
@@ -2401,6 +2560,8 @@ async function loadItemsAndProgress(){
       // v5.2 履歷申報：舊後端沒有 logRequests 欄位 → 隱藏申報功能（待 getLogRequests 再確認）
       logRequests=Array.isArray(backendData.logRequests)?backendData.logRequests:[];
       logRequestsSupported=backendData.logRequestsSupported===true;
+      // GS 版本核對：從 load 回應取得 gsVersion／initializedGsVersion（如有）
+      if(backendData.gsVersion){ applyBackendRelease(backendData); }
       // cache (含 logs)
       localStorage.setItem(LS.cacheProgress(currentTroopId), JSON.stringify({flat:progressFlat, rich:progressRich, members, logs:logRecords, logRequests, savedAt:Date.now()}));
     }else{
@@ -4970,6 +5131,7 @@ async function enterDemoMode(demoRole='leader'){
     document.getElementById('homePage').style.display='none';
     document.getElementById('loginPage').style.display='none';
     document.getElementById('mainApp').style.display='block';
+    resetBackendRelease();
     refreshAppTitle();
     refreshUserInfoChip();
     setupTabsByRole();

@@ -3,6 +3,17 @@
 版號、歷史更新及開發背景集中保留在 Git，不放入可下載的 GS 或用戶提示。
 本文件不納入網站部署：`build.js` 只發布本目錄的 `Code.gs`，`.vercelignore` 亦排除其餘檔案。
 
+## 2026-10-23：最新版本公告、GS 初始化核對及資料保全
+
+- 新增 `GS_VERSION`／`GS_RELEASE_DATE`／`GS_INIT_REQUIRED` 常數及 `gsVersionInfo_()`，供前端核對。
+- `ecStatus`（GET，閂口前放行）回報 `gsVersion`、`initializedGsVersion`、`initRequired`；只回版本資訊，不含用戶資料。
+- `handleLoad()` 回應新增 `gsVersion`、`gsReleaseDate`、`initRequired`、`initializedGsVersion`。
+- `initializeSheets()` 最後一步才寫入 `INITIALIZED_GS_VERSION`（Script Properties），表示此版本初始化已完成。
+- **資料保全**：`initializeSheets()` 不再自動刪除殘留 `super_admin` 列或 Tokens；不再逐列改寫既有帳號的 `force_change_password`（改為登入時判斷預設密碼）。表頭只補空白格（`setHeaderIfEmpty_`），不覆蓋既有欄名。殘留 `super_admin` 列在 `getUser`／`getUserByEmail`／`handleLogin` 讀取時略過（`isLegacySuperRow_`），不可作為登入身分。
+- 前端 `index.html`：首頁、登入頁、登入後主頁新增最新版本公告（日期、GS 版本、下載、更新步驟、「重新檢查」按鈕）；三狀態分辨「GS 未更新」、「GS 已更新但未初始化」、「全部完成」（綠色「已核對」）。
+- `api/proxy.js`：`ecStatus` 以 GET 轉發（與 `load` 同路徑）。
+- `test/release-version.test.js`：前端與 GS 版本一致、ecStatus／load 回報、初始化前後資料快照對比、重複初始化安全、API Key 不變、殘留列保留。
+
 ## 2026-09-23：中央登入（A）改成回打驗票（對齊 VS／RS）
 
 - **安全升級**：舊版「純單向授權」只憑本團 `API_KEY` ＋ `isSuperAdmin: true` 就叫 GS 發中央 session；

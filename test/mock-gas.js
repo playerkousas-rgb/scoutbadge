@@ -143,6 +143,7 @@ class MockGas {
       });
     }
     if (action === 'getLoginMode') return this._json(res, 200, { success: true, login_mode: 'standalone' });
+    if (action === 'ecStatus') return this._json(res, 200, { success: true, gsVersion: 'scout-leaf', initializedGsVersion: 'scout-leaf' });
     return this._json(res, 200, { success: false, error: 'Unknown action: ' + action });
   }
 

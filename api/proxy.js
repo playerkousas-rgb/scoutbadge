@@ -87,9 +87,9 @@ function looksLikeGoogleSignIn(upstream, raw) {
 // domain-scoped registration (/a/macros/<domain>/…) would force a Google
 // sign-in the proxy cannot perform. The registered string itself is never
 // rewritten — tickets and sessions stay bound to it (see registry).
-async function getUpstream(troopConfig, forwardPayload) {
+async function getUpstream(troopConfig, forwardPayload, action) {
   const target = new URL(canonicalBackendUrl(troopConfig.backend));
-  target.searchParams.set('action', 'load');
+  target.searchParams.set('action', action || 'load');
   if (forwardPayload.token) target.searchParams.set('token', forwardPayload.token);
   // ecportal v4.1.0：家長 sig bearer 可經 GET load 讀自己子女範圍
   // （exp 係 number，一併 stringify；簽名訊息由 GAS 端還原）
@@ -387,8 +387,8 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    let upstream = action === 'load'
-      ? await getUpstream(troopConfig, forwardPayload)
+    let upstream = (action === 'load' || action === 'ecStatus')
+      ? await getUpstream(troopConfig, forwardPayload, action)
       : await postUpstream(troopConfig.backend, forwardPayload);
 
     let raw = await upstream.text();
