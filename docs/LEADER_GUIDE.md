@@ -10,6 +10,17 @@
 
 ---
 
+## 最新更新公告（2026-10-23）
+
+> **所有補丁的硬性資料保全規則：不得修改、刪除、覆寫、重置或擅自遷移用戶現有資料。** 帳號、成員、YMIS、現行及舊 ID 進度、其他徽章、活動履歷、備註和旅團設定都包括在內；舊資料不得因版本更新而被轉換或要求重新輸入。補丁只可向後兼容地補齊缺失結構，已有值一律保留。完整部署規則見 [APP_ADMIN_WORKFLOW.md](../APP_ADMIN_WORKFLOW.md)。
+
+- **最新 GS：`6.0.0`**。只需安裝這個最新版，無須逐級下載補丁。
+- **這次必須執行一次 `initializeSheets()`**。更新步驟：下載並取代 `Code.gs` → 儲存 → 執行 `initializeSheets()` → 管理部署 → 編輯現有部署 → 選「新版本」→ 部署（沿用原 URL）。
+- 首頁、登入頁及登入後主頁都會顯示最新日期、GS 版本及下載入口。系統會分別核對 **GS 程式版本**及**初始化版本**：只貼新程式但未初始化，仍會顯示警告；綠色「已核對」才代表兩者都完成。
+- 初始化只補齊缺失的設定及工作表，並在 Script Properties 記錄版本；不得更改上述用戶資料，亦不應更換現有 API Key。完成後在公告按「重新檢查」。
+
+---
+
 ## 1. 我的進度
 
 - 選任何成員查看所有紀錄。
@@ -72,6 +83,15 @@
 
 > As a leader you have full permissions (assessment, approvals, user management).
 > See also: [YMIS_EXPORT.md](YMIS_EXPORT.md) and [BULK_ONBOARD.md](BULK_ONBOARD.md).
+
+### Latest update (2026-10-23)
+
+> **Hard data-preservation rule for all patches: never modify, delete, overwrite, reset, or arbitrarily migrate existing user data.** Accounts, members, YMIS, current and legacy-ID progress, other badges, activity records, notes and troop settings are all covered; old data must not be converted or re-entered due to a version update. Patches may only add backward-compatible structures; existing values are always preserved. Full deployment rules: [APP_ADMIN_WORKFLOW.md](../APP_ADMIN_WORKFLOW.md).
+
+- **Latest GS: `6.0.0`**. Install this latest version only — no per-version patch list.
+- **This release requires running `initializeSheets()` once.** Update steps: download and replace `Code.gs` → save → run `initializeSheets()` → deploy → manage deployments → edit → new version → deploy (URL stays the same).
+- The home, login and main views all show the latest date, GS version and download link. The system checks **GS code version** and **initialization version** separately: pasting new code without initializing still shows a warning; the green "Verified" only appears when both match.
+- Initialization only fills in missing settings and sheets, and records the version in Script Properties; it must not change any of the above user data, nor rotate the existing API key. After completion, press "Re-check" in the notice.
 
 ### 1. My Progress
 
