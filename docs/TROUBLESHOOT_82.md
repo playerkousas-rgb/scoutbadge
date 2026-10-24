@@ -40,9 +40,10 @@ TROOP_0082_APIKEY
    或「任何擁有 Google 帳戶的人」，執行身分係「我」；改完一定要**建立新版本**先生效；
 2. 「任何人」選項唔存在／揀完仍然強制登入 → 學校 Workspace 管理員政策封咗對外發佈，
    改用非學校 Google 帳戶部署（做法見 `TROOP_ONBOARDING.md` §A）；
-3. `TROOP_<編號>_BACKEND` 要同選單「🔑 顯示 BACKEND／APIKEY」顯示嘅**逐字一致**，包括
+3. `TROOP_<編號>_BACKEND` 要同 **Google「部署 → 管理部署」視窗提供嘅部署網址**逐字一致，包括
    `/a/macros/<學校域名>/` 前綴（如有）——proxy 呼叫時會自動轉成標準 `/macros/` 形式，唔使人手改，
-   改咗反而會令後端雜湊核對唔上。
+   改咗反而會令後端雜湊核對唔上。GS 選單「🔑 顯示 API KEY（交 ADMIN）」只提供 API Key，
+   唔會顯示、推算或快取任何部署網址。
 
 不要為本次代理或登入升級而執行 `initializeSheets()`、`repairSheets()`、清空資料或變更工作表欄位。若需修復真正缺失的工作表，先備份並依既有營運流程處理。
 
@@ -80,7 +81,7 @@ TROOP_0082_APIKEY
 | 中央登入驗票失敗：驗票端點回應 HTTP 5xx | Vercel 部署未完成或有錯 | 去 Vercel 睇 deployment log 再 redeploy |
 | Vercel 登記嘅後端網址同本 Sheet 嘅 Web App 網址唔一致 | `TROOP_{ID}_BACKEND` 同 Sheet 嘅 `/exec` 網址唔同（多咗斜線／空格，或係舊部署 ID） | 修正 `TROOP_{ID}_BACKEND` → 重新部署 → 再按一次「測試連線」 |
 | Vercel 未登記旅團編號 | `TROOP_{ID}_NAME／_BACKEND／_APIKEY` 唔齊，或編號同變數名唔一致 | 補齊三個變數（`0082` 同 `82` 唔互通） |
-| 本機 API Key 唔等於 Vercel 嘅 `TROOP_{編號}_APIKEY` | Sheet 嘅 `API_KEY`（選單「🔑 顯示 BACKEND／APIKEY」睇到）同 Vercel 登記唔同 | 兩邊對齊（改 Vercel 變數後重新部署） |
+| 本機 API Key 唔等於 Vercel 嘅 `TROOP_{編號}_APIKEY` | Sheet 嘅 `API_KEY`（選單「🔑 顯示 API KEY（交 ADMIN）」睇到）同 Vercel 登記唔同 | 兩邊對齊（改 Vercel 變數後重新部署） |
 | 登入失敗（無其他說明） | 票唔啱：過期（>1 分鐘）、已用過、或唔係本部署封嘅票 | 重新登入一次；如果持續發生，先做「測試連線」 |
 | 登入嘗試次數過多，請稍後再試 | 密碼錯 5 次，鎖 15 分鐘（**只計密碼錯**，設定問題唔會鎖） | 等 15 分鐘；順便確認 `SUPER_KEY` |
 | 中央登入連線失敗：`UrlFetchApp.fetch` 缺少 `script.external_request` 權限 | **首次**使用回打驗票時，Apps Script 需要授權 `script.external_request` 才能對外發送 HTTP 請求 | 見下方「Apps Script 外部請求權限設定」 |

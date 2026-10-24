@@ -10,14 +10,18 @@
 
 ---
 
-## 最新更新公告（2026-10-23）
+## 最新更新公告（2026-10-24）
 
 > **所有補丁的硬性資料保全規則：不得修改、刪除、覆寫、重置或擅自遷移用戶現有資料。** 帳號、成員、YMIS、現行及舊 ID 進度、其他徽章、活動履歷、備註和旅團設定都包括在內；舊資料不得因版本更新而被轉換或要求重新輸入。補丁只可向後兼容地補齊缺失結構，已有值一律保留。完整部署規則見 [APP_ADMIN_WORKFLOW.md](../APP_ADMIN_WORKFLOW.md)。
 
-- **最新 GS：`6.0.0`**。只需安裝這個最新版，無須逐級下載補丁。
+- **最新 GS：`6.1.0`**。只需安裝這個最新版，無須逐級下載補丁。
 - **這次必須執行一次 `initializeSheets()`**。更新步驟：下載並取代 `Code.gs` → 儲存 → 執行 `initializeSheets()` → 管理部署 → 編輯現有部署 → 選「新版本」→ 部署（沿用原 URL）。
 - 首頁、登入頁及登入後主頁都會顯示最新日期、GS 版本及下載入口。系統會分別核對 **GS 程式版本**及**初始化版本**：只貼新程式但未初始化，仍會顯示警告；綠色「已核對」才代表兩者都完成。
 - 初始化只補齊缺失的設定及工作表，並在 Script Properties 記錄版本；不得更改上述用戶資料，亦不應更換現有 API Key。完成後在公告按「重新檢查」。
+- **接入資料只提供 API Key**：初始化彈窗及選單「🔗 旅系統 → 🔑 顯示 API KEY（交 ADMIN）」只顯示 `API Key = …`，不再顯示自動取得或快取的部署網址。
+  部署網址請由 Google「部署 → 管理部署」視窗自行取得，然後在 ADMIN FORM 自行填寫旅團編號、名稱、URL 及 API Key；旅團編號毋須在 GS 預先設定。
+- 首頁新增「🌿 系統介紹」分頁：一張通用介紹圖（資料流向、Google 授權、「任何人」入口、帳號密碼登入）＋中英說明及安全邊界。
+  私人 Sheet 不等於所有資料 API 自動安全，部分讀取入口的登入／權限驗證仍待補強；介紹頁不是獨立安全認證。
 
 ---
 
@@ -84,14 +88,18 @@
 > As a leader you have full permissions (assessment, approvals, user management).
 > See also: [YMIS_EXPORT.md](YMIS_EXPORT.md) and [BULK_ONBOARD.md](BULK_ONBOARD.md).
 
-### Latest update (2026-10-23)
+### Latest update (2026-10-24)
 
 > **Hard data-preservation rule for all patches: never modify, delete, overwrite, reset, or arbitrarily migrate existing user data.** Accounts, members, YMIS, current and legacy-ID progress, other badges, activity records, notes and troop settings are all covered; old data must not be converted or re-entered due to a version update. Patches may only add backward-compatible structures; existing values are always preserved. Full deployment rules: [APP_ADMIN_WORKFLOW.md](../APP_ADMIN_WORKFLOW.md).
 
-- **Latest GS: `6.0.0`**. Install this latest version only — no per-version patch list.
+- **Latest GS: `6.1.0`**. Install this latest version only — no per-version patch list.
 - **This release requires running `initializeSheets()` once.** Update steps: download and replace `Code.gs` → save → run `initializeSheets()` → deploy → manage deployments → edit → new version → deploy (URL stays the same).
 - The home, login and main views all show the latest date, GS version and download link. The system checks **GS code version** and **initialization version** separately: pasting new code without initializing still shows a warning; the green "Verified" only appears when both match.
 - Initialization only fills in missing settings and sheets, and records the version in Script Properties; it must not change any of the above user data, nor rotate the existing API key. After completion, press "Re-check" in the notice.
+- **Credential displays show the API Key only**: the initialization dialog and the “🔗 Troop system → 🔑 Show API KEY (to ADMIN)” menu show `API Key = …` and never an automatically discovered or cached deployment URL.
+  Get the deployment URL from Google’s “Deploy → Manage deployments” dialog, then enter the troop ID, name, URL and API key yourself in the ADMIN FORM; no troop ID needs to be set in GS first.
+- The home page now has a “🌿 System introduction” tab: one shared diagram (data flow, Google authorisation, the “Anyone” endpoint, password sign-in) plus Chinese/English notes and the security boundary.
+  A private Sheet does not automatically secure every data API; authentication on some data-reading endpoints still needs strengthening, and this page is not an independent security certification.
 
 ### 1. My Progress
 

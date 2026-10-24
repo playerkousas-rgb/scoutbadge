@@ -4,8 +4,11 @@
 
 1. 建立 Google Sheet，開啟 Apps Script，貼上 `apps-script/Code.gs`。
 2. 只在這個全新的 Sheet 執行一次 `initializeSheets()` 並完成授權。完成後會彈「✅ 初始化完成」視窗，
-   入面有 API Key、Web App URL，**仲有預設管理員帳號（YMIS `1111111111`／密碼 `changeme`）**——
+   入面有 **API Key（`API Key = …`）**，**仲有預設管理員帳號（YMIS `1111111111`／密碼 `changeme`）**——
    呢個就係 §C 首次登入用嘅帳號。冇抄低都唔緊要：只要未登入改過密碼，預設值係固定嘅。
+   > 彈窗**唔會**顯示部署網址：`ScriptApp.getService().getUrl()` 可能係 `/dev` 或另一個部署，
+   > 唔能夠代表你在部署視窗選定的入口。部署網址請在下一步由 Google 部署視窗取得。
+   > 初始化亦**唔會**要求輸入旅團編號。
 3. 部署為 Web App：**執行身分「我」＋存取權「任何人」**（`Anyone`）。存取權收窄成「只有本人」的話，
    主系統 proxy 打唔入 `/exec`，該團在 App 內會直接失敗。部署後取得 `/exec` URL。
 
@@ -14,10 +17,13 @@
    > 只會食到登入頁，App 會出「旅團後端要求 Google 登入」。如果「任何人」選項唔見咗／㩒唔到，
    > 或者揀咗之後用無痕窗口開 `/exec` 仍然彈登入頁，即係學校 Workspace 管理員政策封咗對外發佈：
    > 請 IT 管理員放行，或者用**非學校 Google 帳戶**（例如旅團自建嘅 Gmail）建 Sheet 重新部署。
-4. 取得本節點憑證：選單「🔗 旅系統 → 🔑 顯示 BACKEND／APIKEY（交 ADMIN）」，抄下 **BACKEND（`/exec` URL）**
-   與 **APIKEY**（首次讀取時自動生成並存 Script Properties）。BACKEND **照選單顯示逐字抄**，包括
-   `/a/macros/<學校域名>/` 前綴（如有）——proxy 呼叫後端時會自動轉成標準 `/macros/` 形式，
-   人手改咗反而會令後端雜湊核對唔上。
+4. 取得接入資料：選單「🔗 旅系統 → 🔑 顯示 API KEY（交 ADMIN）」只提供 **API Key**
+   （首次讀取時自動生成並存 Script Properties，已有 Key 不會更換）。部署網址請在
+   Google「部署 → 管理部署」視窗自行取得（`/exec` 結尾那條）；本系統不顯示、也不推算任何網址。
+   如屬學校／機構 Workspace 帳戶，網址可能帶 `/a/macros/<學校域名>/` 前綴，proxy 呼叫後端時會
+   自動轉成標準 `/macros/` 形式。
+5. 在 ADMIN FORM 自行填寫**旅團編號、名稱、部署 URL 及 API Key**。旅團編號毋須（亦不會）在
+   Sheet／Apps Script 預先設定。
 
 > **成員名單係可選（非前置條件）**：`apply` 只要求 10 位 YMIS、姓名、電郵格式正確＋唔可以同
 > `Users`／`成員名單`／待審批申請重覆——**唔需要**事先有名單。所以可以三條路任揀（可並用）：
