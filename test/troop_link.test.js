@@ -831,8 +831,11 @@ function run() {
     assert.match(up.ui._state.alerts.pop().message, /已登記下游：1 個/);
     up.context.menuShowLinkCredentials();
     const creds = up.ui._state.alerts.pop().message;
-    assert.ok(creds.includes(UPSTREAM_KEY), 'BACKEND／APIKEY 彈窗應顯示本機 API KEY');
-    assert.match(creds, /\/exec$|\/exec\n/, '應顯示本機 /exec URL');
+    assert.ok(creds.includes(UPSTREAM_KEY), 'API KEY 彈窗應顯示本機 API KEY');
+    assert.ok(creds.includes('API Key = ' + UPSTREAM_KEY), '接入資料格式為「API Key = …」');
+    assert.ok(!/https?:\/\//.test(creds), '接入資料不可顯示任何自動取得／快取的部署網址');
+    assert.match(creds, /管理部署/, '要指示用戶由 Google 部署視窗取得部署 URL');
+    assert.match(creds, /ADMIN FORM/, '要指示用戶在 ADMIN FORM 填寫旅團編號、名稱、URL 及 API Key');
     up.ui._state.answers = ['progress'];
     up.context.menuRemoveDownstream();
     assert.strictEqual(String(up.props.get('DOWNSTREAM_progress_KEY') || ''), '', '移除下游登記應清走 Script Properties');

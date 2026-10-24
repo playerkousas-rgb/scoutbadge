@@ -8,10 +8,11 @@
 
 - 旅團編號（保留前導零）
 - 顯示名稱
-- 既有 Apps Script `/exec` URL
-- 既有 Apps Script API Key
+- 部署 URL（由旅團在 Google「部署 → 管理部署」視窗取得，並自行填寫在 ADMIN FORM）
+- 既有 Apps Script API Key（GS 選單「🔑 顯示 API KEY（交 ADMIN）」提供）
 
-每個旅團正好使用 `TROOP_{ID}_NAME`、`TROOP_{ID}_BACKEND`、`TROOP_{ID}_APIKEY` 三個變數。不要提交這些值到 Git、靜態設定檔、前端或 URL。
+GS 只提供 API Key；不要要求旅團提供由 Apps Script 自動推算／快取的網址，也不要新增把 URL 貼進
+Apps Script 的設定步驟。每個旅團正好使用 `TROOP_{ID}_NAME`、`TROOP_{ID}_BACKEND`、`TROOP_{ID}_APIKEY` 三個變數。不要提交這些值到 Git、靜態設定檔、前端或 URL。
 
 ## 所有補丁的資料保全硬性規則
 

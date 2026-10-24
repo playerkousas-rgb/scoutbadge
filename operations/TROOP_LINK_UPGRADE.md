@@ -34,11 +34,13 @@
 | 代號 | 名稱 | 邊個產生 | 放喺邊 | 用途 |
 |---|---|---|---|---|
 | **A** | `SUPER_KEY` | 現有（隱藏） | Vercel env | 超管登入。**與旅系統無關，本輪不改動、不在任何選單顯示** |
-| **B** | `TROOP_(id)_BACKEND` | GS 部署後抄（`ScriptApp.getService().getUrl()`） | Vercel env；上游則存 `DOWNSTREAM_<id>_URL` | 主系統 proxy／上游打去邊個 GAS |
+| **B** | `TROOP_(id)_BACKEND` | Google「部署 → 管理部署」視窗提供（GS 不顯示、不推算網址） | Vercel env；上游則存 `DOWNSTREAM_<id>_URL` | 主系統 proxy／上游打去邊個 GAS |
 | **C** | `TROOP_(id)_NAME` | 你自填 | Vercel env | 前端旅團顯示名（純文字） |
 | **D** | `TROOP_(id)_APIKEY` | GS 生成（存 Script Properties `API_KEY`） | Vercel env；上游則存 `DOWNSTREAM_<id>_KEY` | API key，同時係 `sig` 嘅根密鑰（第 3 節） |
 
-- **一次過抄 B + D**：Sheet 選單「**🔗 旅系統 → 🔑 顯示 BACKEND／APIKEY（交 ADMIN）**」。
+- **D 由 GS 提供**：Sheet 選單「**🔗 旅系統 → 🔑 顯示 API KEY（交 ADMIN）**」只顯示 `API Key = …`。
+- **B 由 Google 部署視窗提供**：在「部署 → 管理部署」視窗抄 `/exec` 網址；GS 彈窗及選單只提供 API Key，
+  不顯示自動取得／快取的網址，亦沒有把 URL 貼入 GS 的設定步驟。
 - **交 ADMIN**：經收件匣（首頁「📋 新旅團部署」→ `submitRegistration` → `/api/proxy` → 伺服器端固定嘅中央收件端點）。交 B、C、D；ADMIN 入 Vercel env 後 Redeploy。
 - **四個都唔寫入任何工作表**：B/D 只存 Script Properties（同 Vercel env），C 由你填，A 隱藏。`test/troop_link.test.js` 會掃晒所有工作表，確保冇後端 URL、冇 API KEY、冇 `ALLOW_LOCAL_LOGIN` 字樣。
 - 換 D（撤銷舊 key）＝三處同步（漏一處就靜靜打唔通）：① 下游 Script Properties 刪 `API_KEY` → 跑 `showApiKey()` 生成新 key；② 上游重新登記下游；③ ADMIN 改 Vercel env + Redeploy。
@@ -63,9 +65,9 @@
 
 | 步驟 | 做乜 | 邊度做 |
 |---|---|---|
-| 1 | 部署 GS，抄 B 的 URL，生成 D | 每層 Sheet → Apps Script → 部署（執行身分「我」、存取權「任何人」）→ 選單「🔗 旅系統 → 🔑 顯示 BACKEND／APIKEY」 |
+| 1 | 部署 GS，生成 D；B 由 Google 部署視窗抄 | 每層 Sheet → Apps Script → 部署（執行身分「我」、存取權「任何人」）→ 部署視窗抄 B／選單「🔗 旅系統 → 🔑 顯示 API KEY」抄 D |
 | 2 | 填 C，連 B/D 經收件匣交 ADMIN | 首頁「📋 新旅團部署」表單（前端冇改，照舊用） |
-| 3 | 每團補一張支部 SHEET，與現有進度 SHEET 成對 | 新 Sheet → 貼同一份 `Code.gs` → `initializeSheets()` → 部署 → 抄 B/D |
+| 3 | 每團補一張支部 SHEET，與現有進度 SHEET 成對 | 新 Sheet → 貼同一份 `Code.gs` → `initializeSheets()` → 部署 → 部署視窗抄 B／選單抄 D |
 | 4 | 上游登記下游，再測連線 | 上游選單「➕ 登記下游（URL + SHEET KEY）」→「📡 測試下游連線（sig）」 |
 | 5 | 搬舊數（第 7 節） | 舊進度「📤 匯出 JSON（含 hash）」→ 新支部「📥 匯入 JSON」 |
 | 6 | 核對無誤後閂下游直接入口 | 上游選單「🚪 下游直接入口 → 🔒 閂口」（有確認彈窗，提醒先完成匯入及連線測試） |
@@ -231,7 +233,7 @@ npm run build      # 產生 public/（部署內容）
 9. 上游傳來的標籤不可變成工作表算式（`auth_by`／操作紀錄消毒）
 10. GS 內冇版號註解
 11. **選單冒煙**（本 repo 加碼）：`onOpen` 建到「🔗 旅系統」選單、每個選單項都指到真實函式（防改壞 `handler` 名），
-    登記下游／測連線（sig）／為下游開戶（揀團）／兩個直接入口掣／匯出 JSON／接駁狀態／顯示 BACKEND＋APIKEY／移除登記全部行得通
+    登記下游／測連線（sig）／為下游開戶（揀團）／兩個直接入口掣／匯出 JSON／接駁狀態／API KEY（交 ADMIN）／移除登記全部行得通
 
 > 本地測試唔能代替正式 GAS 部署驗收：`sig` 經真實 302 轉址、Drive 權限、Script Properties 配額、`onOpen` 選單授權，都要喺測試旅團真機跑一次先算數。
 

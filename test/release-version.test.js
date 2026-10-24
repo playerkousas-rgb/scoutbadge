@@ -31,7 +31,7 @@ function snapshotRows(backend, names) {
   assert.ok(release, 'frontend exposes one latest-release declaration');
   const gs = gas.match(/const GS_VERSION = '([^']+)'/);
   assert.ok(gs, 'Apps Script exposes its latest GS version');
-  assert.equal(release[1], '2026-10-23');
+  assert.equal(release[1], '2026-10-24');
   assert.equal(release[2], gs[1], 'frontend required GS and backend reported GS must match');
   assert.equal(release[3], 'true', 'this release explicitly requires initializeSheets()');
   assert.match(gas, /setProperty\(GS_INIT_PROP,\s*GS_VERSION\)/);
@@ -72,7 +72,7 @@ function snapshotRows(backend, names) {
   // ---- ecStatus：未初始化 ----
   const before = backend.get({ action: 'ecStatus' });
   assert.equal(before.success, true);
-  assert.equal(before.gsVersion, '6.0.0');
+  assert.equal(before.gsVersion, '6.1.0');
   assert.equal(before.initializedGsVersion, '', 'new Code.gs alone must not count as initialized');
   assert.equal(before.initRequired, true);
   console.log('[PASS] ecStatus 回報 gsVersion 和 initializedGsVersion（未初始化）');
@@ -146,12 +146,12 @@ function snapshotRows(backend, names) {
   console.log('[PASS] 前端分辨「GS 未更新」');
 
   // GS 已更新但未初始化
-  const needsInit = sandbox.gsReleaseStatusOf({ gsVersion: '6.0.0', initializedGsVersion: '' });
+  const needsInit = sandbox.gsReleaseStatusOf({ gsVersion: '6.1.0', initializedGsVersion: '' });
   assert.equal(needsInit.code, 'needs_init');
   console.log('[PASS] 前端分辨「GS 已更新但未初始化」');
 
   // 全部完成
-  const ok = sandbox.gsReleaseStatusOf({ gsVersion: '6.0.0', initializedGsVersion: '6.0.0' });
+  const ok = sandbox.gsReleaseStatusOf({ gsVersion: '6.1.0', initializedGsVersion: '6.1.0' });
   assert.equal(ok.code, 'ok');
   console.log('[PASS] 前端分辨「全部完成」（顯示綠色「已核對」）');
 })();

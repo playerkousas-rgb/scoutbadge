@@ -3,6 +3,30 @@
 版號、歷史更新及開發背景集中保留在 Git，不放入可下載的 GS 或用戶提示。
 本文件不納入網站部署：`build.js` 只發布本目錄的 `Code.gs`，`.vercelignore` 亦排除其餘檔案。
 
+## 2026-10-24：接入資料只提供 API Key、新增系統介紹（GS 6.1.0）
+
+- **接入顯示**：`initializeSheets()` 完成彈窗、`showApiKey()`、`showVercelEnv()`、`vercelEnvLines()`、
+  選單「🔑 顯示 API KEY（交 ADMIN）」（`menuShowLinkCredentials`）一律只提供 `API Key = …`。
+- **不再顯示／回傳自動取得或快取的部署網址**：移除 `initializeSheets()` 的 `ScriptApp.getService().getUrl()`
+  取值及回傳值 `scriptUrl`；不再讀 `WEBAPP_URL` 等舊快取；不新增人手貼網址到 GS 的設定流程。
+- **不要求先設定旅團編號**：初始化不提示輸入編號、不寫入 `TROOP_ID`／`TROOP_NAME`，亦不新增「設定旅團編號」選單。
+  用戶流程：初始化生成／保留 API Key → 完成 Google 部署並在部署視窗取得 URL → 自行在原有 ADMIN FORM 填編號、名稱、URL、API Key。
+- **保留童軍自己的內容**：預設管理員首次登入／改密碼提示、綱要、評核權限、既有資料及 API Key 全部不變。
+- **相容函式**：新增 `verifyBackendUrl()`（固定回 `AUTO_BACKEND_URL_DISABLED`）及 `menuVerifyBackendUrl()`，
+  讓未重新載入的舊選單不會再猜網址、發請求或聲稱「已核實」。
+- **不改內部協定**：中央登入／回打驗票（`SUPER_VERIFY_URL`、`verifyCentralTicket()`、`SUPER_TOKEN_PREFIX`）
+  及簽名 `sig` 完全沒有改動。
+- `GS_VERSION` = `6.1.0`、`GS_RELEASE_DATE` = `2026-10-24`；`initializeSheets()` 可安全重跑，
+  只補表／補設定，寫入 `INITIALIZED_GS_VERSION`，不刪改任何既有資料，不更換既有 API Key。
+- 前端 `index.html`：新增「🌿 系統介紹」分頁及部署教學雙向入口（通用介紹圖 `assets/system-introduction-zh-hant.webp`，
+  中英說明及安全邊界）；`showWelcomeTab()` 交叉連結會選中正確分頁；`applyStaticI18n()` 支援 `data-i18n-alt`；
+  部署步驟文案改為「Google 部署視窗提供 URL、自己填 ADMIN FORM」；`GS_LATEST` 同步為 `2026-10-24`／`6.1.0`。
+- 本地預覽伺服器 `server.js` 提供 `.webp` → `image/webp`。
+- 測試：新增 `test/credential-display.test.js`、`test/system-intro.test.js`；更新 `test/troop_link.test.js`、
+  `test/release-version.test.js`；`README.md`、`TROOP_ONBOARDING.md`、`docs/LEADER_GUIDE.md`、
+  `APP_ADMIN_WORKFLOW.md`、`docs/BACKEND_URL_DIAGNOSIS.md` 同步。
+- **注意**：本次只修改 repository，不代表各旅團的線上 Google Apps Script 部署已更新。
+
 ## 2026-10-23：最新版本公告、GS 初始化核對及資料保全
 
 - 新增 `GS_VERSION`／`GS_RELEASE_DATE`／`GS_INIT_REQUIRED` 常數及 `gsVersionInfo_()`，供前端核對。

@@ -38,6 +38,20 @@ ScoutBadge 係底層**支部進度追蹤系統（leaf）**，可被上層容器�
 
 - 合約細節、sig 格式、endpoint 列表：[docs/INTEGRATION_ECPORTAL_V4.md](docs/INTEGRATION_ECPORTAL_V4.md)
 - 中央登入（`sheep`）失敗排查：[docs/TROUBLESHOOT_82.md](docs/TROUBLESHOOT_82.md)「中央登入（sheep）失敗」
+
+## 接入資料顯示與「系統介紹」
+
+- 旅團的接入資料**只提供 API Key**：Sheet 選單「🔗 旅系統 → 🔑 顯示 API KEY（交 ADMIN）」、
+  `initializeSheets()` 完成彈窗、`showApiKey()`／`showVercelEnv()`／`vercelEnvLines()` 都只顯示
+  `API Key = …`，不再顯示 `ScriptApp.getService().getUrl()`、舊 `WEBAPP_URL` 快取或任何推算網址。
+- 部署 URL 的唯一來源是 Google「部署 → 管理部署」視窗；用戶取得 URL 後，自行在原有 ADMIN FORM
+  填寫旅團編號、名稱、URL 及 API Key。初始化**不要求**先設定旅團編號，亦**沒有**新增把 URL 貼進
+  Apps Script 的設定步驟。
+- 首頁新增「🌿 系統介紹」分頁（及部署頁雙向入口），沿用通用「支部進度追蹤系統」介紹圖
+  （[assets/system-introduction-zh-hant.webp](assets/system-introduction-zh-hant.webp)），另有中英文字
+  說明及安全邊界；不披露任何保留帳號資訊。
+- 調查及處理紀錄：[docs/BACKEND_URL_DIAGNOSIS.md](docs/BACKEND_URL_DIAGNOSIS.md)。
+- 回歸測試：`test/credential-display.test.js`、`test/system-intro.test.js`（已納入 `npm test`）。
 - 合約 e2e 對真 `apps-script/Code.gs` 執行（`test/e2e_realgas.test.js`），已納入 `npm test`
 
 ## 旅系統接駁（旅 > 團 > 進度）
@@ -57,7 +71,7 @@ ScoutBadge 係底層**支部進度追蹤系統（leaf）**，可被上層容器�
 管理部署作業」為**既有 Web App** 建立**新版本**（`/exec` URL 會保持不變）。只覆寫編輯器
 內的程式碼並不會改變 `/exec` 所提供的版本，這是升級後功能「似有冇效」最常見的原因。
 
-**最新版本（2026-10-23，GS 6.0.0）需要執行一次 `initializeSheets()`**：補齊缺失設定及工作表，
+**最新版本（2026-10-24，GS 6.1.0）需要執行一次 `initializeSheets()`**：補齊缺失設定及工作表，
 並在 Script Properties 記錄初始化版本。前端首頁、登入頁及登入後主頁會顯示最新公告及「重新檢查」按鈕，
 分別核對 GS 程式版本與初始化版本；只有兩者都完成才顯示綠色「已核對」。
 
