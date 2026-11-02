@@ -12,8 +12,10 @@
    - **成員**：YMIS 10 位數字 + 密碼。
    - **領袖**：電郵 + 密碼（領袖毋須 YMIS）。
 3. 沒有帳戶？在登入頁按「🆕 申請帳戶」，填妥後由領袖在「審批中心」批准。
-   批核後**初始密碼為 1234**，首次登入時系統會**強制要求設定新密碼**（至少 4 位）。
-   忘記密碼請聯絡領袖／管理員重設。
+   批核後**初始密碼為 1234**，首次登入時系統會**強制要求設定新密碼**（4–32 位）。
+4. **忘記密碼或連續 5 次輸錯密碼鎖定 15 分鐘**：
+   - 未登記電郵的童軍成員：請聯絡旅團領袖在「👥 用戶管理 → 重設密碼」重發臨時密碼（會即時解除 15 分鐘鎖定）。
+   - 已登記電郵的帳戶：可按登入頁密碼欄旁 **「🔑 忘記密碼？」** 收取 8 位重設碼自助重設（見 [PASSWORD_RESET.md](PASSWORD_RESET.md)）。
 
 ---
 
@@ -70,7 +72,8 @@
 
 1. Tap your troop card on the home page (e.g. **0082**).
 2. **Members** sign in with their 10-digit YMIS number + password; **leaders** use email + password.
-3. No account yet? Use "🆕 Apply for an account" on the login page; a leader approves it in the Approval Centre. The initial password is **1234**; on first login you are **required to set a new one** (at least 4 characters).
+3. No account yet? Use "🆕 Apply for an account" on the login page; a leader approves it in the Approval Centre. The initial password is **1234**; on first login you are **required to set a new one** (4–32 characters).
+4. **Forgot your password or locked for 15 minutes after 5 wrong attempts?** Ask your troop leader to issue a temporary password in **👥 User Management → Reset Password** (clears the lockout immediately), or if your account has a registered email, tap **🔑 Forgot password?** on the sign-in page (see [PASSWORD_RESET.md](PASSWORD_RESET.md)).
 
 ### After login you will see
 

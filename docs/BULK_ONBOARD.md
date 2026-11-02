@@ -74,7 +74,7 @@ auth_date, created_at, last_login, status, allowed_badges, squad, squad_role, fo
 1. 在 Google Sheets 新建試算表。
 2. **檔案 > 匯入 > 上載 > 選取本機 CSV**，選 `data/members_template.csv`（或從 app 下載的同一份）。
 3. 填寫資料。
-4. **擴充套件 > Apps Script**，把 [`assets/batch-onboard/Code.gs`](assets/batch-onboard/Code.gs) 的內容貼上並儲存。
+4. **擴充套件 > Apps Script**，把 [`assets/batch-onboard/Code.gs`](../assets/batch-onboard/Code.gs) 的內容貼上並儲存。
 5. 修改檔首 `CONFIG`：
    - `MAIN_SHEET_ID`：我們的 Sheet 的 ID（直接寫入時需要，出現在網址 `/d/.../` 之間）。
    - `APIKEY`：與 app 登入相同的 apikey（用「推送後端」時需要）。
@@ -91,7 +91,7 @@ auth_date, created_at, last_login, status, allowed_badges, squad, squad_role, fo
 
 - 若 `Users` 工作表不存在 → 自動建立。
 - 若 `Users` 工作表沒有 `ymis` 表頭（空白新表）→ 自動寫入標準 16 欄表頭。
-- 有填 `password` 的成員會以 SHA-256 雜湊儲存密碼，開戶後即可登入（建議首次登入修改密碼）。
+- 有填 `password` 的成員會以 `PBKDF2-HMAC-SHA256`（120,000 次迭代＋每戶獨立 16-byte 隨機鹽，格式 `pbkdf2$<iter>$<salt>$<dk>`）雜湊儲存密碼，開戶後即可登入（首次登入強制修改密碼）。
 
 > 提示：若你想要這份 Sheet 完全由 app 使用（含進度追蹤、操作紀錄等其他工作表），
 > 請先執行 app 後端的 `initializeSheets()` 一次性建立所有工作表，再執行批量開戶。

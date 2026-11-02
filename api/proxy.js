@@ -13,6 +13,83 @@ const loginRateLimit = require('../lib/login-rate-limit');
 
 const UPSTREAM_TIMEOUT_MS = 25_000;
 
+// 公開入口白名單（未登入可呼叫；其中忘記密碼兩個 action 會強制剝除任何 token／自報身分欄位）
+const PUBLIC_ACTIONS = new Set([
+  'login',
+  'apply',
+  'logout',
+  'requestPasswordReset',
+  'confirmPasswordReset',
+  'load',
+  'ecStatus',
+  'health',
+  'healthCheck',
+  'getLoginMode',
+  'getAllowLocalLogin',
+  'getMembers',
+  'getConfig',
+  'getOtherBadges',
+  'getRegistrySafe',
+  'portalLogin'
+]);
+
+const PASSWORD_RESET_PUBLIC_ACTIONS = new Set([
+  'requestPasswordReset',
+  'confirmPasswordReset'
+]);
+
+// 需憑證（session token 或上游／家長 HMAC 簽章）方可操作的後端 action 白名單
+const AUTH_ACTIONS = new Set([
+  'save',
+  'saveOtherBadge',
+  'requestComplete',
+  'reviewRequest',
+  'addMember',
+  'addUser',
+  'bulkAddUsers',
+  'upsertUser',
+  'importUsers',
+  'importAll',
+  'exportUsers',
+  'exportAll',
+  'resetPassword',
+  'changePassword',
+  'setPw',
+  'verifyPw',
+  'setStatus',
+  'deactivateUser',
+  'updateUserRole',
+  'updatePermissions',
+  'updateConfig',
+  'getAllUsers',
+  'getPendingRequests',
+  'getApplications',
+  'reviewApplication',
+  'getApprovalHistory',
+  'getAuditLog',
+  'addServiceRecord',
+  'getServiceRecords',
+  'getLogRecords',
+  'getLogRequests',
+  'saveLogRecord',
+  'deleteLogRecord',
+  'requestLogRecord',
+  'cancelLogRequest',
+  'reviewLogRequest',
+  'getLinkState',
+  'setLocalLogin',
+  'setAllowLocalLogin',
+  'getDownstreamAccess',
+  'setDownstreamAccess',
+  'checkSheets',
+  'diagnose',
+  'diagnoseSheets',
+  'repairSheets',
+  'rebootServer',
+  'configureTrustedTicketVerifier',
+  'testTrustedTicketVerifier'
+]);
+
 function attachResponseHelpers(res) {
   if (!res.status) {
     res.status = function status(code) {
@@ -329,6 +406,9 @@ module.exports = async function handler(req, res) {
     // be resolved before the registry lookup (the destination is fixed
     // server-side, never the troop's own backend).
     if (action === 'submitContact') return handleRegistration(res, payload, startedAt);
+    if (!PUBLIC_ACTIONS.has(action) && !AUTH_ACTIONS.has(action)) {
+      return fail(res, 400, '不支援的請求動作');
+    }
 
     const troopConfig = getTroopConfig(troopId);
     if (!troopConfig) return fail(res, 404, '找不到指定旅團');
@@ -371,6 +451,19 @@ module.exports = async function handler(req, res) {
       };
     } else {
       forwardPayload = sanitizeForwardPayload(payload, troopConfig);
+      if (PASSWORD_RESET_PUBLIC_ACTIONS.has(action)) {
+        // 公開重設入口絕不轉發任何 token、角色、on_behalf 或簽名欄位
+        delete forwardPayload.token;
+        delete forwardPayload.role;
+        delete forwardPayload.on_behalf;
+        delete forwardPayload.on_behalf_role;
+        delete forwardPayload.sig;
+        delete forwardPayload.sig_ts;
+        delete forwardPayload.sig_nonce;
+        delete forwardPayload.sub;
+        delete forwardPayload.scope;
+        delete forwardPayload.exp;
+      }
       // The verifier bootstrap always targets the routed troop itself; the
       // sanitiser stripped the routing key, so hand it back explicitly.
       if (action === 'configureTrustedTicketVerifier') {
@@ -466,3 +559,6 @@ module.exports = async function handler(req, res) {
     return fail(res, 500, '服務暫時無法使用，請稍後再試');
   }
 };
+
+module.exports.PUBLIC_ACTIONS = PUBLIC_ACTIONS;
+module.exports.AUTH_ACTIONS = AUTH_ACTIONS;

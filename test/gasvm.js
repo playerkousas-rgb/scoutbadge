@@ -79,6 +79,8 @@ function makeGas({ apiKey = null, execUrl = 'http://127.0.0.1:0/exec' } = {}) {
   const sheets = new Map();
   const props = new Map();
   const cache = new Map();
+  const sentMails = [];
+  const mailState = { failWith: '', activeUserEmail: 'owner@troop.org' };
   if (apiKey) props.set('API_KEY', apiKey);
 
   const ss = {
@@ -118,12 +120,14 @@ function makeGas({ apiKey = null, execUrl = 'http://127.0.0.1:0/exec' } = {}) {
         const h = crypto.createHash('sha256').update(String(input), 'utf8').digest();
         return Array.from(h);
       },
-      // 真實 Apps Script API 係 computeHmacSha256Signature(value, key[, charset])。
+      // 真實 Apps Script API 係 computeHmacSha256Signature(value, key[, charset])，支援 String 或 Byte[]（有號 byte -128..127）。
       // shim 只提供呢個真名＋真參數次序；Code.gs 若果叫錯名／傳錯次序，
       // 測試要即刻衰，唔可以再靜靜雞「夾啱」（之前自動開通因此必敗）。
       computeHmacSha256Signature: (value, key) => {
-        const h = crypto.createHmac('sha256', String(key)).update(String(value), 'utf8').digest();
-        return Array.from(h);
+        const keyBuf = Array.isArray(key) ? Buffer.from(key.map((b) => b & 0xFF)) : Buffer.from(String(key), 'utf8');
+        const valBuf = Array.isArray(value) ? Buffer.from(value.map((b) => b & 0xFF)) : Buffer.from(String(value), 'utf8');
+        const h = crypto.createHmac('sha256', keyBuf).update(valBuf).digest();
+        return Array.from(h, (b) => (b > 127 ? b - 256 : b));
       },
       sleep: () => {},
       DigestAlgorithm: { SHA_256: 'SHA-256' },
@@ -182,6 +186,19 @@ function makeGas({ apiKey = null, execUrl = 'http://127.0.0.1:0/exec' } = {}) {
       }),
       MimeType: { JSON: 'application/json' }
     },
+    MailApp: {
+      sendEmail: function (toOrObj, subject, body) {
+        if (mailState.failWith) throw new Error(mailState.failWith);
+        if (toOrObj && typeof toOrObj === 'object') {
+          sentMails.push({ to: String(toOrObj.to || ''), subject: String(toOrObj.subject || ''), body: String(toOrObj.body || '') });
+        } else {
+          sentMails.push({ to: String(toOrObj || ''), subject: String(subject || ''), body: String(body || '') });
+        }
+      }
+    },
+    Session: {
+      getActiveUser: () => ({ getEmail: () => mailState.activeUserEmail })
+    },
     console,
     JSON, Date, Math, String, Number, Boolean, Object, Array, Set, Map, RegExp,
     Error, TypeError, RangeError, parseInt, parseFloat, isNaN, isFinite,
@@ -203,7 +220,7 @@ function makeGas({ apiKey = null, execUrl = 'http://127.0.0.1:0/exec' } = {}) {
     const out = sandbox.doGet({ parameter: params });
     try { return JSON.parse(out.getContent()); } catch (_) { return { _raw: out.getContent() }; }
   };
-  return { sandbox, post, get, props, sheets, ss };
+  return { sandbox, post, get, props, sheets, ss, sentMails, mailState };
 }
 
 module.exports = { makeGas, makeSheet };

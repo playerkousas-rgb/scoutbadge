@@ -3,6 +3,17 @@
 版號、歷史更新及開發背景集中保留在 Git，不放入可下載的 GS 或用戶提示。
 本文件不納入網站部署：`build.js` 只發布本目錄的 `Code.gs`，`.vercelignore` 亦排除其餘檔案。
 
+## 2026-11-02：PBKDF2 密碼雜湊、登入鎖定、反枚舉、職級重設權限與領袖電郵重設（GS 6.2.0）
+
+- **A3 密碼雜湊全面升級**：`hashPassword`／`hashPasswordV2` 及 `assets/batch-onboard/Code.gs` 改用 `PBKDF2-HMAC-SHA256`（`120,000` 次迭代＋每用戶獨立 16-byte 隨機鹽，儲存格式 `pbkdf2$<iter>$<salt>$<dk>`）。涵蓋申請批核、新增用戶、批量開戶、直插設密、自行改密、領袖重設及電郵重設所有寫密入口。
+- **舊帳平滑升級與匯入相容**：`verifyPassword` 同時支援 `pbkdf2$...` 與舊版 64-hex 無鹽 SHA-256；舊帳首次成功登入時自動將 `Users.password_hash` 重算升級為 `PBKDF2-HMAC-SHA256`（原密碼不變）。`upsertUser`／`linkUpsertUser`／`importUsers`／`setPw`／`verifyPw` 同時接受新舊兩種雜湊格式並拒絕明文（匯入專用入口）。
+- **A5 登入鎖定與改密踢舊 session**：同一帳號連續 5 次密碼錯誤即寫入 Script Properties `LOGIN_FAIL:<ymis>` 鎖定 15 分鐘，鎖定期內即使輸入正確密碼亦拒絕，並寫入 `操作紀錄` 的 `login_locked`；成功登入或重設密碼自動清零。用戶自行 `changePassword` 後保留當前 token，踢走該帳號所有其他舊裝置 session（`destroyUserTokensExcept`）。
+- **A17 公開入口反枚舉**：未登入公開入口（`handleLogin`、`handleRequestPasswordReset`、`handleConfirmPasswordReset`）對帳號不存在、無電郵、預設管理員或密碼錯誤一律回傳完全一致訊息（如 `帳號或密碼錯誤` 或中性發信提示），並在帳號不存在／不可重設時執行 `dummyPasswordHash_()` 消除 KDF 時間差；領袖後台查詢（`getAllUsers`／`getMembers`／電郵唯一性檢查）維持正常顯示存在與否。
+- **重設密碼權限階梯與強制善後**：`canManageUser` 與 `handleResetPassword` 在 handler 內部強制驗證已認證 `manager` 物件的角色（涵蓋本機 token 與上游 `sig` 入口，絕不單憑自報 `ymis` 反查提權）：只准較高職級重設較低職級（只有 `SUPER_ADMIN` 可重設 `ADMIN`；`ADMIN` 不可重設另一 `ADMIN`；同級不可互改；`member` 不可重設任何人；`super_admin` 保留帳號不可被重設）。重設成功後強制同步執行三件事：清除 `LOGIN_FAIL:<target>`、踢走目標帳號全部既有 session（不影響操作者 session）、設 `force_change_password = true`。
+- **領袖電郵自助重設密碼（第 2 條路徑）**：新增 `requestPasswordReset`、`confirmPasswordReset` 公開 action 及 `testPasswordResetMail()` 授權輔助函式；新增 `密碼重設` 工作表（`reset_id`／`ymis`／`email`／`code_hash`／`created_ms`／`expires_ms`／`attempts`／`status`／`used_at`），未跑 `initializeSheets()` 時首次使用亦會自動補建空白表。8 位不分大小寫重設碼只存 SHA-256 雜湊、15 分鐘有效、最多錯 5 次即作廢、單次使用、每鍵 30 分鐘限 3 次及全團每小時上限 30 次、自動清理 24 小時前舊列。`ADMIN_EMAIL` 維持 `admin@example.com` 不可收信（第 3 條路徑維持回報 APP ADMIN 以 `SUPER_KEY` 重設）。
+- **Proxy 白名單與欄位剝除**：`api/proxy.js` 新增明確 `PUBLIC_ACTIONS`＋`AUTH_ACTIONS` 白名單（未知 action 直接回 `400`），並在轉發 `requestPasswordReset`／`confirmPasswordReset` 前剝除任何 `token`、`role`、`on_behalf`、`sig` 等欄位。
+- **版本與資料保全**：`GS_VERSION` = `6.2.0`、`GS_RELEASE_DATE` = `2026-11-02`、`GS_INIT_REQUIRED` = `true`（與前端 `GS_LATEST` 同步）；`initializeSheets()` 維持冪等只增不刪。回退方法：直接切回上一版 `Code.gs`（已升級為 `pbkdf2$` 的帳號如要回退至舊版 GS，需由領袖重設一次密碼；不回退 GS 而只回退前端則零影響）。
+
 ## 2026-10-24：接入資料只提供 API Key、新增系統介紹（GS 6.1.0）
 
 - **接入顯示**：`initializeSheets()` 完成彈窗、`showApiKey()`、`showVercelEnv()`、`vercelEnvLines()`、

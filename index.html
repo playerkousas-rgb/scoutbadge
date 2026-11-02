@@ -333,6 +333,23 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
 .app-item-info{flex:1}
 
 .tutorial{background:var(--card);border-radius:10px;padding:18px;margin-bottom:16px;box-shadow:var(--shadow)}
+.forgot-pw-row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.forgot-pw-row label{margin-bottom:0!important}
+.forgot-pw-prominent{appearance:none;background:var(--maroon-light);color:var(--maroon);border:1px solid rgba(139,0,0,0.28);border-radius:999px;padding:4px 12px;font-size:12.5px;font-weight:700;cursor:pointer;line-height:1.4;transition:.15s}
+.forgot-pw-prominent:hover,.forgot-pw-prominent:focus-visible{background:var(--maroon);color:#fff;outline:none}
+.fp-step{display:flex;flex-direction:column;gap:12px}
+.fp-paths-box{background:var(--bg);border:1px solid var(--border);border-left:4px solid var(--maroon);border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.65;color:var(--text)}
+.fp-paths-box ul{margin:6px 0 0 18px;padding:0}
+.fp-paths-box li{margin-bottom:4px}
+.fp-code-input{letter-spacing:0.22em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:20px!important;font-weight:700;text-align:center;text-transform:uppercase}
+.fp-rule-hint{font-size:11.5px;color:var(--text-light);line-height:1.5;margin-top:4px}
+.fp-troubleshoot{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.65}
+.fp-troubleshoot summary{cursor:pointer;font-weight:700;color:var(--maroon)}
+.fp-troubleshoot ol{margin:8px 0 0 18px;padding:0}
+.fp-troubleshoot li{margin-bottom:5px}
+.fp-secondary-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;padding-top:4px;border-top:1px solid var(--border)}
+.fp-link-btn{appearance:none;background:none;border:none;color:var(--blue);font-size:12.5px;font-weight:600;cursor:pointer;padding:6px 4px;text-decoration:underline}
+.fp-link-btn:hover{opacity:0.8}
 .steps{margin-top:12px}
 .step{display:flex;gap:12px;margin-bottom:12px;padding:12px;background:var(--bg);border-radius:10px;border-left:4px solid var(--maroon)}
 .step-number{width:32px;height:32px;background:var(--maroon);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
@@ -596,13 +613,19 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
       </div>
       <div id="loginMsg" class="login-msg"></div>
       <div class="form-group"><label id="loginIdLabel">YMIS（10位數字）</label><input type="text" id="loginId" placeholder="例如 1234567890" maxlength="10"></div>
-      <div class="form-group"><label data-i18n="login_pw_label">密碼</label><input type="password" id="loginPassword" data-i18n-ph="login_pw_ph" placeholder="請輸入密碼"></div>
+      <div class="form-group">
+        <div class="forgot-pw-row">
+          <label for="loginPassword" data-i18n="login_pw_label">密碼</label>
+          <button type="button" class="forgot-pw-prominent" id="btnForgotPwProminent" onclick="showForgotPasswordModal()" data-i18n="login_forgot_prominent">🔑 忘記密碼？</button>
+        </div>
+        <input type="password" id="loginPassword" data-i18n-ph="login_pw_ph" placeholder="請輸入密碼">
+      </div>
       <button class="btn btn-primary" onclick="doLogin()" style="width:100%" id="btnLogin" data-i18n="login_btn">登入</button>
       <div style="text-align:center;margin-top:12px;display:flex;justify-content:center;gap:12px;flex-wrap:wrap">
         <a href="#" onclick="openScoutReport();return false" style="font-size:11px">🐛💬 回報 · 意見</a>
         <a href="#" onclick="showAccountApplyModal();return false" style="font-size:11px" data-i18n="login_apply">🆕 申請帳戶（成員／領袖）</a>
         <a href="#" onclick="showContactModal();return false" style="font-size:11px" data-i18n="login_join">旅團接入</a>
-        <a href="#" onclick="showForgotPasswordModal();return false" style="font-size:11px" data-i18n="login_forgot">🔑 忘記密碼</a>
+        <a href="#" onclick="showForgotPasswordModal();return false" style="font-size:11px" data-i18n="login_forgot">🔑 忘記密碼？</a>
         <a href="#" onclick="backToHome();return false" style="font-size:11px" data-i18n="login_back">← 返回首頁</a>
       </div>
     </div>
@@ -677,15 +700,70 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
 </div>
 
 <div id="forgotPwModal" class="modal">
-  <div class="modal-content" style="max-width:420px">
-    <h3 data-i18n="fp_title">🔑 忘記密碼</h3>
+  <div class="modal-content" style="max-width:440px">
+    <h3 data-i18n="fp_title">🔑 忘記密碼？</h3>
     <div id="fpTroop" class="troop-info-box" style="margin-bottom:10px">—</div>
-    <div style="font-size:12.5px;line-height:1.8;color:var(--text)" data-i18n-html="fp_body">
-      本系統唔會以電郵自動重設密碼。請聯絡你旅團嘅領袖／旅長，由佢哋喺 APP 內「👥 用戶管理 → 重設密碼」幫你重發臨時密碼，首次登入後再自行更改。
+
+    <!-- 畫面 1：單一輸入索取 8 位重設碼（每畫面一主動作） -->
+    <div id="fpStep1" class="fp-step">
+      <div class="fp-paths-box" data-i18n-html="fp_body">
+        <b>三種找回方式：</b>
+        <ul>
+          <li><b>已登記電郵（領袖／有電郵帳戶）</b>：在下方輸入童軍編號或登記電郵，收取 8 位重設碼自助重設。</li>
+          <li><b>未登記電郵的童軍成員</b>：請聯絡旅團領袖，在「👥 用戶管理 → 重設密碼」幫你設臨時密碼。</li>
+          <li><b>預設管理員（1111111111）</b>：請按下方「🐛💬 聯絡支援」通知主系統管理員（APP ADMIN）重設。</li>
+        </ul>
+      </div>
+      <div id="fpStep1Msg" class="login-msg"></div>
+      <div class="form-group" style="margin-bottom:0">
+        <label for="fpLoginId" data-i18n="fp_id_label">童軍編號（YMIS）或登記電郵</label>
+        <input type="text" id="fpLoginId" data-i18n-ph="fp_id_ph" placeholder="例如 1234567890 或 leader@example.org" maxlength="120" autocomplete="username">
+        <div class="fp-rule-hint" data-i18n="fp_id_hint">只需填其中一項；重設碼有效期為 15 分鐘。</div>
+      </div>
+      <button type="button" class="btn btn-primary" id="btnFpSendCode" onclick="submitForgotPasswordRequest()" style="width:100%;padding:12px;font-size:15px" data-i18n="fp_send_btn">📨 發送 8 位重設碼</button>
+      <div class="fp-secondary-row">
+        <button type="button" class="fp-link-btn" onclick="switchForgotPwStep(2)" data-i18n="fp_have_code">已收到重設碼？直接輸入 →</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button type="button" class="fp-link-btn" onclick="closeModal('forgotPwModal');openScoutReport()" data-i18n="fp_contact">🐛💬 聯絡支援</button>
+          <button type="button" class="fp-link-btn" onclick="closeModal('forgotPwModal')" data-i18n="close">關閉</button>
+        </div>
+      </div>
     </div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeModal('forgotPwModal')" data-i18n="close">關閉</button>
-      <button class="btn btn-primary" onclick="closeModal('forgotPwModal');openScoutReport()" data-i18n="fp_contact">🐛💬 聯絡支援</button>
+
+    <!-- 畫面 2：輸入 8 位重設碼並設定新密碼（每畫面一主動作） -->
+    <div id="fpStep2" class="fp-step" style="display:none">
+      <div id="fpStep2Banner" class="login-msg success" style="display:block" data-i18n="fp_neutral_sent">若此帳號已登記電郵，重設碼已發送到登記電郵（15 分鐘內有效）。</div>
+      <div id="fpStep2Msg" class="login-msg"></div>
+      <div class="form-group" style="margin-bottom:0">
+        <label for="fpCode" data-i18n="fp_code_label">8 位重設碼（不分大小寫，可直接貼上）</label>
+        <input type="text" id="fpCode" class="fp-code-input" data-i18n-ph="fp_code_ph" placeholder="ABCD1234" maxlength="24" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" oninput="sanitizeFpCodeInput(this)">
+        <div class="fp-rule-hint" data-i18n="fp_code_hint">自動去除空格與連字號（-）；最多可嘗試 5 次。</div>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label for="fpNewPw" data-i18n="fp_newpw_label">新密碼（4–32 位）</label>
+        <input type="password" id="fpNewPw" data-i18n-ph="fp_newpw_ph" placeholder="請輸入新密碼（至少 4 位）" maxlength="32" autocomplete="new-password">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label for="fpConfirmPw" data-i18n="fp_confirmpw_label">再次輸入新密碼</label>
+        <input type="password" id="fpConfirmPw" data-i18n-ph="fp_confirmpw_ph" placeholder="請再次輸入相同新密碼" maxlength="32" autocomplete="new-password">
+        <div class="fp-rule-hint" data-i18n="fp_pw_rules">密碼規則：4–32 位字元；重設成功後，舊裝置登入狀態會自動登出。</div>
+      </div>
+      <button type="button" class="btn btn-primary" id="btnFpConfirm" onclick="submitForgotPasswordConfirm()" style="width:100%;padding:12px;font-size:15px" data-i18n="fp_confirm_btn">✅ 確認重設密碼</button>
+      <details class="fp-troubleshoot">
+        <summary data-i18n="fp_no_mail_title">📬 收唔到信？點此查看排查方法</summary>
+        <div data-i18n-html="fp_no_mail_html">
+          <ol>
+            <li>請先檢查電郵的<b>垃圾郵件（Spam）／促銷郵件匣</b>，信件標題含「忘記密碼重設碼」。</li>
+            <li>如你係<b>未登記電郵的童軍成員</b>，系統唔會寄信，請直接搵本旅團領袖喺「👥 用戶管理 → 重設密碼」幫你設臨時密碼。</li>
+            <li>等 1–2 分鐘仍未收到，可按下方「← 返回重新發送」（新碼會即時作廢舊碼；每 30 分鐘最多 3 次）。</li>
+            <li>如全團領袖都收唔到信，請旅團管理員打開 Google Sheet「擴充功能 → Apps Script」，執行一次 <code>testPasswordResetMail</code> 完成電郵寄送授權。</li>
+          </ol>
+        </div>
+      </details>
+      <div class="fp-secondary-row">
+        <button type="button" class="fp-link-btn" onclick="switchForgotPwStep(1)" data-i18n="fp_back_step1">← 返回重新輸入帳號／重發重設碼</button>
+        <button type="button" class="fp-link-btn" onclick="closeModal('forgotPwModal')" data-i18n="close">關閉</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1034,8 +1112,28 @@ zh:{
   guide_member_card:'<b>👤 成員 member</b><ul style="font-size:11px;margin:6px 0 0 16px"><li>只能看自己進度</li><li>不能直接剔，按📝申請</li><li>待批查看自己申請</li><li>其他獎章只讀自己</li><li>表格列印官方格式</li><li>資料庫看綱要及安全指引</li></ul>',
   guide_leader_card:'<b>👨‍💼 領袖 leader</b><ul style="font-size:11px;margin:6px 0 0 16px"><li>全部功能</li><li>我的進度選任何成員看紀錄</li><li>全團一眼睇會員章+百分比</li><li>考驗營批量一鍵幫全團剔</li><li>離線暫存確認寫入</li><li>待批批量批准</li><li>用戶管理及⚙️權限設定</li><li>領袖默認全部，旅長／管理員可改低層級</li><li>審批新帳號</li></ul>',
   login_h2:'🔐 登入系統', login_member_tab:'👤 成員<br><small style="font-weight:normal">YMIS 10位</small>', login_leader_tab:'👨‍💼 領袖<br><small style="font-weight:normal">Email</small>',
-  login_pw_label:'密碼', login_pw_ph:'請輸入密碼', login_apply:'🆕 申請帳戶（成員／領袖）', login_join:'旅團接入', login_forgot:'🔑 忘記密碼', fp_title:'🔑 忘記密碼', fp_contact:'🐛💬 聯絡支援',
-  fp_body:'本系統唔會以電郵自動重設密碼。請聯絡你旅團嘅領袖／旅長，由佢哋喺 APP 內「👥 用戶管理 → 重設密碼」幫你重發臨時密碼，首次登入後再自行更改。', login_back:'← 返回首頁', login_page_h1:'童軍進度追蹤 v5.1',
+  login_pw_label:'密碼', login_pw_ph:'請輸入密碼', login_apply:'🆕 申請帳戶（成員／領袖）', login_join:'旅團接入', login_forgot:'🔑 忘記密碼？', login_forgot_prominent:'🔑 忘記密碼？', fp_title:'🔑 忘記密碼？', fp_contact:'🐛💬 聯絡支援',
+  fp_body:'<b>三種找回方式：</b><ul><li><b>已登記電郵（領袖／有電郵帳戶）</b>：在下方輸入童軍編號或登記電郵，收取 8 位重設碼自助重設。</li><li><b>未登記電郵的童軍成員</b>：請聯絡旅團領袖，在「👥 用戶管理 → 重設密碼」幫你設臨時密碼。</li><li><b>預設管理員（1111111111）</b>：請按下方「🐛💬 聯絡支援」通知主系統管理員（APP ADMIN）重設。</li></ul>',
+  fp_id_label:'童軍編號（YMIS）或登記電郵', fp_id_ph:'例如 1234567890 或 leader@example.org', fp_id_hint:'只需填其中一項；重設碼有效期為 15 分鐘。',
+  fp_send_btn:'📨 發送 8 位重設碼', fp_sending:'發送中...', fp_have_code:'已收到重設碼？直接輸入 →',
+  fp_neutral_sent:'若此帳號已登記電郵，重設碼已發送到登記電郵（15 分鐘內有效）。',
+  fp_code_label:'8 位重設碼（不分大小寫，可直接貼上）', fp_code_ph:'ABCD1234', fp_code_hint:'自動去除空格與連字號（-）；最多可嘗試 5 次。',
+  fp_newpw_label:'新密碼（4–32 位）', fp_newpw_ph:'請輸入新密碼（至少 4 位）',
+  fp_confirmpw_label:'再次輸入新密碼', fp_confirmpw_ph:'請再次輸入相同新密碼',
+  fp_pw_rules:'密碼規則：4–32 位字元；重設成功後，舊裝置登入狀態會自動登出。',
+  fp_confirm_btn:'✅ 確認重設密碼', fp_confirming:'重設中...',
+  fp_no_mail_title:'📬 收唔到信？點此查看排查方法',
+  fp_no_mail_html:'<ol><li>請先檢查電郵的<b>垃圾郵件（Spam）／促銷郵件匣</b>，信件標題含「忘記密碼重設碼」。</li><li>如你係<b>未登記電郵的童軍成員</b>，系統唔會寄信，請直接搵本旅團領袖喺「👥 用戶管理 → 重設密碼」幫你設臨時密碼。</li><li>等 1–2 分鐘仍未收到，可按下方「← 返回重新發送」（新碼會即時作廢舊碼；每 30 分鐘最多 3 次）。</li><li>如全團領袖都收唔到信，請旅團管理員打開 Google Sheet「擴充功能 → Apps Script」，執行一次 <code>testPasswordResetMail</code> 完成電郵寄送授權。</li></ol>',
+  fp_back_step1:'← 返回重新輸入帳號／重發重設碼',
+  fp_err_empty_id:'請先輸入童軍編號（YMIS）或登記電郵，再按「發送 8 位重設碼」。',
+  fp_err_bad_email:'電郵格式不正確，請檢查有否漏打 @ 或域名，或改填童軍編號。',
+  fp_err_bad_code:'請輸入完整的 8 位重設碼（不分大小寫，可直接貼上電郵內的重設碼）。',
+  fp_err_pw_len:'新密碼長度須為 4 至 32 位，請重新輸入。',
+  fp_err_pw_mismatch:'兩次輸入的新密碼不一致，請重新核對。',
+  fp_err_rate:'請求過於頻密，請等約 30 分鐘後再試，或聯絡本旅團領袖協助重設。',
+  fp_err_code_invalid:'重設碼不正確或已過期（超過 15 分鐘或輸錯達 5 次）。請核對最新一封電郵，或按「← 返回」重新發送新重設碼。',
+  fp_reset_done_login:'✅ 密碼已成功重設！請輸入剛設定的新密碼（密碼規則：4–32 位）登入。',
+  login_back:'← 返回首頁', login_page_h1:'童軍進度追蹤 v5.1',
   nav_progress:'📊 我的進度', nav_overview:'👥 全團總覽', nav_requests:'✅ 審批中心', nav_logs:'📅 活動履曆', nav_forms:'🖨️ 表格列印', nav_help:'❓ 教學', nav_info:'📚 資料庫', nav_users:'👥 用戶管理', logout:'登出',
   pending_hint:'已暫存於瀏覽器', savebar_discard:'捨棄', savebar_confirm:'✅ 確認寫入雲端',
   cm_title:'📧 提交旅團接入申請', cm_tid:'旅團編號 *', cm_tname:'旅團名稱', cm_tname_ph:'第 82 旅', cm_url:'Apps Script URL (…/exec) *', cm_key:'API Key *', cm_note:'聯絡 Email / 備註', cm_note_ph:'請留下聯絡方式...',
@@ -1439,8 +1537,28 @@ en:{
   guide_member_card:'<b>👤 Member</b><ul style="font-size:11px;margin:6px 0 0 16px"><li>Sees own progress only</li><li>Cannot tick — applies via 📝</li><li>Tracks own applications in Approvals</li><li>Other badges read-only (own)</li><li>Prints official-format forms</li><li>Library: syllabus & safety guides</li></ul>',
   guide_leader_card:'<b>👨‍💼 Leader</b><ul style="font-size:11px;margin:6px 0 0 16px"><li>All features</li><li>View any member\'s records in My Progress</li><li>Troop-wide Membership at a glance + %</li><li>One-tap batch ticking for assessment camps</li><li>Offline cache → confirm write</li><li>Batch approvals</li><li>User management & ⚙️ fine-grained permissions</li><li>Leaders default to all; GSL/admin can narrow lower levels</li><li>Approve new accounts</li></ul>',
   login_h2:'🔐 Sign In', login_member_tab:'👤 Member<br><small style="font-weight:normal">10-digit YMIS</small>', login_leader_tab:'👨‍💼 Leader<br><small style="font-weight:normal">Email</small>',
-  login_pw_label:'Password', login_pw_ph:'Enter password', login_apply:'🆕 Apply for an account (member / leader)', login_join:'Troop Integration', login_forgot:'🔑 Forgot password', fp_title:'🔑 Forgot password', fp_contact:'🐛💬 Contact support',
-  fp_body:'This system does not send automatic password-reset emails. Please contact your troop leader, who can issue a new temporary password via 👥 User Management → Reset Password in the app. You can change it after your first login.', login_back:'← Back to Home', login_page_h1:'Scout Progress Tracker v5.1',
+  login_pw_label:'Password', login_pw_ph:'Enter password', login_apply:'🆕 Apply for an account (member / leader)', login_join:'Troop Integration', login_forgot:'🔑 Forgot password?', login_forgot_prominent:'🔑 Forgot password?', fp_title:'🔑 Forgot password?', fp_contact:'🐛💬 Contact support',
+  fp_body:'<b>Three ways to recover access:</b><ul><li><b>Registered email (leaders / accounts with email)</b>: enter your Scout ID (YMIS) or registered email below to receive an 8-character reset code.</li><li><b>Members without a registered email</b>: ask your troop leader to issue a temporary password in 👥 User Management → Reset Password.</li><li><b>Default admin (1111111111)</b>: tap 🐛💬 Contact support below to ask the APP ADMIN to reset it.</li></ul>',
+  fp_id_label:'Scout ID (YMIS) or registered email', fp_id_ph:'e.g. 1234567890 or leader@example.org', fp_id_hint:'Enter either one; reset codes stay valid for 15 minutes.',
+  fp_send_btn:'📨 Send 8-character reset code', fp_sending:'Sending...', fp_have_code:'Already have a code? Enter it now →',
+  fp_neutral_sent:'If this account has a registered email, an 8-character reset code has been sent (valid for 15 minutes).',
+  fp_code_label:'8-character reset code (case-insensitive, pasteable)', fp_code_ph:'ABCD1234', fp_code_hint:'Spaces and hyphens (-) are removed automatically; up to 5 attempts.',
+  fp_newpw_label:'New password (4–32 characters)', fp_newpw_ph:'Enter new password (min 4 characters)',
+  fp_confirmpw_label:'Confirm new password', fp_confirmpw_ph:'Re-enter the same new password',
+  fp_pw_rules:'Password rule: 4–32 characters. After reset, all previous sign-in sessions are signed out automatically.',
+  fp_confirm_btn:'✅ Confirm password reset', fp_confirming:'Resetting...',
+  fp_no_mail_title:'📬 Didn’t get the email? Troubleshooting steps',
+  fp_no_mail_html:'<ol><li>Check your <b>Spam / Junk / Promotions</b> folder for a message titled “Password reset code”.</li><li>If you are a <b>member without a registered email</b>, no email will be sent — ask your troop leader to reset your password in 👥 User Management → Reset Password.</li><li>Still nothing after 1–2 minutes? Tap “← Back” below to send a fresh code (the previous code is invalidated; max 3 requests per 30 minutes).</li><li>If no leader in your troop receives emails, ask your troop admin to open Google Sheet → Extensions → Apps Script and run <code>testPasswordResetMail</code> once to grant email permission.</li></ol>',
+  fp_back_step1:'← Back to re-enter account / resend code',
+  fp_err_empty_id:'Please enter your Scout ID (YMIS) or registered email first, then tap Send.',
+  fp_err_bad_email:'That email address looks incomplete — please check @ and the domain, or enter your 10-digit YMIS instead.',
+  fp_err_bad_code:'Please enter the full 8-character reset code (case-insensitive; you can paste it directly from the email).',
+  fp_err_pw_len:'New password must be 4 to 32 characters long.',
+  fp_err_pw_mismatch:'The two new passwords do not match — please check and try again.',
+  fp_err_rate:'Too many reset requests. Please wait about 30 minutes or ask your troop leader for help.',
+  fp_err_code_invalid:'Reset code is incorrect or expired (over 15 minutes or 5 wrong attempts). Check the newest email or tap “← Back” to request a new code.',
+  fp_reset_done_login:'✅ Password reset complete! Sign in with your new password (rule: 4–32 characters).',
+  login_back:'← Back to Home', login_page_h1:'Scout Progress Tracker v5.1',
   nav_progress:'📊 My Progress', nav_overview:'👥 Troop Overview', nav_requests:'✅ Approvals', nav_logs:'📅 Activity Records', nav_forms:'🖨️ Forms & Printing', nav_help:'📖 User Guide', nav_info:'ℹ️ System Info', nav_users:'👥 User Management', logout:'Sign Out',
   pending_hint:'cached in browser', savebar_discard:'Discard', savebar_confirm:'✅ Confirm & write to cloud',
   cm_title:'📧 Submit Troop Integration Request', cm_tid:'Troop ID *', cm_tname:'Troop Name', cm_tname_ph:'Troop 82', cm_url:'Apps Script URL (…/exec) *', cm_key:'API Key *', cm_note:'Contact Email / Notes', cm_note_ph:'Leave your contact...',
@@ -1956,16 +2074,19 @@ async function apiRequest(action, payload = {}, options = {}) {
   // Preserve the registered identifier exactly, including leading zeroes.
   reqBody.troopId = troopId;
 
-  if (!reqBody.token && typeof currentToken !== 'undefined' && currentToken && action !== 'ecStatus') {
-    reqBody.token = currentToken;
-  }
-  // ecportal v4.1.0 整合：無本地 token 時（家長 sig bearer 模式）隨請求附帶信任鏈 sig
-  if (!reqBody.token && currentSigPayload) {
-    reqBody.childId = currentSigPayload.childId;
-    reqBody.sub = currentSigPayload.sub;
-    reqBody.scope = currentSigPayload.scope;
-    reqBody.exp = currentSigPayload.exp;
-    reqBody.sig = currentSigPayload.sig;
+  const isPublicReset = action === 'requestPasswordReset' || action === 'confirmPasswordReset';
+  if (!isPublicReset && !options.skipToken) {
+    if (!reqBody.token && typeof currentToken !== 'undefined' && currentToken && action !== 'ecStatus') {
+      reqBody.token = currentToken;
+    }
+    // ecportal v4.1.0 整合：無本地 token 時（家長 sig bearer 模式）隨請求附帶信任鏈 sig
+    if (!reqBody.token && currentSigPayload) {
+      reqBody.childId = currentSigPayload.childId;
+      reqBody.sub = currentSigPayload.sub;
+      reqBody.scope = currentSigPayload.scope;
+      reqBody.exp = currentSigPayload.exp;
+      reqBody.sig = currentSigPayload.sig;
+    }
   }
 
   const controller = new AbortController();
@@ -2079,7 +2200,7 @@ let itemsData=null,progressFlat={},progressRich={},members=[],pendingChanges=[],
  *   ok          全部完成（前端顯示綠色「已核對」）
  *   unchecked   尚未核對（沒有任何回報）
  */
-const GS_LATEST=Object.freeze({updated:'2026-10-24',gsVersion:'6.1.0',initializeRequired:true});
+const GS_LATEST=Object.freeze({updated:'2026-11-02',gsVersion:'6.2.0',initializeRequired:true});
 let backendReleaseState={code:'unchecked',gsVersion:'',initializedGsVersion:''};
 
 function compareVersions(a, b) {
@@ -2151,8 +2272,8 @@ function renderHomeReleaseNotice(st, inEn) {
   const initRequired = inEn() ? 'This version requires running initializeSheets() once.' : '此版本必須執行一次 initializeSheets()。';
   const noPatch = inEn() ? 'No per-version patch list — install this latest version only.' : '不設逐級補丁清單，只需安裝此最新版本。';
   const steps = inEn()
-    ? '1. Download and replace Code.gs → 2. Save → 3. Run initializeSheets() → 4. Deploy → Manage deployments → Edit → New version → Deploy (URL stays the same).'
-    : '1. 下載並取代 Code.gs → 2. 儲存 → 3. 執行 initializeSheets() → 4. 部署 → 管理部署 → 編輯 → 新版本 → 部署（URL 不變）。';
+    ? '1. Download and replace Code.gs → 2. Save → 3. Run initializeSheets() (and testPasswordResetMail() once to authorize email reset) → 4. Deploy → Manage deployments → Edit → New version → Deploy (URL stays the same).'
+    : '1. 下載並取代 Code.gs → 2. 儲存 → 3. 執行 initializeSheets()（並執行一次 testPasswordResetMail() 授權寄送重設電郵） → 4. 部署 → 管理部署 → 編輯 → 新版本 → 部署（URL 不變）。';
   let statusHTML = '';
   if (st.code === 'unchecked') {
     statusHTML = '<div class="release-status">' + (inEn() ? '⏳ Checking backend version…' : '⏳ 正在核對後端版本…') + '</div>';
@@ -2185,8 +2306,8 @@ function renderMainReleaseNotice(st, inEn) {
   const initRequired = inEn() ? 'This version requires running initializeSheets() once.' : '此版本必須執行一次 initializeSheets()。';
   const noPatch = inEn() ? 'No per-version patch list — install this latest version only.' : '不設逐級補丁清單，只需安裝此最新版本。';
   const steps = inEn()
-    ? '1. Download and replace Code.gs → 2. Save → 3. Run initializeSheets() → 4. Deploy → Manage deployments → Edit → New version → Deploy (URL stays the same).'
-    : '1. 下載並取代 Code.gs → 2. 儲存 → 3. 執行 initializeSheets() → 4. 部署 → 管理部署 → 編輯 → 新版本 → 部署（URL 不變）。';
+    ? '1. Download and replace Code.gs → 2. Save → 3. Run initializeSheets() (and testPasswordResetMail() once to authorize email reset) → 4. Deploy → Manage deployments → Edit → New version → Deploy (URL stays the same).'
+    : '1. 下載並取代 Code.gs → 2. 儲存 → 3. 執行 initializeSheets()（並執行一次 testPasswordResetMail() 授權寄送重設電郵） → 4. 部署 → 管理部署 → 編輯 → 新版本 → 部署（URL 不變）。';
   let statusHTML = '';
   if (st.code === 'unchecked') {
     statusHTML = '<div class="release-status">' + (inEn() ? '⏳ Checking backend version…' : '⏳ 正在核對後端版本…') + '</div>';
@@ -2374,6 +2495,16 @@ function switchLoginType(tp){
   if(tp==='member'){ l.textContent=inEn()?'YMIS (10 digits)':'YMIS（10位數字）'; i.placeholder=inEn()?'e.g. 1234567890':'例如 1234567890'; i.type='text'; i.maxLength=10; }
   else{ l.textContent='Email'; i.placeholder='your@email.com'; i.type='email'; i.maxLength=100; }
 }
+function localizeAuthError(raw){
+  const s=String(raw||'');
+  if(!inEn()) return s;
+  if(/帳號或密碼錯誤/.test(s)) return 'Incorrect account or password. If you forgot your password, tap “🔑 Forgot password?”.';
+  if(/登入失敗次數過多/.test(s)){
+    const m=s.match(/(\d+)/);
+    return 'Too many failed sign-in attempts — please try again in '+(m?m[1]:'15')+' minute(s), or tap “🔑 Forgot password?” to reset.';
+  }
+  return s;
+}
 async function doLogin(){
   const lid=document.getElementById('loginId').value.trim();
   const pw=document.getElementById('loginPassword').value;
@@ -2403,7 +2534,7 @@ async function doLogin(){
         loadItemsAndProgress();
         checkBackendRelease();
       },600);
-    }else{ msg.textContent=d.error||t('login_failed'); msg.className='login-msg error'; }
+    }else{ msg.textContent=localizeAuthError(d.error)||t('login_failed'); msg.className='login-msg error'; }
   }catch(e){ console.error(e); msg.textContent=e.message||t('login_failed_retry'); msg.className='login-msg error'; }
   finally{ btn.disabled=false; btn.textContent=t('login_btn'); }
 }
@@ -2488,6 +2619,11 @@ function updateNavSticky(){
 }
 if(typeof window!=='undefined') window.addEventListener('resize',()=>{ try{ updateNavSticky(); }catch(e){} });
 function getRoleName(r){ const k={'super_admin':'role_super_admin','admin':'role_admin','group_leader':'role_group_leader','branch_leader':'role_branch_leader','member':'role_member'}[r]; return k?t(k):r; }
+const CLIENT_ROLE_LEVEL={super_admin:100,admin:90,group_leader:80,branch_leader:50,member:10};
+function canManageClientRole(mgrRole,targetRole){
+  if(!mgrRole || targetRole==='super_admin') return false;
+  return (CLIENT_ROLE_LEVEL[mgrRole]||0) > (CLIENT_ROLE_LEVEL[targetRole]||0);
+}
 function canUserTickRole(role){ return ['admin','group_leader','branch_leader','super_admin'].includes(role); } // 童軍無執委，全部領袖
 
 function canCurrentUserTickItem(itemId){
@@ -2563,11 +2699,123 @@ async function submitAccountApply(){
   finally{ btn.disabled=false; btn.textContent=t('submit'); }
 }
 
-/* ================== Contact ================== */
+/* ================== Forgot Password & Contact ================== */
+let __fpwLogin='';
+function sanitizeFpCodeInput(el){
+  if(!el) return '';
+  const cleaned=String(el.value||'').replace(/[\s\-]+/g,'').replace(/[^0-9A-Za-z]/g,'').toUpperCase().slice(0,8);
+  if(el.value!==cleaned) el.value=cleaned;
+  return cleaned;
+}
+function switchForgotPwStep(step){
+  const s1=document.getElementById('fpStep1'), s2=document.getElementById('fpStep2');
+  const m1=document.getElementById('fpStep1Msg'), m2=document.getElementById('fpStep2Msg');
+  if(m1){ m1.textContent=''; m1.className='login-msg'; }
+  if(m2){ m2.textContent=''; m2.className='login-msg'; }
+  if(step===2){
+    const cur=document.getElementById('fpLoginId');
+    if(cur && cur.value.trim()) __fpwLogin=cur.value.trim();
+    if(!__fpwLogin){
+      if(m1){ m1.textContent=t('fp_err_empty_id'); m1.className='login-msg error'; }
+      if(cur) cur.focus();
+      return;
+    }
+    if(s1) s1.style.display='none';
+    if(s2) s2.style.display='flex';
+    const c=document.getElementById('fpCode');
+    if(c) setTimeout(()=>c.focus(),60);
+  }else{
+    if(s2) s2.style.display='none';
+    if(s1) s1.style.display='flex';
+    const inp=document.getElementById('fpLoginId');
+    if(inp) setTimeout(()=>inp.focus(),60);
+  }
+}
+function formatForgotPwError(raw){
+  const s=String(raw||'');
+  if(/請求過於頻密/.test(s)) return t('fp_err_rate');
+  if(/重設碼不正確或已過期/.test(s)) return t('fp_err_code_invalid');
+  if(/有效的登記電郵|valid email/i.test(s)) return t('fp_err_bad_email');
+  if(/新密碼至少|不可超過/.test(s)) return t('fp_err_pw_len');
+  return s || t('api_failed');
+}
 function showForgotPasswordModal(){
   const box=document.getElementById('fpTroop');
   if(box){ const ti=document.getElementById('loginTroopInfo'); box.textContent = (ti&&ti.textContent.trim()) ? ti.textContent.trim() : '—'; }
+  const loginField=document.getElementById('loginId');
+  const prefill=(loginField&&loginField.value)?loginField.value.trim():'';
+  const fpId=document.getElementById('fpLoginId');
+  if(fpId) fpId.value=prefill||__fpwLogin||'';
+  ['fpCode','fpNewPw','fpConfirmPw'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  switchForgotPwStep(1);
   document.getElementById('forgotPwModal').classList.add('active');
+}
+async function submitForgotPasswordRequest(){
+  const inp=document.getElementById('fpLoginId');
+  const msg=document.getElementById('fpStep1Msg');
+  const btn=document.getElementById('btnFpSendCode');
+  const val=inp?inp.value.trim():'';
+  msg.className='login-msg'; msg.textContent='';
+  if(!val){ msg.textContent=t('fp_err_empty_id'); msg.className='login-msg error'; if(inp) inp.focus(); return; }
+  if(val.includes('@') && (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) || /^[=+\-@]/.test(val))){
+    msg.textContent=t('fp_err_bad_email'); msg.className='login-msg error'; if(inp) inp.focus(); return;
+  }
+  if(currentTroopId==='DEMO'){
+    __fpwLogin=val;
+    switchForgotPwStep(2);
+    return;
+  }
+  btn.disabled=true; btn.textContent=t('fp_sending');
+  try{
+    const d=await apiRequest('requestPasswordReset', { login_id: val }, { troopId: currentTroopId, skipToken: true });
+    if(!d || !d.success){
+      msg.textContent=formatForgotPwError(d&&d.error); msg.className='login-msg error'; return;
+    }
+    __fpwLogin=val;
+    const banner=document.getElementById('fpStep2Banner');
+    if(banner) banner.textContent=inEn()?t('fp_neutral_sent'):(d.message||t('fp_neutral_sent'));
+    switchForgotPwStep(2);
+  }catch(e){
+    msg.textContent=formatForgotPwError(e&&e.message); msg.className='login-msg error';
+  }finally{
+    btn.disabled=false; btn.textContent=t('fp_send_btn');
+  }
+}
+async function submitForgotPasswordConfirm(){
+  const codeEl=document.getElementById('fpCode');
+  const pwEl=document.getElementById('fpNewPw');
+  const cpwEl=document.getElementById('fpConfirmPw');
+  const msg=document.getElementById('fpStep2Msg');
+  const btn=document.getElementById('btnFpConfirm');
+  const loginId=(__fpwLogin||(document.getElementById('fpLoginId')||{}).value||'').trim();
+  const code=sanitizeFpCodeInput(codeEl);
+  const newPw=pwEl?pwEl.value:'';
+  const confirmPw=cpwEl?cpwEl.value:'';
+  msg.className='login-msg'; msg.textContent='';
+  if(!loginId){ switchForgotPwStep(1); return; }
+  if(code.length!==8){ msg.textContent=t('fp_err_bad_code'); msg.className='login-msg error'; if(codeEl) codeEl.focus(); return; }
+  if(newPw.length<4 || newPw.length>32){ msg.textContent=t('fp_err_pw_len'); msg.className='login-msg error'; if(pwEl) pwEl.focus(); return; }
+  if(newPw!==confirmPw){ msg.textContent=t('fp_err_pw_mismatch'); msg.className='login-msg error'; if(cpwEl) cpwEl.focus(); return; }
+  btn.disabled=true; btn.textContent=t('fp_confirming');
+  try{
+    const d=await apiRequest('confirmPasswordReset', { login_id: loginId, code: code, new_password: newPw }, { troopId: currentTroopId, skipToken: true });
+    if(!d || !d.success){
+      msg.textContent=formatForgotPwError(d&&d.error); msg.className='login-msg error'; return;
+    }
+    closeModal('forgotPwModal');
+    switchLoginType(loginId.includes('@')?'leader':'member');
+    const lid=document.getElementById('loginId');
+    const lpw=document.getElementById('loginPassword');
+    const lmsg=document.getElementById('loginMsg');
+    if(lid) lid.value=loginId;
+    if(lpw){ lpw.value=''; setTimeout(()=>lpw.focus(),80); }
+    if(lmsg){ lmsg.textContent=t('fp_reset_done_login'); lmsg.className='login-msg success'; }
+    showToast(t('fp_reset_done_login'),'success');
+  }catch(e){
+    msg.textContent=formatForgotPwError(e&&e.message); msg.className='login-msg error';
+  }finally{
+    btn.disabled=false; btn.textContent=t('fp_confirm_btn');
+  }
 }
 function showContactModal(){ document.getElementById('contactModal').classList.add('active'); }
 function closeContactModal(){ document.getElementById('contactModal').classList.remove('active'); }
@@ -4603,7 +4851,7 @@ async function loadUsers(){
       h+=`<div style="font-size:12px;color:var(--text-light);margin:4px 0 10px">${tf('users_count_fmt',(d.users||[]).length,memberCount,leaderCount)}</div>`;
       if(!(d.users||[]).length) h+=`<p style="color:var(--text-light);padding:16px;background:var(--bg);border-radius:8px">${t('users_empty')}</p>`;
       h+=d.users.map(u=>`<div class="user-item" data-search="${(u.name+u.ymis+(u.email||'')).toLowerCase()}" data-ymis="${escapeHtml(u.ymis||'')}" data-name="${escapeHtml(u.name||'')}" data-email="${escapeHtml(u.email||'')}" data-role="${escapeHtml(u.role||'')}" data-status="${escapeHtml(u.status||'')}" data-cantick="${u.can_tick?'true':'false'}" data-note="${escapeHtml(u.note||'')}"><div class="user-item-info"><b>${u.name}</b> ${u.ymis&&String(u.ymis).charAt(0)!=='L'?`(${u.ymis})`:''} ${u.email?` - ${u.email}`:''}<span class="role-badge role-${u.role}">${getRoleName(u.role)}</span> ${u.roster_only?`<span style="background:var(--orange);color:#fff;padding:1px 6px;border-radius:999px;font-size:9px;margin-left:4px">${t('users_roster_chip')}</span>`:''} ${u.can_tick?`<span style="background:var(--green-light);color:var(--green);padding:1px 6px;border-radius:999px;font-size:9px">${t('can_tick_chip')}</span>`:''}<br><small style="font-size:10px;color:var(--text-light)">${t('perm_prefix')}${permDisplayText(u.allowed_badges,u.role)}</small></div><div class="user-item-actions">`+
-        (['admin','group_leader','branch_leader','super_admin'].includes(currentUser.role)&&u.ymis!==currentUser.ymis?`<select onchange="updateUserRole('${u.ymis}',this.value,'${u.role}',${!!(gslHolder&&gslHolder.ymis!==u.ymis)},${u.role==='group_leader'&&gslCount<2})"><option value="member" ${u.role==='member'?'selected':''}>${t('role_opt_member')}</option><!-- 童軍無執委 --><option value="branch_leader" ${u.role==='branch_leader'?'selected':''}>${t('role_opt_branch')}</option><option value="group_leader" ${u.role==='group_leader'?'selected':''} ${gslHolder&&u.role!=='group_leader'?'disabled':''}>${gslHolder&&u.role!=='group_leader'?tf('gsl_opt_taken',gslHolder.name):t('role_opt_group')}</option><option value="admin" ${u.role==='admin'?'selected':''}>${t('role_opt_admin')}</option></select><button class="btn btn-sm ${u.can_tick?'btn-danger':'btn-success'}" onclick="toggleCanTick('${u.ymis}',${!u.can_tick})">${u.can_tick?t('tick_revoke'):t('tick_grant')}</button><button class="btn btn-sm btn-warning" onclick="openPermissionModal('${u.ymis}','${u.name.replace(/'/g,"\'") }','${u.role}','${(u.allowed_badges||'').replace(/'/g,"")}')">${t('perm_btn')}</button><button class="btn btn-sm btn-warning" onclick="resetMemberPassword('${u.ymis}')">${t('pw_reset_btn')}</button><button class="btn btn-sm btn-outline" onclick="editSquad('${u.ymis}','${(u.squad||'').replace(/'/g,"\'")}','${(u.squad_role||'member').replace(/'/g,"\'")}')">${t('squad_btn')}</button><button class="btn btn-sm btn-danger" onclick="deactivateUser('${u.ymis}',${u.role==='group_leader'&&gslCount<2})">${t('deactivate_btn')}</button>`:'' )+
+        (['admin','group_leader','branch_leader','super_admin'].includes(currentUser.role)&&u.ymis!==currentUser.ymis?`<select onchange="updateUserRole('${u.ymis}',this.value,'${u.role}',${!!(gslHolder&&gslHolder.ymis!==u.ymis)},${u.role==='group_leader'&&gslCount<2})"><option value="member" ${u.role==='member'?'selected':''}>${t('role_opt_member')}</option><!-- 童軍無執委 --><option value="branch_leader" ${u.role==='branch_leader'?'selected':''}>${t('role_opt_branch')}</option><option value="group_leader" ${u.role==='group_leader'?'selected':''} ${gslHolder&&u.role!=='group_leader'?'disabled':''}>${gslHolder&&u.role!=='group_leader'?tf('gsl_opt_taken',gslHolder.name):t('role_opt_group')}</option><option value="admin" ${u.role==='admin'?'selected':''}>${t('role_opt_admin')}</option></select><button class="btn btn-sm ${u.can_tick?'btn-danger':'btn-success'}" onclick="toggleCanTick('${u.ymis}',${!u.can_tick})">${u.can_tick?t('tick_revoke'):t('tick_grant')}</button><button class="btn btn-sm btn-warning" onclick="openPermissionModal('${u.ymis}','${u.name.replace(/'/g,"\'") }','${u.role}','${(u.allowed_badges||'').replace(/'/g,"")}')">${t('perm_btn')}</button>${canManageClientRole(currentUser.role,u.role)?`<button class="btn btn-sm btn-warning" onclick="resetMemberPassword('${u.ymis}')">${t('pw_reset_btn')}</button>`:''}<button class="btn btn-sm btn-outline" onclick="editSquad('${u.ymis}','${(u.squad||'').replace(/'/g,"\'")}','${(u.squad_role||'member').replace(/'/g,"\'")}')">${t('squad_btn')}</button><button class="btn btn-sm btn-danger" onclick="deactivateUser('${u.ymis}',${u.role==='group_leader'&&gslCount<2})">${t('deactivate_btn')}</button>`:'' )+
         `</div></div>`).join('');
       h+='</div>';
       c.innerHTML=h;
