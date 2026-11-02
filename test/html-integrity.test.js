@@ -116,11 +116,11 @@ console.log('\n【7】中央管理帳號隱藏：用戶可見 UI／文檔不得�
   check('全頁無「系統管理帳號」字樣', !html.includes('系統管理帳號'));
   check('全頁無獨立「系統管理員」字樣（「主系統管理員」係對外主系統聯絡，不在此限）', !/(?<!主)系統管理員/.test(html));
   check('全頁無「救援」字眼（app 面向旅團，唔提後門用途）', !html.includes('救援'));
-  const deployedDocs = ['docs/LEADER_GUIDE.md', 'docs/MEMBER_GUIDE.md', 'docs/YMIS_EXPORT.md', 'docs/BULK_ONBOARD.md'];
+  const deployedDocs = ['docs/LEADER_GUIDE.md', 'docs/MEMBER_GUIDE.md', 'docs/YMIS_EXPORT.md', 'docs/BULK_ONBOARD.md', 'docs/PASSWORD_RESET.md'];
   const dirty = deployedDocs.filter(f => {
     try { return /中央管理帳號|中央帳號|超管|super_admin|SUPER_ADMIN|(?<!主)系統管理員|sheep|SUPER_KEY/.test(fs.readFileSync(path.join(ROOT, f), 'utf8')); } catch (e) { return false; }
   });
-  check('已部署用戶文檔（LEADER／MEMBER／YMIS／BULK）無中央帳號字眼', dirty.length === 0, dirty.join(','));
+  check('已部署用戶文檔（LEADER／MEMBER／YMIS／BULK／PASSWORD_RESET）無中央帳號字眼', dirty.length === 0, dirty.join(','));
 }
 
 console.log('\n【8】i18n 屬性完整性：含 HTML 標籤之翻譯鍵必須使用 data-i18n-html 而非 data-i18n');

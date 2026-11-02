@@ -162,9 +162,12 @@ function makeNode({ name, apikey, url }) {
       DigestAlgorithm: { SHA_256: 'SHA-256' },
       Charset: { UTF_8: 'UTF-8' },
       computeDigest: (algo, value) => Array.from(crypto.createHash('sha256').update(String(value), 'utf8').digest()),
-      // 真實 Apps Script API 為 computeHmacSha256Signature(value, key[, charset])。
-      computeHmacSha256Signature: (value, key) =>
-        Array.from(crypto.createHmac('sha256', String(key)).update(String(value), 'utf8').digest())
+      // 真實 Apps Script API 為 computeHmacSha256Signature(value, key[, charset])，支援 String 或 Byte[]（有號 byte -128..127）。
+      computeHmacSha256Signature: (value, key) => {
+        const keyBuf = Array.isArray(key) ? Buffer.from(key.map((b) => b & 0xFF)) : Buffer.from(String(key), 'utf8');
+        const valBuf = Array.isArray(value) ? Buffer.from(value.map((b) => b & 0xFF)) : Buffer.from(String(value), 'utf8');
+        return Array.from(crypto.createHmac('sha256', keyBuf).update(valBuf).digest(), (b) => (b > 127 ? b - 256 : b));
+      }
     },
     DriveApp: {
       Access: { PRIVATE: 'PRIVATE' },
@@ -597,7 +600,8 @@ function run() {
     const downstream = readUser(down, '2345678901');
     assert.ok(upstream && downstream, '上下游都應有帳戶');
     assert.strictEqual(downstream.password_hash, upstream.password_hash, '下游必須直插同一 hash');
-    assert.strictEqual(downstream.password_hash, sha256('4321'));
+    assert.match(downstream.password_hash, /^pbkdf2\$120000\$[0-9a-f]{32}\$[0-9a-f]{64}$/, '新帳戶必須用 PBKDF2-HMAC-SHA256');
+    assert.strictEqual(down.context.verifyPassword('4321', downstream.password_hash), true);
     assert.strictEqual(downstream.force_change_password, true, '首登仍然強制改密碼');
     assert.strictEqual(downstream.role, 'branch_leader');
 
@@ -616,7 +620,8 @@ function run() {
     assert.strictEqual(mirrored.password_kept, true, '冇帶 hash 時必須保留原密碼');
     assert.strictEqual(readUser(down, '2345678901').name, '李四（改名）');
     assert.strictEqual(readUser(down, '2345678901').branch, '第 82 旅童軍', '冇帶 branch 不可洗走既有支部');
-    assert.strictEqual(readUser(down, '2345678901').password_hash, sha256('4321'));
+    assert.strictEqual(readUser(down, '2345678901').password_hash, upstream.password_hash);
+    assert.strictEqual(down.context.verifyPassword('4321', readUser(down, '2345678901').password_hash), true);
     assert.strictEqual(sheetRows(down, 'Users').filter((r) => String(r[0]) === '2345678901').length, 1, '不可出現重複列');
     // 保留帳號不可經 sig 操作
     assert.strictEqual(up.context.callDownstream('progress', 'upsertUser', { user: { ymis: 'sheep', name: 'x', password_hash: sha256('x') } }).success, false, 'SUPER 保留帳號不可操作');
@@ -649,7 +654,8 @@ function run() {
     const payload = JSON.parse(stored.content);
     assert.strictEqual(payload.format, 'scoutbadge-users-export');
     const chen = payload.users.find((u) => u.ymis === '1234560001');
-    assert.strictEqual(chen.password_hash, sha256('newpass1'), '匯出必須含 hash');
+    assert.match(chen.password_hash, /^pbkdf2\$120000\$[0-9a-f]{32}\$[0-9a-f]{64}$/, '匯出必須含 PBKDF2 hash');
+    assert.strictEqual(oldNode.context.verifyPassword('newpass1', chen.password_hash), true);
     assert.strictEqual(JSON.stringify(sheetRows(oldNode, '操作紀錄')).includes(chen.password_hash), false, 'hash 不可寫入操作紀錄');
     assert.strictEqual(oldNode.ss.getSheets().some((sh) => sh.getName().includes('匯出')), false, '匯出不可另開工作表');
 
@@ -663,7 +669,7 @@ function run() {
     assert.strictEqual(driveStore.get(exported.file_id).trashed, true, 'Drive 檔要真係入垃圾桶');
     assert.strictEqual(String(sheetRows(newNode, '操作紀錄').map((r) => r.join('|')).join('\n')).includes(chen.password_hash), false, '垃圾桶動作不可記 hash');
     const rec = readUser(newNode, '1234560001');
-    assert.strictEqual(rec.password_hash, sha256('newpass1'), '舊密碼必須保留');
+    assert.strictEqual(rec.password_hash, chen.password_hash, '舊密碼必須保留');
     assert.strictEqual(rec.force_change_password, false, '搬舊數唔應該強制改密碼');
     const login = postTo(newNode, { action: 'login', login_id: '1234560001', password: 'newpass1', apikey: 'sc_new_branch_key_0006' });
     assert.strictEqual(login.success, true, '匯入後應可用舊密碼登入：' + JSON.stringify(login));

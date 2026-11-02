@@ -2,7 +2,7 @@
 
 > 給領袖的說明：你擁有全部權限（考核、審批、用戶管理）。
 > APP 內 ❓ 教學也有同一份內容（會跟隨介面語言顯示中／英文版）。
-> 相關文件：[YMIS_EXPORT.md](YMIS_EXPORT.md)（YMIS 匯出教學）、[BULK_ONBOARD.md](BULK_ONBOARD.md)（批量開戶總覽）。
+> 相關文件：[YMIS_EXPORT.md](YMIS_EXPORT.md)（YMIS 匯出教學）、[BULK_ONBOARD.md](BULK_ONBOARD.md)（批量開戶總覽）、[PASSWORD_RESET.md](PASSWORD_RESET.md)（忘記密碼與重設指引）。
 >
 > 🆕 **新部署旅團第一次登入**：預設管理員帳號係 YMIS `1111111111`／密碼 `changeme`
 > （用「👤 成員」分頁以 YMIS 登入，首次登入會強制改密碼）。
@@ -10,12 +10,13 @@
 
 ---
 
-## 最新更新公告（2026-10-24）
+## 最新更新公告（2026-11-02）
 
 > **所有補丁的硬性資料保全規則：不得修改、刪除、覆寫、重置或擅自遷移用戶現有資料。** 帳號、成員、YMIS、現行及舊 ID 進度、其他徽章、活動履歷、備註和旅團設定都包括在內；舊資料不得因版本更新而被轉換或要求重新輸入。補丁只可向後兼容地補齊缺失結構，已有值一律保留。完整部署規則見 [APP_ADMIN_WORKFLOW.md](../APP_ADMIN_WORKFLOW.md)。
 
-- **最新 GS：`6.1.0`**。只需安裝這個最新版，無須逐級下載補丁。
-- **這次必須執行一次 `initializeSheets()`**。更新步驟：下載並取代 `Code.gs` → 儲存 → 執行 `initializeSheets()` → 管理部署 → 編輯現有部署 → 選「新版本」→ 部署（沿用原 URL）。
+- **最新 GS：`6.2.0`**。只需安裝這個最新版，無須逐級下載補丁。
+- **這次必須執行一次 `initializeSheets()`（並執行一次 `testPasswordResetMail()` 完成寄信授權）**。更新步驟：下載並取代 `Code.gs` → 儲存 → 執行 `initializeSheets()`（補建 `密碼重設` 表，不改動任何既有資料）→ 執行一次 `testPasswordResetMail()` 授權 `MailApp` 寄送重設電郵 → 管理部署 → 編輯現有部署 → 選「新版本」→ 部署（沿用原 URL）。
+- **登入與密碼安全升級**：密碼雜湊全面升級為 `PBKDF2-HMAC-SHA256`（120,000 次迭代＋隨機鹽），舊版 64-hex 帳號首次成功登入後自動平滑升級、原密碼不變；連續 5 次錯密鎖定 15 分鐘；領袖支援以登記電郵收取 8 位重設碼自助重設密碼（見 [PASSWORD_RESET.md](PASSWORD_RESET.md)）。
 - 首頁、登入頁及登入後主頁都會顯示最新日期、GS 版本及下載入口。系統會分別核對 **GS 程式版本**及**初始化版本**：只貼新程式但未初始化，仍會顯示警告；綠色「已核對」才代表兩者都完成。
 - 初始化只補齊缺失的設定及工作表，並在 Script Properties 記錄版本；不得更改上述用戶資料，亦不應更換現有 API Key。完成後在公告按「重新檢查」。
 - **接入資料只提供 API Key**：初始化彈窗及選單「🔗 旅系統 → 🔑 顯示 API KEY（交 ADMIN）」只顯示 `API Key = …`，不再顯示自動取得或快取的部署網址。
@@ -55,9 +56,15 @@
 
 - 自動填入成員資料與進度日期，官方 PT/18、P120A1 童軍支部表格格式，可編輯後列印。
 
-## 6. 用戶管理
+## 6. 用戶管理與密碼重設
 
-- 更改成員角色、停用／刪除帳戶；可直接為成員設定新密碼（無電郵也可面對面告知）。
+- 更改成員角色、停用／刪除帳戶；可直接為下級成員設定新密碼（無電郵也可面對面告知）。
+- **重設密碼權限階梯**：只可重設**職級低於自己**的帳號，同級不可互改（`admin` 可重設團長／支部領袖／成員，不可重設另一位 `admin`；團長可重設支部領袖／成員；支部領袖只可重設成員）。重設後會即時清除該帳號的 15 分鐘錯密鎖定、踢走其所有舊裝置登入狀態，並設為首次登入強制改密。
+- **🔑 領袖自己忘記密碼（逐步教學）**：
+  1. 在登入頁密碼欄旁按 **「🔑 忘記密碼？」**。
+  2. 輸入你的**童軍編號（YMIS）或登記電郵** → 按 **「📨 發送 8 位重設碼」**。
+  3. 到登記電郵信箱複製 8 位重設碼（15 分鐘內有效、不分大小寫、貼上時自動去除空格與 `-`），填寫 4–32 位新密碼後按 **「✅ 確認重設密碼」**。
+  4. 如全團收唔到重設電郵，請旅團管理員在 Google Sheet「擴充功能 → Apps Script」執行一次 `testPasswordResetMail()` 完成 `MailApp` 授權。如遺失預設管理員 `1111111111` 密碼，請按「🐛💬 回報 · 意見」聯絡主系統管理員（APP ADMIN）。詳見 [PASSWORD_RESET.md](PASSWORD_RESET.md)。
 - ⚙️ **權限設定**：領袖預設全部 (*)，可按個別成員設定可考核範圍。
 - 🆕 成員／領袖可自行申請帳戶，在「審批中心」批准；旅長／管理員須由現任管理層直接開立。
 
@@ -86,14 +93,15 @@
 ## English Version
 
 > As a leader you have full permissions (assessment, approvals, user management).
-> See also: [YMIS_EXPORT.md](YMIS_EXPORT.md) and [BULK_ONBOARD.md](BULK_ONBOARD.md).
+> See also: [YMIS_EXPORT.md](YMIS_EXPORT.md), [BULK_ONBOARD.md](BULK_ONBOARD.md) and [PASSWORD_RESET.md](PASSWORD_RESET.md).
 
-### Latest update (2026-10-24)
+### Latest update (2026-11-02)
 
 > **Hard data-preservation rule for all patches: never modify, delete, overwrite, reset, or arbitrarily migrate existing user data.** Accounts, members, YMIS, current and legacy-ID progress, other badges, activity records, notes and troop settings are all covered; old data must not be converted or re-entered due to a version update. Patches may only add backward-compatible structures; existing values are always preserved. Full deployment rules: [APP_ADMIN_WORKFLOW.md](../APP_ADMIN_WORKFLOW.md).
 
-- **Latest GS: `6.1.0`**. Install this latest version only — no per-version patch list.
-- **This release requires running `initializeSheets()` once.** Update steps: download and replace `Code.gs` → save → run `initializeSheets()` → deploy → manage deployments → edit → new version → deploy (URL stays the same).
+- **Latest GS: `6.2.0`**. Install this latest version only — no per-version patch list.
+- **This release requires running `initializeSheets()` once (and `testPasswordResetMail()` once to authorize email reset).** Update steps: download and replace `Code.gs` → save → run `initializeSheets()` → run `testPasswordResetMail()` once → deploy → manage deployments → edit → new version → deploy (URL stays the same).
+- **Authentication & password-reset hardening**: all passwords now use `PBKDF2-HMAC-SHA256` (120,000 iterations + random salt) with transparent login upgrade for legacy hashes; 5 consecutive wrong passwords lock the account for 15 minutes; leaders with a registered email can self-reset via an 8-character email code (see [PASSWORD_RESET.md](PASSWORD_RESET.md)).
 - The home, login and main views all show the latest date, GS version and download link. The system checks **GS code version** and **initialization version** separately: pasting new code without initializing still shows a warning; the green "Verified" only appears when both match.
 - Initialization only fills in missing settings and sheets, and records the version in Script Properties; it must not change any of the above user data, nor rotate the existing API key. After completion, press "Re-check" in the notice.
 - **Credential displays show the API Key only**: the initialization dialog and the “🔗 Troop system → 🔑 Show API KEY (to ADMIN)” menu show `API Key = …` and never an automatically discovered or cached deployment URL.
@@ -130,9 +138,11 @@
 
 - Auto-filled with member data and progress dates in the official Scout Section PT/18 / P120A1 format; edit then print.
 
-### 6. User Management
+### 6. User Management & Password Reset
 
-- Change roles, deactivate/delete accounts; set a member's new password directly (can be told face-to-face without email).
+- Change roles, deactivate/delete accounts; set a subordinate member's new password directly (clears any 15-minute lockout, signs out all old sessions, and forces password change on next login).
+- **Role hierarchy**: you can only reset passwords of **strictly lower roles** (`admin` → `group_leader` / `branch_leader` / `member`, never another `admin`; `group_leader` → `branch_leader` / `member`; `branch_leader` → `member`).
+- **🔑 Forgot your own leader password?** Tap **🔑 Forgot password?** on the sign-in page → enter your Scout ID or registered email → paste the 8-character code from your email (valid for 15 minutes, case-insensitive, spaces stripped automatically) and set a new 4–32 character password. Full steps & troubleshooting: [PASSWORD_RESET.md](PASSWORD_RESET.md).
 - ⚙️ Permission settings: leaders default to all (*); per-member assessable scope can be set.
 - 🆕 Members and leaders may apply for accounts themselves, approved in the Approval Centre; Group Leader / admin accounts must be created directly by the current management.
 

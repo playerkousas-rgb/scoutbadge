@@ -16,9 +16,62 @@ function onOpen() {
     .addToUi();
 }
 
+var PBKDF2_ITERATIONS = 120000;
+
+function utf8SignedBytes_(str) {
+  var s = String(str === undefined || str === null ? '' : str);
+  var out = [];
+  for (var i = 0; i < s.length; i++) {
+    var c = s.charCodeAt(i);
+    if (c < 0x80) {
+      out.push(c);
+    } else if (c < 0x800) {
+      out.push(0xC0 | (c >> 6), 0x80 | (c & 0x3F));
+    } else if (c >= 0xD800 && c <= 0xDBFF && i + 1 < s.length) {
+      var c2 = s.charCodeAt(i + 1);
+      if (c2 >= 0xDC00 && c2 <= 0xDFFF) {
+        var cp = 0x10000 + (((c & 0x3FF) << 10) | (c2 & 0x3FF));
+        out.push(0xF0 | (cp >> 18), 0x80 | ((cp >> 12) & 0x3F), 0x80 | ((cp >> 6) & 0x3F), 0x80 | (cp & 0x3F));
+        i++;
+      } else {
+        out.push(0xEF, 0xBF, 0xBD);
+      }
+    } else {
+      out.push(0xE0 | (c >> 12), 0x80 | ((c >> 6) & 0x3F), 0x80 | (c & 0x3F));
+    }
+  }
+  for (var j = 0; j < out.length; j++) if (out[j] > 127) out[j] -= 256;
+  return out;
+}
+
+function hexToSignedBytes_(hex) {
+  var h = String(hex || '');
+  var out = new Array(h.length >> 1);
+  for (var i = 0, j = 0; i < h.length; i += 2, j++) {
+    var v = parseInt(h.substr(i, 2), 16) & 0xFF;
+    out[j] = v > 127 ? v - 256 : v;
+  }
+  return out;
+}
+
 function hashPassword(p) {
-  var raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, p, Utilities.Charset.UTF_8);
-  return raw.map(function (b) { return ('0' + (b & 0xFF).toString(16)).slice(-2); }).join('');
+  var rawUuid = String(Utilities.getUuid() || '').replace(/-/g, '').toLowerCase();
+  var saltHex = /^[0-9a-f]{32}$/.test(rawUuid)
+    ? rawUuid
+    : Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, rawUuid + ':' + Date.now() + ':' + Math.random(), Utilities.Charset.UTF_8)
+        .map(function (b) { return ('0' + (b & 0xFF).toString(16)).slice(-2); }).join('').substring(0, 32);
+  var keyBytes = utf8SignedBytes_(p);
+  var saltBytes = hexToSignedBytes_(saltHex);
+  var msg = saltBytes.concat([0, 0, 0, 1]);
+  var u = Utilities.computeHmacSha256Signature(msg, keyBytes);
+  var t = u.slice();
+  for (var c = 2; c <= PBKDF2_ITERATIONS; c++) {
+    u = Utilities.computeHmacSha256Signature(u, keyBytes);
+    for (var k = 0; k < 32; k++) t[k] ^= u[k];
+  }
+  var dkHex = '';
+  for (var i = 0; i < 32; i++) dkHex += ('0' + (t[i] & 0xFF).toString(16)).slice(-2);
+  return 'pbkdf2$' + PBKDF2_ITERATIONS + '$' + saltHex + '$' + dkHex;
 }
 
 function readRows() {

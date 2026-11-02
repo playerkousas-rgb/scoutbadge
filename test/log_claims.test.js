@@ -56,12 +56,13 @@ function installEnv() {
     getScriptProperties(){ return {
       getProperty(k){ return props[k] !== undefined ? props[k] : null; },
       setProperty(k, v){ props[k] = v; },
+      deleteProperty(k){ delete props[k]; },
       setProperties(values){ Object.assign(props, values); }
     }; }
   };
   global.Utilities = {
     computeDigest(_algo, str){ const b = []; for (let i = 0; i < str.length; i++) b.push(str.charCodeAt(i) & 0xff); return b; },
-    getUuid(){ return 'u' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36); },
+    getUuid(){ return require('crypto').randomUUID(); },
     formatDate(d){ return d; },
     Charset: { UTF_8: 'UTF-8' },
     DigestAlgorithm: { SHA_256: 'SHA_256' }
@@ -80,7 +81,9 @@ function installEnv() {
   };
   global.Utilities.computeHmacSha256Signature = function(value, key){
     const crypto = require('crypto');
-    return Array.from(crypto.createHmac('sha256', String(key)).update(String(value), 'utf8').digest());
+    const keyBuf = Array.isArray(key) ? Buffer.from(key.map((b) => b & 0xFF)) : Buffer.from(String(key), 'utf8');
+    const valBuf = Array.isArray(value) ? Buffer.from(value.map((b) => b & 0xFF)) : Buffer.from(String(value), 'utf8');
+    return Array.from(crypto.createHmac('sha256', keyBuf).update(valBuf).digest(), (b) => (b > 127 ? b - 256 : b));
   };
 }
 installEnv();
@@ -245,7 +248,7 @@ console.log('\n【B】中央登入：只認回打驗票（舊密碼／舊單向�
 const centralIdMatch=code.match(/const SUPER_ADMIN_ID = '([^']+)'/);
 const centralId=centralIdMatch&&centralIdMatch[1];
 const directCentral=out(api.handleLogin(centralId,'not-used'));
-check('中央身份不能直接以 GAS 密碼入口登入', directCentral.success===false && /登入/.test(directCentral.error||''), JSON.stringify(directCentral));
+check('中央身份不能直接以 GAS 密碼入口登入', directCentral.success===false && /登入|帳號或密碼錯誤/.test(directCentral.error||''), JSON.stringify(directCentral));
 global.__scriptProperties.CENTRAL_AUTH_VERIFY_URL='http://127.0.0.1:9/api/verify-super-ticket';
 // 1) 冇票（舊版單向授權 exactly 咁做）→ 401，而且完全唔會對外發請求。
 let callbacks=0;

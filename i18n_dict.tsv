@@ -30,5 +30,21 @@ Developed for 82 Troop • <a href="https://www.scout.org.hk" target="_blank" re
 關閉	Close
 請填寫帳號和密碼	Please enter your account and password
 登入失敗	Login failed
+帳號或密碼錯誤	Incorrect account or password
 提交失敗	Submit failed
 權限不足	Insufficient permission
+🔑 忘記密碼？	🔑 Forgot password?
+童軍編號（YMIS）或登記電郵	Scout ID (YMIS) or registered email
+只需填其中一項；重設碼有效期為 15 分鐘。	Enter either one; reset codes stay valid for 15 minutes.
+📨 發送 8 位重設碼	📨 Send 8-character reset code
+已收到重設碼？直接輸入 →	Already have a code? Enter it now →
+若此帳號已登記電郵，重設碼已發送到登記電郵（15 分鐘內有效）。	If this account has a registered email, an 8-character reset code has been sent (valid for 15 minutes).
+8 位重設碼（不分大小寫，可直接貼上）	8-character reset code (case-insensitive, pasteable)
+自動去除空格與連字號（-）；最多可嘗試 5 次。	Spaces and hyphens (-) are removed automatically; up to 5 attempts.
+新密碼（4–32 位）	New password (4–32 characters)
+再次輸入新密碼	Confirm new password
+密碼規則：4–32 位字元；重設成功後，舊裝置登入狀態會自動登出。	Password rule: 4–32 characters. After reset, all previous sign-in sessions are signed out automatically.
+✅ 確認重設密碼	✅ Confirm password reset
+📬 收唔到信？點此查看排查方法	📬 Didn’t get the email? Troubleshooting steps
+← 返回重新輸入帳號／重發重設碼	← Back to re-enter account / resend code
+✅ 密碼已成功重設！請輸入剛設定的新密碼（密碼規則：4–32 位）登入。	✅ Password reset complete! Sign in with your new password (rule: 4–32 characters).

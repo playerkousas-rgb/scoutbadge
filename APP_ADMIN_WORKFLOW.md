@@ -26,11 +26,13 @@ Apps Script 的設定步驟。每個旅團正好使用 `TROOP_{ID}_NAME`、`TROO
 
 ## 最新版本公告與 GS 初始化核對
 
-- 前端首頁、登入頁及登入後主頁均顯示最新更新日期及最新 GS 版本（不設逐級補丁清單），並提供 `Code.gs` 下載、更新步驟及「重新檢查」按鈕。
+- 前端首頁、登入頁及登入後主頁均顯示最新更新日期及最新 GS 版本（目前為 `2026-11-02`／`GS 6.2.0`，不設逐級補丁清單），並提供 `Code.gs` 下載、更新步驟及「重新檢查」按鈕。
 - GS 的 `ecStatus`（GET）及登入後 `load` 均回報 `gsVersion` 和 `initializedGsVersion`。
-- `initializeSheets()` 成功完成後，才在 Script Properties 寫入 `INITIALIZED_GS_VERSION`。
+- `initializeSheets()` 採**冪等只增不刪**約定：只補建缺失工作表（包含 `密碼重設` 表）及缺失表頭欄，成功完成後才在 Script Properties 寫入 `INITIALIZED_GS_VERSION`，絕不刪改既有帳號、進度或 API Key。
+- 更新至 `GS 6.2.0` 後，旅團管理員須在 Apps Script 編輯器額外執行一次 `testPasswordResetMail()`，授權 Google `MailApp`「傳送電郵」範圍並確認收到測試信，讓領袖可透過 8 位重設碼自助重設密碼。
 - 前端分辨三種狀態：「GS 未更新」、「GS 已更新但未初始化」、「全部完成」；只有最後一種情況才顯示綠色「已核對」。
 - 如該版本需要初始化，公告明確寫出「必須執行一次 `initializeSheets()`」。
+- **預設管理員（`1111111111`）或旅團 `admin` 忘記密碼處理**：`ADMIN` 帳號只能由 `SUPER_ADMIN` 重設（同級 `admin` 不可互改，`ADMIN_EMAIL` 亦固定為不可收信的 `admin@example.com`）。收到旅團經「回報 · 意見」核實身分後，APP ADMIN 以 `SUPER_KEY` 登入該旅團，於「👥 用戶管理 → 重設密碼」重發臨時密碼（系統會自動解除鎖定、踢走舊 session 並開啟 `force_change_password = true`）。
 
 ## 操作步驟
 

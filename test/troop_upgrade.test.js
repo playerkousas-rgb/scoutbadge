@@ -220,7 +220,7 @@ async function run() {
   assert.strictEqual(expWithHash.meta.include_hash, true);
   const u1WithHash = expWithHash.data.users.find((u) => u.ymis === '1234560001');
   assert(u1WithHash, '應包含成員');
-  assert(typeof u1WithHash.password_hash === 'string' && u1WithHash.password_hash.length === 64, '應包含完整 password_hash');
+  assert(typeof u1WithHash.password_hash === 'string' && /^pbkdf2\$120000\$[0-9a-f]{32}\$[0-9a-f]{64}$/.test(u1WithHash.password_hash), '應包含完整 PBKDF2 password_hash（含迭代與隨機鹽）');
   console.log('  [PASS] exportAll 支援剝密碼備份與含 hash 吐出，meta 含 sha256 校驗碼');
 
   // ========================================================
