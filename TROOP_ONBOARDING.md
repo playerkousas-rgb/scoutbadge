@@ -20,8 +20,12 @@
 4. 取得接入資料：選單「🔗 旅系統 → 🔑 顯示 API KEY（交 ADMIN）」只提供 **API Key**
    （首次讀取時自動生成並存 Script Properties，已有 Key 不會更換）。部署網址請在
    Google「部署 → 管理部署」視窗自行取得（`/exec` 結尾那條）；本系統不顯示、也不推算任何網址。
-   如屬學校／機構 Workspace 帳戶，網址可能帶 `/a/macros/<學校域名>/` 前綴，proxy 呼叫後端時會
-   自動轉成標準 `/macros/` 形式。
+   如屬學校／機構 Workspace 帳戶，網址可能帶 `/a/macros/<學校域名>/` 前綴：proxy 呼叫後端時會
+   自動轉成標準 `/macros/` 形式（登記字串仍然逐字保存），所以**照抄唔使手改**。
+   > ⚠️ 自動轉換只係換路徑，唔會令 deployment 變公開。如果「管理部署作業」顯示嘅本身就係
+   > `/a/macros/<學校域名>/…`，代表該部署嘅存取權係「<域名> 內任何人」，proxy（冇 Google session）
+   > 一樣入唔到，Google 會回「無法開啟檔案」。申請表提交時 proxy 會即時匿名探測後端，遇到呢種情況
+   > 會即刻拒絕並講明原因，唔會等管理員批准後才發現。
 5. 在 ADMIN FORM 自行填寫**旅團編號、名稱、部署 URL 及 API Key**。旅團編號毋須（亦不會）在
    Sheet／Apps Script 預先設定。
 
@@ -65,6 +69,9 @@ TROOP_0082_APIKEY=Apps Script 既有 API Key
 > ③ 加完變數**一定要 Redeploy**（環境變數唔會熱生效），
 > 之後該團卡片才會出現在首頁。要一次確認登記正確，喺該團 Apps Script 跑一次 `testTrustedTicketVerifier`：
 > 三項 `troop_known`／`key_ok`／`backend_matches` 都 true 就係全對。
+> ④ 新旅團申請提交時，proxy 會先匿名 GET 後端 `?action=ecStatus`：回 JSON 才會轉交管理員；
+> 回 Google 登入頁／「無法開啟檔案」／HTTP 404 就即時拒絕並附原因（存取權、網域限制或部署已刪除）；
+> 逾時或非預期錯誤則照樣轉交，只記 log（避免冷啟動誤殺合法申請）。
 
 ## C. 首次登入（預設管理員帳號）
 

@@ -158,6 +158,62 @@ function looksLikeGoogleSignIn(upstream, raw) {
   return /accounts\.google\.com|ServiceLogin|signin\/identifier/.test(head);
 }
 
+// A deployment that is not published to 「任何人」 — or a deployment that no
+// longer exists — answers an anonymous request with Google's Drive error page
+// ("Sorry, unable to open the file at this time"), not a sign-in form. This is
+// the shape a school Workspace deployment takes when the domain forbids public
+// publishing, so it must be named rather than reported as a generic outage.
+function looksLikeDriveUnavailable(upstream, raw) {
+  const finalUrl = String((upstream && upstream.url) || '');
+  if (/(^|\/\/)drive\.google\.com(\/|$)/.test(finalUrl)) return true;
+  const head = String(raw || '').slice(0, 8192);
+  return /unable to open the file at this time|drive\.google\.com\/start\/apps|無法開啟這個檔案|目前無法開啟/i.test(head);
+}
+
+// Registration-time reachability probe. The applicant's deployment is only
+// usable by this proxy when an anonymous GET gets JSON back: a Workspace
+// deployment restricted to the domain (the /a/macros/<domain>/… form) never
+// will, and finding that out at approval time wastes an admin round trip.
+// ecStatus is deliberately unauthenticated (Code.gs answers it before the
+// auth gate) and cheap, so it doubles as a liveness check for any build.
+const PROBE_TIMEOUT_MS = 12_000;
+
+async function probeAnonymousBackend(backend) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+  try {
+    const target = new URL(canonicalBackendUrl(backend));
+    target.searchParams.set('action', 'ecStatus');
+    const upstream = await fetch(target, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      redirect: 'follow',
+      signal: controller.signal
+    });
+    const raw = await upstream.text();
+    if (looksLikeGoogleSignIn(upstream, raw)) return { verdict: 'signin', status: upstream.status };
+    if (looksLikeDriveUnavailable(upstream, raw)) return { verdict: 'restricted', status: upstream.status };
+    if (upstream.status === 404) return { verdict: 'not_found', status: 404 };
+    if (upstream.status < 200 || upstream.status >= 300) return { verdict: 'http_error', status: upstream.status };
+    let parsed = null;
+    try { parsed = JSON.parse(raw); } catch (_) { /* not a JSON build */ }
+    if (!parsed || typeof parsed !== 'object') return { verdict: 'not_json', status: upstream.status };
+    return { verdict: 'ok', status: upstream.status, gsVersion: String(parsed.gsVersion || '') };
+  } catch (error) {
+    return { verdict: error && error.name === 'AbortError' ? 'timeout' : 'network' };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+// Blocking verdicts are permanent for this caller: retrying the same URL can
+// never succeed, so the application is refused with the fix in the message.
+const REGISTRATION_BLOCKING = {
+  signin: '後端要求 Google 登入，無法匿名存取：請喺 Apps Script「部署 → 管理部署作業 → ✏️」把「執行身分」設為「我」、「可存取」設為「任何人」，儲存後用新網址重新提交（API Key 不變）。',
+  restricted: '後端未開放匿名存取（Google 回覆「無法開啟檔案」）：通常係部署只限網域內使用（網址帶 /a/macros/<學校域名>/），或該部署已刪除。請設為「任何人」重新部署；學校 Google Workspace 帳戶如被管理員限制公開發佈，請改用個人 Google 帳戶部署，或請學校 IT 開啟權限。',
+  not_found: '找不到這個部署（HTTP 404）：請由 Apps Script「部署 → 管理部署作業」複製現行 Web App 的 /exec 網址（不要用 /dev 或已刪除的部署）。'
+};
+
 // Reads go to Apps Script as a GET with the server-side key on the query
 // string; writes and every other action are POSTed as before. Upstream
 // requests always use the canonical /macros/ URL form: a Workspace
@@ -268,6 +324,30 @@ async function handleRegistration(res, payload, startedAt) {
   if (!regPayload.troopId || !regPayload.backendUrl || !regPayload.apiKey) {
     return fail(res, 400, '申請資料不完整');
   }
+  // Only Apps Script web-app URLs are ever registered (registry.js enforces
+  // the same rule), so refuse anything else before probing — that also keeps
+  // this public entry point from fetching a host of the caller's choosing.
+  if (!isTrustedBackend(regPayload.backendUrl)) {
+    logResult({ troopId: 'REG', action: 'submitContact', status: 400, startedAt, success: false, central: false });
+    return fail(res, 400, '請提供 Apps Script Web App 的 https://script.google.com/…/exec 網址');
+  }
+
+  // Prove the deployment answers anonymously *before* the application reaches
+  // the admin: a domain-restricted (school Workspace) deployment is permanently
+  // unusable here and looks identical to a valid one from the browser.
+  const probe = await probeAnonymousBackend(regPayload.backendUrl);
+  const blockingMessage = REGISTRATION_BLOCKING[probe.verdict];
+  if (blockingMessage) {
+    console.error(`[proxy] registration_backend_unusable verdict=${probe.verdict} status=${probe.status || 0}`);
+    logResult({ troopId: 'REG', action: 'submitContact', status: 422, startedAt, success: false, central: false });
+    return fail(res, 422, blockingMessage);
+  }
+  // Anything inconclusive (cold start, timeout, transient 5xx, a non-JSON
+  // build) must not block a legitimate application; the admin still checks.
+  if (probe.verdict !== 'ok') {
+    console.error(`[proxy] registration_probe_inconclusive verdict=${probe.verdict} status=${probe.status || 0}`);
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
   try {
@@ -510,6 +590,12 @@ module.exports = async function handler(req, res) {
         console.error(`[proxy] upstream_signin_wall troop=${troopId} action=${action} status=${upstream.status}`);
         return fail(res, 502, '旅團後端要求 Google 登入，伺服器無法匿名存取：請喺 Apps Script「部署 → 管理部署作業」將存取權設為「任何人」並建立新版本；學校 Google Workspace 帳戶如被管理員政策限制對外發佈，請改用非學校 Google 帳戶部署該旅團後端');
       }
+      // Same root cause, different page: a domain-only (or deleted) deployment
+      // reaches Chrome as Drive's "unable to open the file" page.
+      if (looksLikeDriveUnavailable(upstream, raw)) {
+        console.error(`[proxy] upstream_restricted_wall troop=${troopId} action=${action} status=${upstream.status}`);
+        return fail(res, 502, '旅團後端未開放匿名存取（Google 回覆「無法開啟檔案」）：通常係部署只限網域內使用（網址帶 /a/macros/學校域名/）或該部署已刪除。請喺 Apps Script「部署 → 管理部署作業」將存取權設為「任何人」並建立新版本；學校 Google Workspace 帳戶如被管理員限制公開發佈，請改用個人 Google 帳戶部署該旅團後端');
+      }
       console.error(`[proxy] upstream_non_json troop=${troopId} action=${action} status=${upstream.status}`);
       return fail(res, 502, '後端服務暫時無法使用，請稍後再試');
     }
@@ -572,3 +658,7 @@ module.exports = async function handler(req, res) {
 
 module.exports.PUBLIC_ACTIONS = PUBLIC_ACTIONS;
 module.exports.AUTH_ACTIONS = AUTH_ACTIONS;
+// Exported for unit tests: registration-time reachability classification.
+module.exports.looksLikeGoogleSignIn = looksLikeGoogleSignIn;
+module.exports.looksLikeDriveUnavailable = looksLikeDriveUnavailable;
+module.exports.probeAnonymousBackend = probeAnonymousBackend;
