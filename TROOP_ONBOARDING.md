@@ -3,9 +3,11 @@
 ## A. 建立新旅團（僅新 Sheet）
 
 1. 建立 Google Sheet，開啟 Apps Script，貼上 `apps-script/Code.gs`。
-2. 只在這個全新的 Sheet 執行一次 `initializeSheets()` 並完成授權。完成後會彈「✅ 初始化完成」視窗，
-   入面有 **API Key（`API Key = …`）**，**仲有預設管理員帳號（YMIS `1111111111`／密碼 `changeme`）**——
+2. 儲存後按選單 **「🔗 旅系統 → 🔧 初始化／更新」** 一次（等同在編輯器執行 `initializeSheets()`），並完成授權。
+   完成後會彈「✅ 初始化完成」視窗，入面有 **API Key（`API Key = …`）**，**仲有預設管理員帳號（YMIS `1111111111`／密碼 `changeme`）**——
    呢個就係 §C 首次登入用嘅帳號。冇抄低都唔緊要：只要未登入改過密碼，預設值係固定嘅。
+   呢個選單動作同時係**唯一嘅更新入口**：日後貼上任何新版本 `Code.gs`，都只需再按同一個掣一次
+   （只補缺失工作表／欄及版本標記，唔會刪改既有資料、唔會更換 API Key，可重複執行）。
    > 彈窗**唔會**顯示部署網址：`ScriptApp.getService().getUrl()` 可能係 `/dev` 或另一個部署，
    > 唔能夠代表你在部署視窗選定的入口。部署網址請在下一步由 Google 部署視窗取得。
    > 初始化亦**唔會**要求輸入旅團編號。
@@ -18,6 +20,8 @@
    > 或者揀咗之後用無痕窗口開 `/exec` 仍然彈登入頁，即係學校 Workspace 管理員政策封咗對外發佈：
    > 請 IT 管理員放行，或者用**非學校 Google 帳戶**（例如旅團自建嘅 Gmail）建 Sheet 重新部署。
 4. 取得接入資料：選單「🔗 旅系統 → 🔑 顯示 API KEY（交 ADMIN）」只提供 **API Key**
+   （**必須先完成步驟 2**；未初始化前按呢個掣雖然會顯示 Key，但對話框最上方會標明「尚未完成初始化／更新」，
+   該 Key 暫時無效——見到呢句就返去步驟 2 按一次，唔好照抄落申請表）
    （首次讀取時自動生成並存 Script Properties，已有 Key 不會更換）。部署網址請在
    Google「部署 → 管理部署」視窗自行取得（`/exec` 結尾那條）；本系統不顯示、也不推算任何網址。
    如屬學校／機構 Workspace 帳戶，網址可能帶 `/a/macros/<學校域名>/` 前綴：proxy 呼叫後端時會
@@ -40,9 +44,11 @@
 > 即係下面 §B 要填嘅 `TROOP_<編號>_BACKEND`／`TROOP_<編號>_APIKEY` 一定係喺呢一步之後才有。相反，
 > **升級一個已經登記好嘅旅團**才係「Vercel 先、葉端後」（見 §H 及 `operations/TROOP_LINK_UPGRADE.md` 第 12 節）。
 
-> 已投入使用的 Sheet 不要為本次 Vercel／驗證升級執行初始化。更新程式後部署既有 Web App 的新版本即可，原 `/exec` URL 不變。
+> **已投入使用的 Sheet 更新 GS**：貼上新 `Code.gs` → 按選單「🔧 初始化／更新」一次 → 為既有 Web App 建立新版本
+> （原 `/exec` URL 不變）。呢個動作只增不刪、可重跑，唔會改動任何帳號、進度、徽章、履歷、設定或既有 API Key，
+> 亦唔需要再搵 `repairSheets()` 之類嘅其他按鈕。純 Vercel 端更新（proxy／驗票）則不需要動 Sheet，只需 Redeploy。
 
-> **冪等只增不刪（`initializeSheets()`）與 `MailApp` 電郵重設授權（GS `6.2.0`）**：
+> **冪等只增不刪（`initializeSheets()`）與 `MailApp` 電郵重設授權（GS `6.3.0`）**：
 > - `initializeSheets()` 採嚴格**冪等只增不刪**約定：只補建缺失工作表（如新增的 `密碼重設` 表）及缺失表頭欄，並寫入 `INITIALIZED_GS_VERSION`；**絕不刪除、覆寫或重置任何既有帳號、進度、徽章、履歷或既有 API Key**（除非 `Users` 整張表曾被手動改名／刪走才會補建預設表）。若舊旅團未重跑 `initializeSheets()`，首次有人使用「忘記密碼？」時亦會自動補建空白 `密碼重設` 表。
 > - 為啟用領袖電郵自助重設密碼（`MailApp.sendEmail`），貼上最新 `Code.gs` 後請在 Apps Script 編輯器執行一次 **`testPasswordResetMail`**，完成 Google「傳送電郵」範圍授權並確認收到測試信（同時如未授權對外請求，亦執行一次 `testTrustedTicketVerifier`）。
 
@@ -72,6 +78,9 @@ TROOP_0082_APIKEY=Apps Script 既有 API Key
 > ④ 新旅團申請提交時，proxy 會先匿名 GET 後端 `?action=ecStatus`：回 JSON 才會轉交管理員；
 > 回 Google 登入頁／「無法開啟檔案」／HTTP 404 就即時拒絕並附原因（存取權、網域限制或部署已刪除）；
 > 逾時或非預期錯誤則照樣轉交，只記 log（避免冷啟動誤殺合法申請）。
+> ⑤ **未初始化會被拒絕**：如果後端回報 `initRequired: true` 而 `initializedGsVersion` 仍然係空（即貼咗
+> `Code.gs` 但未按過「🔧 初始化／更新」），申請會即時以 422 拒絕並指示先按一次選單動作；舊版後端冇呢兩個
+> 欄位就當「未知」照樣轉交，唔會誤殺。
 
 ## C. 首次登入（預設管理員帳號）
 

@@ -310,6 +310,57 @@ async function run() {
     console.log('  [PASS] probe uses the canonical /macros/ form, never the /a/macros/<domain>/ one');
   }
 
+  console.log('\n10. Registration refuses a backend that never ran initializeSheets()');
+  {
+    const ADMIN_API = 'https://script.google.com/macros/s/AKfyc_ADMIN_INBOX/exec';
+    const backendUrl = 'https://script.google.com/macros/s/AKfyc_NEW_TROOP/exec';
+    const ecStatusUrl = `${backendUrl}?action=ecStatus`;
+    process.env.SCOUTBADGE_ADMIN_API = ADMIN_API;
+    let adminCalls = 0;
+
+    const submit = async (ecStatusBody) => {
+      adminCalls = 0;
+      global.fetch = async (url) => {
+        const target = String(url);
+        if (target.startsWith(ecStatusUrl)) {
+          return { status: 200, url: backendUrl, text: async () => JSON.stringify(ecStatusBody) };
+        }
+        if (target === ADMIN_API) {
+          adminCalls += 1;
+          return { ok: true, status: 200, text: async () => JSON.stringify({ status: 'success' }) };
+        }
+        throw new Error('unexpected fetch: ' + target);
+      };
+      return callProxy({ action: 'submitContact', troopId: '0013', troopName: '測試旅', scriptUrl: backendUrl, apiKey: 'NEWKEY', note: 'hi' });
+    };
+
+    // Pasted 6.3.0 Code.gs but never pressed 「🔧 初始化／更新」.
+    const uninit = await submit({ success: true, gsVersion: '6.3.0', initRequired: true, initializedGsVersion: '' });
+    assert.strictEqual(uninit.statusCode, 422, JSON.stringify(uninit.body));
+    assert(String(uninit.body.error).indexOf('initializeSheets') >= 0, uninit.body.error);
+    assert(String(uninit.body.error).indexOf('初始化／更新') >= 0, 'must name the single menu action');
+    assert.strictEqual(adminCalls, 0, 'an unusable backend must never reach the admin inbox');
+    assert(!JSON.stringify(uninit.body).includes('AKfyc_NEW_TROOP'), 'error must not echo the backend URL');
+
+    const ready = await submit({ success: true, gsVersion: '6.3.0', initRequired: true, initializedGsVersion: '6.3.0' });
+    assert.strictEqual(ready.statusCode, 200, JSON.stringify(ready.body));
+    assert.strictEqual(ready.body.success, true);
+    assert.strictEqual(adminCalls, 1);
+
+    // Older backend that does not report the init fields at all: unknown, allow.
+    const legacy = await submit({ success: true, gsVersion: '5.2.0' });
+    assert.strictEqual(legacy.statusCode, 200, JSON.stringify(legacy.body));
+    assert.strictEqual(adminCalls, 1);
+
+    // A build that explicitly says initialization is not required.
+    const noInitNeeded = await submit({ success: true, gsVersion: '6.3.0', initRequired: false, initializedGsVersion: '' });
+    assert.strictEqual(noInitNeeded.statusCode, 200, JSON.stringify(noInitNeeded.body));
+
+    delete process.env.SCOUTBADGE_ADMIN_API;
+    console.log('  [PASS] uninitialised backend → 422 actionable message, admin never contacted');
+    console.log('  [PASS] initialised / unknown / not-required backends still reach the admin inbox');
+  }
+
   global.fetch = originalFetch;
   console.log('\n=== All proxy regression tests passed ===');
 }

@@ -2,7 +2,7 @@
 
 const crypto = require('crypto');
 
-const { getTroopConfig, getRegistry } = require('../lib/registry');
+const { getTroopConfig, getRegistry, canonicalBackendUrl } = require('../lib/registry');
 const { verifySuperTicket, openSuperTicket, backendHash } = require('../lib/super-auth');
 const verifyRateLimit = require('../lib/verify-rate-limit');
 
@@ -11,6 +11,21 @@ const verifyRateLimit = require('../lib/verify-rate-limit');
 // collide with one.
 const PROBE_TICKET = 'test';
 const MAX_BODY_BYTES = 8192;
+
+// One deployment, two URL forms. A Workspace-hosted script reports
+// https://script.google.com/a/macros/<domain>/s/<id>/exec from
+// ScriptApp.getService().getUrl(), while the registry may hold either that
+// string or the canonical /macros/s/<id>/exec one. Both name the same
+// deployment, so both hashes are accepted; anything else still fails.
+function backendHashes(backend) {
+  const forms = new Set([String(backend || ''), canonicalBackendUrl(backend)]);
+  return new Set([...forms].filter(Boolean).map((form) => backendHash(form)));
+}
+
+function backendMatches(backend, supplied) {
+  const probe = String(supplied || '').trim().toLowerCase();
+  return Boolean(probe) && backendHashes(backend).has(probe);
+}
 
 function constantTimeEquals(left, right) {
   const a = String(left === undefined || left === null ? '' : left);
@@ -34,7 +49,7 @@ function findTroop(body) {
     let firstKeyMatch = null;
     for (const troop of Object.values(getRegistry())) {
       if (!constantTimeEquals(troop.apikey, apikey)) continue;
-      if (backendHash(troop.backend) === supplied) return { troop, byKey: true };
+      if (backendMatches(troop.backend, supplied)) return { troop, byKey: true };
       if (!firstKeyMatch) firstKeyMatch = troop;
     }
     if (firstKeyMatch) return { troop: firstKeyMatch, byKey: true };
@@ -59,7 +74,7 @@ function probeResult(body) {
     troop_known: Boolean(troop),
     troop_id: troop ? troop.id : '',
     key_ok: keyOk,
-    backend_matches: keyOk && backendHash(troop.backend) === supplied
+    backend_matches: keyOk && backendMatches(troop.backend, supplied)
   };
 }
 
@@ -113,9 +128,14 @@ module.exports = function handler(req, res) {
     constantTimeEquals(troop.apikey, sealed.apikey) &&
     backendHash(troop.backend) === String(sealed.backendHash || '');
 
-  const valid = registered && verifySuperTicket(ticket, {
+  // The leaf proves it runs this troop's deployment by reporting the hash of
+  // its own getUrl(); either URL form is the same deployment, so either hash
+  // is accepted. The ticket itself stays bound to the registered string.
+  const leafMatches = Boolean(troop) && backendMatches(troop.backend, body.backendHash);
+
+  const valid = registered && leafMatches && verifySuperTicket(ticket, {
     apikey: body.apikey,
-    backendHash: body.backendHash,
+    backendHash: backendHash(troop.backend),
     subject: body.loginId
   });
   return json(res, 200, { valid: Boolean(valid) });

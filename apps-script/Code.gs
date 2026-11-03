@@ -24,8 +24,8 @@ const SUPER_VERIFY_URL = 'https://scoutbadge.vercel.app/api/verify-super-ticket'
 // INITIALIZED_GS_VERSION（Script Property）只在 initializeSheets() 成功走完最後一步才寫入，
 // 表示「此 GS 版本的初始化已完成」。initializeSheets() 只做增補（缺表／缺欄位標題／缺預設管理員），
 // 不刪除、不改寫任何既有用戶、進度、紀錄或金鑰資料（見 docs/LEADER_GUIDE.md「資料保全規則」）。
-const GS_VERSION = '6.2.0';
-const GS_RELEASE_DATE = '2026-11-02';
+const GS_VERSION = '6.3.0';
+const GS_RELEASE_DATE = '2026-11-03';
 const GS_INIT_REQUIRED = true;
 const GS_INIT_PROP = 'INITIALIZED_GS_VERSION';
 function gsVersionInfo_(){
@@ -242,6 +242,20 @@ function getApiKey() {
 const DEPLOYMENT_URL_NOTICE = '部署網址由 Google「部署 → 管理部署」視窗提供；本功能不顯示自動取得或推算的網址。';
 const REGISTRATION_FORM_NOTICE = '請在 ADMIN FORM 填寫旅團編號、名稱、部署 URL 及 API Key；旅團編號毋須在 Sheet／Apps Script 預先設定。';
 
+// 未完成（或未更新到本版本）的初始化時，任何 API Key 都未可用；要講在最前，
+// 唔好令用戶以為「抄咗 Key 就搞完」。單一更新入口就係 initializeSheets()。
+function initStatusWarningLines_(){
+  const info = gsVersionInfo_();
+  if (info.initRequired && info.initializedGsVersion !== info.gsVersion) {
+    return [
+      '⚠️ 尚未完成初始化／更新（此 API Key 暫時未可用）',
+      '請先執行選單「🔗 旅系統 → 🔧 初始化／更新」一次（等同 initializeSheets()）；',
+      '只會補建缺少的工作表及預設管理員，不會刪改任何既有資料。',
+      ''
+    ];
+  }
+  return [];
+}
 /** 只回傳現有 API Key（不依賴旅團編號、不讀任何 URL）。保留舊函式名稱供既有選單／腳本使用。 */
 function vercelEnvLines() {
   return ['API Key = ' + getApiKey()];
@@ -250,7 +264,7 @@ function vercelEnvLines() {
 /** 顯示「交 APP ADMIN」的接入資料：只有 API Key。 */
 function showVercelEnv() {
   const lines = vercelEnvLines();
-  const msg = '旅團 API Key（交 APP ADMIN）：\n\n' + lines.join('\n') +
+  const msg = initStatusWarningLines_().join('\n') + '旅團 API Key（交 APP ADMIN）：\n\n' + lines.join('\n') +
     '\n\n' + DEPLOYMENT_URL_NOTICE + '\n\n' + REGISTRATION_FORM_NOTICE +
     '\n\nVercel 功能變數全部由 APP ADMIN 設定，旅團毋須設定任何功能變數。';
   try {
@@ -639,7 +653,8 @@ function initializeSheets() {
   try{
     const ui=SpreadsheetApp.getUi();
     if(ui){
-      ui.alert('✅ 初始化完成！\n\nSheets：進度追蹤、成員名單、Users、Applications、Tokens、SystemConfig、待批完成、其他獎章、服務紀錄、操作紀錄、活動履歷、待批履歷、密碼重設\n\n' +
+      ui.alert('✅ 初始化完成（GS ' + GS_VERSION + '）！\n\nSheets：進度追蹤、成員名單、Users、Applications、Tokens、SystemConfig、待批完成、其他獎章、服務紀錄、操作紀錄、活動履歷、待批履歷、密碼重設\n\n' +
+        'ℹ️ 這個動作就是唯一的「更新」步驟：重跑只會補建缺少的表／欄，不會刪改既有資料，亦不會更換 API Key。\n\n' +
         '👤 預設管理員 YMIS: '+ADMIN_YMIS+'（首次登入密碼：'+ADMIN_PASS+'，首次登入強制改密）\n\n' +
         '🔑 旅團 API Key 資料（交 APP ADMIN，請妥善保管）：\n' + vercelEnvLines().join('\n') +
         '\n\n' + DEPLOYMENT_URL_NOTICE + '\n\n' + REGISTRATION_FORM_NOTICE +
@@ -2141,6 +2156,15 @@ function handleImportAll(body){
 function isLoopbackVerifyUrl(u){
   return /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/|$)/i.test(String(u||'').trim());
 }
+// 回打驗票要比對 /exec 網址的雜湊。Workspace 帳戶由 ScriptApp 回報的網址
+// 可能係 https://script.google.com/a/macros/<域名>/s/<id>/exec（或 /a/<域名>/macros/s/<id>/exec），
+// 而 Vercel 登記的通常是 /macros/s/<id>/exec。兩者係同一個部署，所以計雜湊前
+// 一律正規化成標準形式，令兩邊永遠對得上（客戶改存取權亦唔會再斷線）。
+function canonicalServiceUrl_(u){
+  return String(u||'')
+    .replace(/^https:\/\/script\.google\.com\/a\/macros\/[^/]+(\/s\/)/, 'https://script.google.com/macros$1')
+    .replace(/^https:\/\/script\.google\.com\/a\/[^/]+(\/macros\/)/, 'https://script.google.com$1');
+}
 function superVerifyUrl(){
   // 線上一定用常數；只接受 loopback 覆寫（本地 e2e／開發）。
   const props=PropertiesService.getScriptProperties();
@@ -2165,7 +2189,7 @@ function verifyCentralTicket(ticket,loginId){
       payload:JSON.stringify({
         ticket:ticket,
         apikey:getApiKey(),
-        backendHash:sha256Hex(serviceUrl),
+        backendHash:sha256Hex(canonicalServiceUrl_(serviceUrl)),
         loginId:String(loginId||'').trim()
       })
     });
@@ -2207,7 +2231,7 @@ function testTrustedTicketVerifier(){
   try{
     const probe=UrlFetchApp.fetch(url,{
       method:'post', contentType:'application/json', muteHttpExceptions:true, followRedirects:true,
-      payload:JSON.stringify({ticket:'test',apikey:getApiKey(),backendHash:sha256Hex(serviceUrl)})
+      payload:JSON.stringify({ticket:'test',apikey:getApiKey(),backendHash:sha256Hex(canonicalServiceUrl_(serviceUrl))})
     });
     let parsed=null;
     try{ parsed=JSON.parse(probe.getContentText()); }catch(e){ parsed=null; }
@@ -2238,7 +2262,7 @@ function diagnoseCentralLogin(){
     verifyUrlTail:verifyUrl.slice(-28),
     verifyUrlIsConstant:verifyUrl===SUPER_VERIFY_URL,
     serviceUrlTail:serviceUrl.slice(-14),
-    backendHashTail:sha256Hex(serviceUrl).slice(0,8),
+    backendHashTail:sha256Hex(canonicalServiceUrl_(serviceUrl)).slice(0,8),
     hint:'中央登入靠回打驗票：GAS（本 Sheet）→ '+verifyUrl+'。'
       +'Vercel 嘅 TROOP_{編號}_BACKEND 條尾要同 serviceUrlTail 一樣（同一個 /exec）；'
       +'第一次用之前要在 Apps Script 執行一次 testTrustedTicketVerifier 授權外部請求。'
@@ -3383,6 +3407,7 @@ function onOpen(){
       .addSeparator()
       .addItem('🧭 本機接駁狀態','menuShowLinkState')
       .addItem('🔑 顯示 API KEY（交 ADMIN）','menuShowLinkCredentials')
+      .addItem('🔧 初始化／更新（執行 initializeSheets）','menuInitializeSheets')
       .addSeparator()
       .addItem('➕ 登記下游（URL + SHEET KEY）','menuRegisterDownstream')
       .addItem('📡 測試下游連線（sig）','menuPingDownstream')
@@ -3458,9 +3483,19 @@ function menuShowLinkState(){
   lines.push('\n匯出格式：'+s.export_format);
   return linkAlert('本機接駁狀態',lines.join('\n'));
 }
+// 單一更新入口：貼上新 Code.gs 之後，用戶只需要按呢個，唔需要再搵其他按鈕。
+// initializeSheets() 只增不刪、可安全重跑，並會寫入版本標記。
+function menuInitializeSheets(){
+  const r = initializeSheets();
+  try {
+    Logger.log('initializeSheets 完成：gsVersion=' + GS_VERSION +
+      '／initializedGsVersion=' + String((r && r.initializedGsVersion) || ''));
+  } catch (e) {}
+  return r;
+}
 function menuShowLinkCredentials(){
   // 只顯示 API Key（不顯示、不推算、不探測任何部署網址；亦不改動任何既有屬性）。
-  const lines = vercelEnvLines().concat([
+  const lines = initStatusWarningLines_().concat(vercelEnvLines()).concat([
     '',
     'API Key 由本節點產生，只交 APP ADMIN，請勿公開分享。',
     DEPLOYMENT_URL_NOTICE,
