@@ -240,10 +240,75 @@ async function run() {
   const genericHtml = await callProxy({ troopId: '0013', action: 'login', login_id: '1234560001', password: 'member-password' });
   assert.strictEqual(genericHtml.statusCode, 502);
   assert.strictEqual(genericHtml.body.error, '後端服務暫時無法使用，請稍後再試');
+  // Domain-only / deleted deployment: Drive's "unable to open the file" page.
+  global.fetch = async () => ({
+    status: 200,
+    text: async () => '<html><head><title>Google Drive</title></head><body>' +
+      '<p>Sorry, unable to open the file at this time.</p></body></html>'
+  });
+  const driveWall = await callProxy({ troopId: '0013', action: 'login', login_id: '1234560001', password: 'member-password' });
+  assert.strictEqual(driveWall.statusCode, 502, JSON.stringify(driveWall.body));
+  assert(String(driveWall.body.error).indexOf('任何人') >= 0, driveWall.body.error);
+  assert(!JSON.stringify(driveWall.body).includes('AKfyc_TEST_DEPLOYMENT'), 'error must not leak the backend URL');
   delete process.env.TROOP_0013_NAME;
   delete process.env.TROOP_0013_BACKEND;
   delete process.env.TROOP_0013_APIKEY;
   console.log('  [PASS] sign-in wall becomes an actionable message; other non-JSON keeps the generic 502');
+
+  console.log('\n9. Registration-time anonymous probe classifies the submitted backend');
+  {
+    const { probeAnonymousBackend, looksLikeDriveUnavailable } = proxyHandler;
+    const deployment = 'https://script.google.com/macros/s/AKfyc_PROBE/exec';
+    let probedUrl = '';
+
+    global.fetch = async (url) => {
+      probedUrl = String(url);
+      return { status: 200, url: deployment, text: async () => JSON.stringify({ success: true, gsVersion: '5.1.0' }) };
+    };
+    const reachable = await probeAnonymousBackend(deployment);
+    assert.strictEqual(reachable.verdict, 'ok', JSON.stringify(reachable));
+    assert.strictEqual(reachable.gsVersion, '5.1.0');
+    assert(probedUrl.startsWith('https://script.google.com/macros/s/AKfyc_PROBE/exec?action=ecStatus'), probedUrl);
+
+    global.fetch = async () => ({
+      status: 200,
+      url: 'https://accounts.google.com/v3/signin/identifier?continue=x',
+      text: async () => '<html>Sign in</html>'
+    });
+    assert.strictEqual((await probeAnonymousBackend(deployment)).verdict, 'signin');
+
+    const drivePage = '<html><head><title>Google Drive</title></head><body>' +
+      '<h1>Sorry, unable to open the file at this time.</h1><a href="https://drive.google.com/start/apps">Learn more</a></body></html>';
+    global.fetch = async () => ({ status: 200, text: async () => drivePage });
+    assert.strictEqual(looksLikeDriveUnavailable({}, drivePage), true);
+    assert.strictEqual(looksLikeDriveUnavailable({ url: 'https://drive.google.com/start/apps' }, ''), true);
+    assert.strictEqual(looksLikeDriveUnavailable({}, '<html><body>ok</body></html>'), false);
+    assert.strictEqual((await probeAnonymousBackend(deployment)).verdict, 'restricted');
+
+    global.fetch = async () => ({ status: 404, text: async () => '<html>not found</html>' });
+    assert.strictEqual((await probeAnonymousBackend(deployment)).verdict, 'not_found');
+
+    global.fetch = async () => ({ status: 503, text: async () => 'busy' });
+    assert.strictEqual((await probeAnonymousBackend(deployment)).verdict, 'http_error');
+
+    global.fetch = async () => ({ status: 200, text: async () => '<html><body>some other app</body></html>' });
+    assert.strictEqual((await probeAnonymousBackend(deployment)).verdict, 'not_json');
+
+    global.fetch = async () => { throw new Error('getaddrinfo ENOTFOUND'); };
+    assert.strictEqual((await probeAnonymousBackend(deployment)).verdict, 'network');
+
+    // A Workspace domain-scoped URL is probed through the canonical /macros/ form.
+    let canonicalProbe = '';
+    global.fetch = async (url) => {
+      canonicalProbe = String(url);
+      return { status: 200, text: async () => JSON.stringify({ success: true }) };
+    };
+    await probeAnonymousBackend('https://script.google.com/a/macros/school.edu.hk/s/AKfyc_PROBE/exec');
+    assert.strictEqual(canonicalProbe, 'https://script.google.com/macros/s/AKfyc_PROBE/exec?action=ecStatus');
+
+    console.log('  [PASS] probe: ok / signin wall / Drive "unable to open" / 404 / 5xx / non-JSON / network are told apart');
+    console.log('  [PASS] probe uses the canonical /macros/ form, never the /a/macros/<domain>/ one');
+  }
 
   global.fetch = originalFetch;
   console.log('\n=== All proxy regression tests passed ===');

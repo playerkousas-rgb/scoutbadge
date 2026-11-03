@@ -689,7 +689,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
     <h3 data-i18n="cm_title">📧 提交旅團接入申請</h3>
     <div class="form-group"><label data-i18n="cm_tid">旅團編號 *</label><input type="text" id="c_troopId" placeholder="0082"></div>
     <div class="form-group"><label data-i18n="cm_tname">旅團名稱</label><input type="text" id="c_troopName" data-i18n-ph="cm_tname_ph" placeholder="第 82 旅"></div>
-    <div class="form-group"><label data-i18n="cm_url">Apps Script URL (…/exec) *</label><input type="text" id="c_scriptUrl" placeholder="https://script.google.com/macros/s/.../exec"></div>
+    <div class="form-group"><label data-i18n="cm_url">Apps Script URL (…/exec) *</label><input type="text" id="c_scriptUrl" placeholder="https://script.google.com/macros/s/.../exec"><div style="font-size:11px;color:var(--text-light);margin-top:6px" data-i18n="cm_url_hint">網址必須係 /macros/s/…/exec。若見到 /a/macros/學校域名/… 即代表只限網域內使用，提交時系統會先自動檢查，唔通會即時提示（學校 Workspace 帳戶通常要改用個人 Google 帳戶部署）。</div></div>
     <div class="form-group"><label data-i18n="cm_key">API Key *</label><input type="text" id="c_apiKey" placeholder="sc_xxxxxxxx"></div>
     <div class="form-group"><label data-i18n="cm_note">聯絡 Email / 備註</label><textarea id="c_note" data-i18n-ph="cm_note_ph" placeholder="請留下聯絡方式..."></textarea></div>
     <div class="modal-actions">
@@ -1136,7 +1136,7 @@ zh:{
   login_back:'← 返回首頁', login_page_h1:'童軍進度追蹤 v5.1',
   nav_progress:'📊 我的進度', nav_overview:'👥 全團總覽', nav_requests:'✅ 審批中心', nav_logs:'📅 活動履曆', nav_forms:'🖨️ 表格列印', nav_help:'❓ 教學', nav_info:'📚 資料庫', nav_users:'👥 用戶管理', logout:'登出',
   pending_hint:'已暫存於瀏覽器', savebar_discard:'捨棄', savebar_confirm:'✅ 確認寫入雲端',
-  cm_title:'📧 提交旅團接入申請', cm_tid:'旅團編號 *', cm_tname:'旅團名稱', cm_tname_ph:'第 82 旅', cm_url:'Apps Script URL (…/exec) *', cm_key:'API Key *', cm_note:'聯絡 Email / 備註', cm_note_ph:'請留下聯絡方式...',
+  cm_title:'📧 提交旅團接入申請', cm_tid:'旅團編號 *', cm_tname:'旅團名稱', cm_tname_ph:'第 82 旅', cm_url:'Apps Script URL (…/exec) *', cm_url_hint:'網址必須係 /macros/s/…/exec。若見到 /a/macros/學校域名/… 即代表只限網域內使用，提交時系統會先自動檢查，唔通會即時提示（學校 Workspace 帳戶通常要改用個人 Google 帳戶部署）。', cm_key:'API Key *', cm_note:'聯絡 Email / 備註', cm_note_ph:'請留下聯絡方式...',
   dm_title:'考驗說明', sm_title:'📚 訓練綱要',
   perm_title:'⚙️ 設定可勾選權限 - ', perm_desc:'設定該用戶可勾選之權限範圍。領袖默認全部 (*)，旅長／管理員可設定及更改可考核之項目範圍。', perm_prog:'進度性獎章 (進度項目層級)', perm_other:'其他獎章 (逐個勾)', perm_all:'全選', perm_none:'全不選', perm_set_all:'設為領袖全部 (*)', perm_save_btn:'💾 儲存權限', perm_saved:'✅ 權限已更新', perm_fail:'儲存失敗：', perm_other_all:'其他獎章 全部',
   reqm_date:'完成日期 *', reqm_evidence:'現場核實備註（例如：證書編號、服務時數、活動日期）', reqm_evidence_ph:'例如：2026-05-01 區際服務，服務 4 小時；證書編號 ABC123，正本已交領袖現場核實',
@@ -1561,7 +1561,7 @@ en:{
   login_back:'← Back to Home', login_page_h1:'Scout Progress Tracker v5.1',
   nav_progress:'📊 My Progress', nav_overview:'👥 Troop Overview', nav_requests:'✅ Approvals', nav_logs:'📅 Activity Records', nav_forms:'🖨️ Forms & Printing', nav_help:'📖 User Guide', nav_info:'ℹ️ System Info', nav_users:'👥 User Management', logout:'Sign Out',
   pending_hint:'cached in browser', savebar_discard:'Discard', savebar_confirm:'✅ Confirm & write to cloud',
-  cm_title:'📧 Submit Troop Integration Request', cm_tid:'Troop ID *', cm_tname:'Troop Name', cm_tname_ph:'Troop 82', cm_url:'Apps Script URL (…/exec) *', cm_key:'API Key *', cm_note:'Contact Email / Notes', cm_note_ph:'Leave your contact...',
+  cm_title:'📧 Submit Troop Integration Request', cm_tid:'Troop ID *', cm_tname:'Troop Name', cm_tname_ph:'Troop 82', cm_url:'Apps Script URL (…/exec) *', cm_url_hint:'The URL must be …/macros/s/…/exec. An /a/macros/school-domain/… URL only works inside that domain. The server checks reachability before submitting and tells you if it fails (school Workspace accounts usually need a personal Google account).', cm_key:'API Key *', cm_note:'Contact Email / Notes', cm_note_ph:'Leave your contact...',
   dm_title:'Requirement Details', sm_title:'📚 Training Scheme',
   perm_title:'⚙️ Configure Ticking Permission - ', perm_desc:'Set what this user may tick. Leaders default to all (*); the GSL/admin can set the assessable scope.', perm_prog:'Progressive awards (item level)', perm_other:'Other badges (one by one)', perm_all:'Select all', perm_none:'Select none', perm_set_all:'Set to leader default: all (*)', perm_save_btn:'💾 Save permission', perm_saved:'✅ Permission updated', perm_fail:'Save failed: ', perm_other_all:'All other badges',
   reqm_date:'Completion date *', reqm_evidence:'On-site verification note (e.g. certificate no., service hours, activity date)', reqm_evidence_ph:'e.g. 2026-05-01 district service, 4 hours; cert no. ABC123, original shown to leader',

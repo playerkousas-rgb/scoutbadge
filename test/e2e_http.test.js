@@ -31,6 +31,7 @@ const { startMockGas } = require('./mock-gas');
 const MOCK_A_PORT = 39111;
 const MOCK_B_PORT = 39112;
 const ADMIN_PORT = 39114;
+const BLOCKED_PORT = 39116;
 const DEV_PORT = 39113;
 const DEV_PORT_NOADMIN = 39115;
 const BASE = `http://127.0.0.1:${DEV_PORT}`;
@@ -63,6 +64,20 @@ async function proxy(base, body, method = 'POST') {
   let data = null;
   try { data = await res.json(); } catch (_) { /* non-json */ }
   return { status: res.status, data };
+}
+
+// Mimics a deployment that is not published to 「任何人」: Google answers with
+// its Drive error page instead of running the web app.
+function startBlockedBackend(port) {
+  return new Promise((resolve) => {
+    const server = http.createServer((req, res) => {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end('<!DOCTYPE html><html><head><title>Google Drive</title></head><body>' +
+        '<p>Sorry, unable to open the file at this time.</p>' +
+        '<p>Please check the address and try again.</p></body></html>');
+    });
+    server.listen(port, '127.0.0.1', () => resolve({ server }));
+  });
 }
 
 function startAdminInbox(port) {
@@ -114,6 +129,8 @@ async function run() {
     users: [{ ymis: '9999999999', name: '旅團B成員', email: '', role: 'member', password: 'B!pass' }]
   });
   const inbox = await startAdminInbox(ADMIN_PORT);
+  const blockedBackend = await startBlockedBackend(BLOCKED_PORT);
+  const MOCK_A_EXEC = `http://127.0.0.1:${MOCK_A_PORT}/exec`;
 
   const children = [];
   const spawnDev = (port, extraEnv) => {
@@ -322,7 +339,7 @@ async function run() {
       troopId: '0777', // not registered yet — must still work
       action: 'submitContact',
       troopName: '新旅團',
-      scriptUrl: 'https://script.google.com/macros/s/FAKEDEPLOYID1234567890/exec',
+      scriptUrl: MOCK_A_EXEC,
       apiKey: 'NEW-TROOP-KEY',
       appType: 'scoutbadge',
       note: '測試申請'
@@ -333,7 +350,7 @@ async function run() {
     assert.strictEqual(inbox.seen[0].body.troopId, '0777');
     assert.strictEqual(inbox.seen[0].body.apiKey, 'NEW-TROOP-KEY');
     assert.strictEqual(inbox.seen[0].body.type, 'apply');
-    assert.strictEqual(inbox.seen[0].body.backendUrl, 'https://script.google.com/macros/s/FAKEDEPLOYID1234567890/exec');
+    assert.strictEqual(inbox.seen[0].body.backendUrl, MOCK_A_EXEC);
     assert.strictEqual(inbox.seen[0].body.appType, 'scoutbadge');
     assert.strictEqual(inbox.seen[0].body.note, '[scoutbadge] 測試申請', 'note is tagged for Scout Admin');
     ok('submitContact forwards to the fixed server-side admin inbox (unregistered troop ok)');
@@ -362,7 +379,7 @@ async function run() {
       troopId: '0778',
       action: 'submitContact',
       troopName: '無備註旅團',
-      scriptUrl: 'https://script.google.com/macros/s/FAKEDEPLOYID1234567890/exec',
+      scriptUrl: MOCK_A_EXEC,
       apiKey: 'BLANK-NOTE-KEY',
       appType: 'scoutbadge',
       note: '   '
@@ -374,7 +391,7 @@ async function run() {
       troopId: '0779',
       action: 'submitContact',
       troopName: '已標註旅團',
-      scriptUrl: 'https://script.google.com/macros/s/FAKEDEPLOYID1234567890/exec',
+      scriptUrl: MOCK_A_EXEC,
       apiKey: 'TAGGED-NOTE-KEY',
       appType: 'scoutbadge',
       note: '[ScoutBadge] 既有標註'
@@ -384,6 +401,43 @@ async function run() {
     assert.strictEqual(inbox.seen[2].body.note, '[ScoutBadge] 既有標註', 'an existing marker is not duplicated');
     ok('submitContact tags notes with [scoutbadge] exactly once');
 
+    // --- registration reaches the backend anonymously before it is forwarded ---
+    assert(
+      mockA.calls.some((c) => c.method === 'GET' && c.url.includes('action=ecStatus')),
+      'registration must probe the submitted backend anonymously'
+    );
+    ok('submitContact probes the backend anonymously (action=ecStatus)');
+
+    // A domain-restricted / deleted deployment answers with Google's Drive
+    // "unable to open the file" page. That can never work from the proxy, so
+    // the application is refused here instead of after admin approval.
+    const blocked = await proxy(BASE, {
+      troopId: '0780',
+      action: 'submitContact',
+      troopName: '學校域名旅團',
+      scriptUrl: `http://127.0.0.1:${BLOCKED_PORT}/exec`,
+      apiKey: 'BLOCKED-KEY',
+      appType: 'scoutbadge',
+      note: '學校帳戶部署'
+    });
+    assert.strictEqual(blocked.status, 422, JSON.stringify(blocked.data));
+    assert.strictEqual(blocked.data.success, false);
+    assert(String(blocked.data.error).includes('任何人') || String(blocked.data.error).includes('網域'),
+      String(blocked.data.error));
+    assert.strictEqual(inbox.seen.length, 3, 'an unusable backend must not reach the admin inbox');
+    ok('submitContact refuses a domain-restricted backend with an actionable message');
+
+    const regForeign = await proxy(BASE, {
+      troopId: '0781',
+      action: 'submitContact',
+      troopName: '外部網址',
+      scriptUrl: 'https://example.org/exec',
+      apiKey: 'FOREIGN-KEY'
+    });
+    assert.strictEqual(regForeign.status, 400, JSON.stringify(regForeign.data));
+    assert.strictEqual(inbox.seen.length, 3, 'a non-Apps-Script URL must not reach the admin inbox');
+    ok('submitContact rejects non-Apps-Script URLs before forwarding');
+
     console.log(`\n=== E2E HTTP：${passed} 通過 ===`);
   } finally {
     for (const child of children) child.kill('SIGTERM');
@@ -391,6 +445,7 @@ async function run() {
     mockA.server && mockA.server.close();
     mockB.server && mockB.server.close();
     inbox.server && inbox.server.close();
+    blockedBackend.server && blockedBackend.server.close();
   }
 }
 
