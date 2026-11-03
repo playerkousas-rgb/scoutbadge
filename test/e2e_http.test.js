@@ -335,6 +335,7 @@ async function run() {
     assert.strictEqual(inbox.seen[0].body.type, 'apply');
     assert.strictEqual(inbox.seen[0].body.backendUrl, 'https://script.google.com/macros/s/FAKEDEPLOYID1234567890/exec');
     assert.strictEqual(inbox.seen[0].body.appType, 'scoutbadge');
+    assert.strictEqual(inbox.seen[0].body.note, '[scoutbadge] 測試申請', 'note is tagged for Scout Admin');
     ok('submitContact forwards to the fixed server-side admin inbox (unregistered troop ok)');
 
     const regNoConfig = await proxy(BASE_NOADMIN, {
@@ -354,6 +355,34 @@ async function run() {
     const regBad = await proxy(BASE, { troopId: '0777', action: 'submitContact', troopName: 'x' });
     assert.strictEqual(regBad.status, 400);
     ok('submitContact with incomplete data → 400');
+
+    // A blank note still carries the app marker, and an already-tagged note is
+    // not tagged twice.
+    const regBlank = await proxy(BASE, {
+      troopId: '0778',
+      action: 'submitContact',
+      troopName: '無備註旅團',
+      scriptUrl: 'https://script.google.com/macros/s/FAKEDEPLOYID1234567890/exec',
+      apiKey: 'BLANK-NOTE-KEY',
+      appType: 'scoutbadge',
+      note: '   '
+    });
+    assert.strictEqual(regBlank.status, 200, JSON.stringify(regBlank.data));
+    assert.strictEqual(inbox.seen.length, 2);
+    assert.strictEqual(inbox.seen[1].body.note, '[scoutbadge]', 'blank note still gets the app marker');
+    const regTagged = await proxy(BASE, {
+      troopId: '0779',
+      action: 'submitContact',
+      troopName: '已標註旅團',
+      scriptUrl: 'https://script.google.com/macros/s/FAKEDEPLOYID1234567890/exec',
+      apiKey: 'TAGGED-NOTE-KEY',
+      appType: 'scoutbadge',
+      note: '[ScoutBadge] 既有標註'
+    });
+    assert.strictEqual(regTagged.status, 200, JSON.stringify(regTagged.data));
+    assert.strictEqual(inbox.seen.length, 3);
+    assert.strictEqual(inbox.seen[2].body.note, '[ScoutBadge] 既有標註', 'an existing marker is not duplicated');
+    ok('submitContact tags notes with [scoutbadge] exactly once');
 
     console.log(`\n=== E2E HTTP：${passed} 通過 ===`);
   } finally {
