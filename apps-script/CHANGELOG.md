@@ -3,6 +3,34 @@
 版號、歷史更新及開發背景集中保留在 Git，不放入可下載的 GS 或用戶提示。
 本文件不納入網站部署：`build.js` 只發布本目錄的 `Code.gs`，`.vercelignore` 亦排除其餘檔案。
 
+## 2026-11-03：單一更新入口、正規化 /exec 雜湊、未初始化提示（GS 6.3.0）
+
+- **單一更新入口**：新增選單「🔗 旅系統 → 🔧 初始化／更新」（`menuInitializeSheets()`），內部只呼叫
+  `initializeSheets()`。貼上新 `Code.gs` 後用戶只需按同一個掣一次即可完成更新，唔需要再搵／執行
+  `repairSheets()`、`diagnoseSheets()` 等其他函式；`initializeSheets()` 維持冪等只增不刪
+  （只補缺失工作表、缺失表頭欄及版本標記，不刪不覆寫、不更換既有 `API_KEY`）。
+- **正規化 `/exec` 網址雜湊**：新增 `canonicalServiceUrl_()`，`verifyCentralTicket()`、
+  `testTrustedTicketVerifier()`、`diagnoseCentralLogin()` 計 `backendHash` 前一律把
+  `https://script.google.com/a/macros/<域名>/s/<id>/exec`（及 `/a/<域名>/macros/s/<id>/exec`）
+  轉成標準 `/macros/s/<id>/exec`。Workspace 帳戶的部署唔再因為 `getUrl()` 同登記字串形式唔同而
+  「登入失敗」；Vercel 端 `api/verify-super-ticket.js` 同步接受兩種形式（`lib/registry.canonicalBackendUrl`
+  亦已支援兩種 `/a/` 寫法）。仍然逐字一致以外的其他部署一律拒絕。
+- **未初始化提示**：`showApiKey()`／`showVercelEnv()`／`menuShowLinkCredentials()` 在
+  `INITIALIZED_GS_VERSION` 為空（或落後於 `GS_VERSION`）時，會在最上方顯示
+  「⚠️ 尚未完成初始化／更新（此 API Key 暫時未可用）」並指示先按一次「🔧 初始化／更新」。
+  Key 仍然照樣顯示，但唔會再令人以為「抄到 Key 就完成」。
+- **初始化彈窗**：標明今次版本、並說明呢個動作就係唯一嘅更新步驟（重跑只補缺失表／欄，不刪改資料、
+  不換 Key）。
+- **Vercel 端配套**：新旅團申請提交時，若匿名 probe 回報 `initRequired: true` 而
+  `initializedGsVersion` 為空，即時以 422 拒絕並指示先初始化（舊版後端冇呢兩個欄位＝未知，照樣轉交）；
+  前端公告／教學步驟改為「選單 → 初始化／更新」，並把「🔑 顯示 API KEY」標明為最後一步。
+- **版本與資料保全**：`GS_VERSION` = `6.3.0`、`GS_RELEASE_DATE` = `2026-11-03`、`GS_INIT_REQUIRED` = `true`
+  （與前端 `GS_LATEST` 同步）。回退方法：切回上一版 `Code.gs`（資料不受影響，因為本版只新增函式／選單項目
+  及對話框文案，未改動任何儲存格式）。
+- **測試**：`test/release-version.test.js` 新增單一入口、未初始化警告、`canonicalServiceUrl_`／
+  `canonicalBackendUrl` 一致性；`test/central_login.test.js` 新增兩種 `/exec` 形式的 probe 與真票驗證；
+  `test/proxy.test.js` 新增未初始化後端 422 拒絕（且唔會送去管理員信箱）。
+
 ## 2026-11-02：PBKDF2 密碼雜湊、登入鎖定、反枚舉、職級重設權限與領袖電郵重設（GS 6.2.0）
 
 - **A3 密碼雜湊全面升級**：`hashPassword`／`hashPasswordV2` 及 `assets/batch-onboard/Code.gs` 改用 `PBKDF2-HMAC-SHA256`（`120,000` 次迭代＋每用戶獨立 16-byte 隨機鹽，儲存格式 `pbkdf2$<iter>$<salt>$<dk>`）。涵蓋申請批核、新增用戶、批量開戶、直插設密、自行改密、領袖重設及電郵重設所有寫密入口。

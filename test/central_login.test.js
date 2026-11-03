@@ -18,6 +18,9 @@ const KEY = 'KEY_A';
 const EXEC_URL = `http://127.0.0.1:${GAS_PORT}/exec`;
 // Deliberate mismatch: same Apps Script, registered with a trailing slash.
 const MISMATCH_URL = `${EXEC_URL}/`;
+// Same deployment, two legitimate URL shapes (see canonicalBackendUrl).
+const DOMAIN_EXEC_URL = 'https://script.google.com/a/macros/60hkg.org/s/AKfy_DOMAIN/exec';
+const CANONICAL_EXEC_URL = 'https://script.google.com/macros/s/AKfy_DOMAIN/exec';
 const OLD_URL = `http://127.0.0.1:${OLD_PORT}/exec`;
 const LEGACY_URL = `http://127.0.0.1:${LEGACY_PORT}/exec`;
 const BASE = `http://127.0.0.1:${DEV_PORT}`;
@@ -172,6 +175,14 @@ async function run() {
       TROOP_0066_NAME: '第 66 旅（未部署新版本）',
       TROOP_0066_BACKEND: LEGACY_URL,
       TROOP_0066_APIKEY: KEY,
+      // One deployment registered with the Workspace /a/macros/<domain>/ form,
+      // another with the canonical form: both must hash to the same value.
+      TROOP_0062_NAME: '第 62 旅（網域形式登記）',
+      TROOP_0062_BACKEND: DOMAIN_EXEC_URL,
+      TROOP_0062_APIKEY: 'KEY_DOMAIN',
+      TROOP_0063_NAME: '第 63 旅（標準形式登記）',
+      TROOP_0063_BACKEND: CANONICAL_EXEC_URL,
+      TROOP_0063_APIKEY: 'KEY_CANON',
       // Pasted values often carry whitespace; login must still work.
       SUPER_KEY: `  ${SUPER_PASSWORD}  `
     },
@@ -307,6 +318,44 @@ async function run() {
     const probeText = JSON.stringify([probeOk.data, probeUnknown.data, probeMismatch.data]);
     assert(probeText.indexOf('127.0.0.1') < 0 && probeText.indexOf(KEY) < 0, 'probe 唔可以洩漏後端網址或 API Key');
     ok('驗票端點自我檢查：旅團登記／KEY／後端一致性只回 booleans，無後端網址亦無 Key');
+
+    // ---- 6b. 同一部署的兩種 URL 形式：驗票與 probe 都要當同一個 ----
+    // 客戶的部署由 ScriptApp 回報 /a/macros/<域名>/s/…，而 Vercel 登記的通常係
+    // /macros/s/…。兩者係同一個部署，計雜湊前正規化，唔應該再斷線。
+    const probeDomain = await verifier({ ticket: 'test', apikey: 'KEY_DOMAIN', backendHash: backendHash(CANONICAL_EXEC_URL) });
+    assert.strictEqual(probeDomain.data.troop_known, true, JSON.stringify(probeDomain.data));
+    assert.strictEqual(probeDomain.data.backend_matches, true, '網域形式登記＋標準形式回報要對得上');
+    assert.strictEqual(probeDomain.data.troop_id, '0062');
+    const probeSame = await verifier({ ticket: 'test', apikey: 'KEY_DOMAIN', backendHash: backendHash(DOMAIN_EXEC_URL) });
+    assert.strictEqual(probeSame.data.backend_matches, true, '原本逐字一致的情況唔可以變差');
+    // 反向（登記標準形式、葉端報網域形式）只有未升級的葉端會出現，而驗票端
+    // 只收到雜湊、無從得知域名，所以維持原本行為：照抄登記字串或升級到 6.3.0
+    // （葉端自己正規化）即可。呢個情況今日都一樣對唔上，唔係回歸。
+    const probeReverse = await verifier({ ticket: 'test', apikey: 'KEY_CANON', backendHash: backendHash(DOMAIN_EXEC_URL) });
+    assert.strictEqual(probeReverse.data.backend_matches, false, '無域名資料時唔可以亂認');
+    const probeOther = await verifier({ ticket: 'test', apikey: 'KEY_DOMAIN', backendHash: backendHash('https://script.google.com/macros/s/AKfy_OTHER/exec') });
+    assert.strictEqual(probeOther.data.backend_matches, false, '另一個部署仍然要對唔上');
+    const probeDomainText = JSON.stringify([probeDomain.data, probeSame.data, probeReverse.data, probeOther.data]);
+    assert(probeDomainText.indexOf('script.google.com') < 0 && probeDomainText.indexOf('KEY_DOMAIN') < 0, 'probe 仍然只回 booleans');
+
+    // 真票：登記係網域形式、葉端（GS 6.3.0）報標準形式 → 一樣換到。
+    const probeCanonReg = await verifier({ ticket: 'test', apikey: 'KEY_CANON', backendHash: backendHash(CANONICAL_EXEC_URL) });
+    assert.strictEqual(probeCanonReg.data.backend_matches, true, '標準形式登記＋標準形式回報');
+    const tCanon = createSuperTicket({ troopId: '0063', backend: CANONICAL_EXEC_URL, apikey: 'KEY_CANON', loginId: 'sheep' });
+    const redeemCanon = await verifier({ ticket: tCanon, apikey: 'KEY_CANON', backendHash: backendHash(CANONICAL_EXEC_URL), loginId: 'sheep' });
+    assert.strictEqual(redeemCanon.data.valid, true, JSON.stringify(redeemCanon.data));
+    const tDomain = createSuperTicket({ troopId: '0062', backend: DOMAIN_EXEC_URL, apikey: 'KEY_DOMAIN', loginId: 'sheep' });
+    const redeemDomain = await verifier({ ticket: tDomain, apikey: 'KEY_DOMAIN', backendHash: backendHash(CANONICAL_EXEC_URL), loginId: 'sheep' });
+    assert.strictEqual(redeemDomain.data.valid, true, JSON.stringify(redeemDomain.data));
+    // 未升級葉端（報網域形式）對住網域形式登記：照舊。
+    const tDomainLegacy = createSuperTicket({ troopId: '0062', backend: DOMAIN_EXEC_URL, apikey: 'KEY_DOMAIN', loginId: 'sheep' });
+    const redeemLegacy = await verifier({ ticket: tDomainLegacy, apikey: 'KEY_DOMAIN', backendHash: backendHash(DOMAIN_EXEC_URL), loginId: 'sheep' });
+    assert.strictEqual(redeemLegacy.data.valid, true, '逐字一致仍然要通（舊葉端）');
+    // 換咗第二個部署／第二條 KEY 的票，仍然唔得。
+    const tOther = createSuperTicket({ troopId: '0063', backend: CANONICAL_EXEC_URL, apikey: 'KEY_CANON', loginId: 'sheep' });
+    const redeemWrong = await verifier({ ticket: tOther, apikey: 'KEY_CANON', backendHash: backendHash('https://script.google.com/macros/s/AKfy_OTHER/exec'), loginId: 'sheep' });
+    assert.strictEqual(redeemWrong.data.valid, false, '後端唔同就唔可以驗票');
+    ok('網域形式／標準形式 /exec 視為同一部署：probe 與真票兩邊都通，另一個部署仍然拒絕');
 
     // ---- 7. 端點係常數：前端寫入嘅 https 覆寫永遠唔會生效 ----
     // （如果呢個檢查消失，任何拎到領袖 token 嘅人就可以把票＋本團 API Key 送去自己部機，

@@ -75,7 +75,7 @@ function makeSheet(name, headers) {
   return sheet;
 }
 
-function makeGas({ apiKey = null, execUrl = 'http://127.0.0.1:0/exec' } = {}) {
+function makeGas({ apiKey = null, execUrl = 'http://127.0.0.1:0/exec', uiAlerts = null } = {}) {
   const sheets = new Map();
   const props = new Map();
   const cache = new Map();
@@ -101,7 +101,18 @@ function makeGas({ apiKey = null, execUrl = 'http://127.0.0.1:0/exec' } = {}) {
       getActiveSpreadsheet: () => ss,
       openById: () => ss,
       flush: () => {},
-      getUi: () => { throw new Error('headless'); }
+      // Tests that exercise a dialog pass uiAlerts: the message text is
+      // captured instead of thrown away, and the dialog never blocks.
+      getUi: () => {
+        if (!Array.isArray(uiAlerts)) throw new Error('headless');
+        return {
+          // GAS has alert(msg) and alert(title, msg, buttons); capture them all
+          // so a dialog title never hides the body under test.
+          alert: function () { uiAlerts.push(Array.from(arguments).join('\n')); },
+          ButtonSet: { OK: 'OK' },
+          Button: { OK: 'OK' }
+        };
+      }
     },
     PropertiesService: {
       getScriptProperties: () => ({

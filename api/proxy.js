@@ -198,7 +198,15 @@ async function probeAnonymousBackend(backend) {
     let parsed = null;
     try { parsed = JSON.parse(raw); } catch (_) { /* not a JSON build */ }
     if (!parsed || typeof parsed !== 'object') return { verdict: 'not_json', status: upstream.status };
-    return { verdict: 'ok', status: upstream.status, gsVersion: String(parsed.gsVersion || '') };
+    // ecStatus also reports whether initializeSheets() has run for this build;
+    // a backend without its sheets cannot accept a single login yet.
+    return {
+      verdict: 'ok',
+      status: upstream.status,
+      gsVersion: String(parsed.gsVersion || ''),
+      initRequired: parsed.initRequired === true,
+      initializedGsVersion: String(parsed.initializedGsVersion || '')
+    };
   } catch (error) {
     return { verdict: error && error.name === 'AbortError' ? 'timeout' : 'network' };
   } finally {
@@ -346,6 +354,14 @@ async function handleRegistration(res, payload, startedAt) {
   // build) must not block a legitimate application; the admin still checks.
   if (probe.verdict !== 'ok') {
     console.error(`[proxy] registration_probe_inconclusive verdict=${probe.verdict} status=${probe.status || 0}`);
+  }
+  // A build that has never had initializeSheets() run has no Users sheet, so
+  // every login would fail. Catch it here instead of after approval: the
+  // applicant's own Sheet is the only place the one-time fix can happen.
+  if (probe.verdict === 'ok' && probe.initRequired && !probe.initializedGsVersion) {
+    console.error(`[proxy] registration_backend_uninitialized gs=${probe.gsVersion || 'unknown'}`);
+    logResult({ troopId: 'REG', action: 'submitContact', status: 422, startedAt, success: false, central: false });
+    return fail(res, 422, '後端未完成初始化：請喺 Apps Script 執行一次 initializeSheets()（選單「🔗 旅系統 → 🔧 初始化／更新」，或編輯器直接執行 initializeSheets），見到「初始化完成」後用同一條網址重新提交。此動作只會補建缺少的工作表及預設管理員，不會刪改既有資料。');
   }
 
   const controller = new AbortController();

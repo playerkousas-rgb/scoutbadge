@@ -536,7 +536,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
       <div class="tutorial">
         <div class="steps">
           <div class="step"><div class="step-number">1</div><div class="step-content"><h4 data-i18n="s1h">共通：下載後端程式碼 (單一檔案版)</h4><p data-i18n="s1p">包含待批、其他獎章、批量、資料修復、PNG、私隱開關</p><a href="apps-script/Code.gs" download="Code.gs" class="btn btn-primary btn-sm" style="margin-top:6px" data-i18n="s1btn">⬇️ 下載 Code.gs (最新)</a></div></div>
-          <div class="step"><div class="step-number">2</div><div class="step-content"><h4 data-i18n="s2h">共通：建立 Google Sheet 並部署</h4><p data-i18n-html="s2p"><b>2.1</b> 建新試算表<br><b>2.2</b> 擴充功能→Apps Script，貼上 Code.gs<br><b>2.3</b> 儲存→執行 initializeSheets，授權，複製 API Key<br><b>2.4</b> 部署為網頁應用程式 (執行身分我，存取權任何人)，複製 URL (/exec)</p></div></div>
+          <div class="step"><div class="step-number">2</div><div class="step-content"><h4 data-i18n="s2h">共通：建立 Google Sheet 並部署</h4><p data-i18n-html="s2p"><b>2.1</b> 建新試算表<br><b>2.2</b> 擴充功能→Apps Script，貼上 Code.gs<br><b>2.3</b> 儲存 → 選單「🔗 旅系統 → 🔧 初始化／更新」按一次（等同 initializeSheets，只增不刪、可重跑）→ 授權<br><b>2.4</b> 部署為網頁應用程式 (執行身分我，存取權任何人)，複製 URL (/exec)<br><b>2.5</b> 最後才按「🔑 顯示 API KEY」抄下 Key —— 未完成 2.3 之前抄到的 Key 無效</p></div></div>
           <div class="step"><div class="step-number">3</div><div class="step-content"><h4 data-i18n="s3h">提交資料給 scoutbadge 管理員</h4><p data-i18n="s3p">將旅團編號、名稱、URL、API Key 交 scoutbadge 管理員，透過受保護的部署設定登記後即可使用；登記完成後首頁會出現旅團卡片</p></div></div>
           <div class="step"><div class="step-number">4</div><div class="step-content"><h4 data-i18n="s_fl_h">首次登入（預設管理員帳號）</h4><p data-i18n-html="s_fl_p">登記完成後，首頁揀該旅團卡片 → 用「<b>👤 成員</b>」分頁登入：<br>YMIS <b>1111111111</b>　密碼 <b>changeme</b>（初始化時自動建立嘅預設管理員，唔好用「領袖=Email」分頁）<br>首次登入會<b>強制改密碼</b>（至少4位）。之後喺「審批中心」批成員申請、喺「用戶管理」開返各領袖自己真YMIS嘅帳號並設權限</p></div></div>
           <!-- [主系統暫時隱藏 2026-10] 軌道B（接上主系統）未開放，完成後解除註解並自行重排步驟號（而家 4=首次登入、5=私隱選擇）：
@@ -689,7 +689,7 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
     <h3 data-i18n="cm_title">📧 提交旅團接入申請</h3>
     <div class="form-group"><label data-i18n="cm_tid">旅團編號 *</label><input type="text" id="c_troopId" placeholder="0082"></div>
     <div class="form-group"><label data-i18n="cm_tname">旅團名稱</label><input type="text" id="c_troopName" data-i18n-ph="cm_tname_ph" placeholder="第 82 旅"></div>
-    <div class="form-group"><label data-i18n="cm_url">Apps Script URL (…/exec) *</label><input type="text" id="c_scriptUrl" placeholder="https://script.google.com/macros/s/.../exec"><div style="font-size:11px;color:var(--text-light);margin-top:6px" data-i18n="cm_url_hint">網址必須係 /macros/s/…/exec。若見到 /a/macros/學校域名/… 即代表只限網域內使用，提交時系統會先自動檢查，唔通會即時提示（學校 Workspace 帳戶通常要改用個人 Google 帳戶部署）。</div></div>
+    <div class="form-group"><label data-i18n="cm_url">Apps Script URL (…/exec) *</label><input type="text" id="c_scriptUrl" placeholder="https://script.google.com/macros/s/.../exec"><div style="font-size:11px;color:var(--text-light);margin-top:6px" data-i18n="cm_url_hint">網址必須係 /macros/s/…/exec。若見到 /a/macros/學校域名/… 即代表只限網域內使用，提交時系統會先自動檢查，唔通會即時提示（學校 Workspace 帳戶通常要改用個人 Google 帳戶部署）。後端亦須先按選單「🔧 初始化／更新」（initializeSheets）完成初始化，否則會被拒絕。</div></div>
     <div class="form-group"><label data-i18n="cm_key">API Key *</label><input type="text" id="c_apiKey" placeholder="sc_xxxxxxxx"></div>
     <div class="form-group"><label data-i18n="cm_note">聯絡 Email / 備註</label><textarea id="c_note" data-i18n-ph="cm_note_ph" placeholder="請留下聯絡方式..."></textarea></div>
     <div class="modal-actions">
@@ -1027,7 +1027,7 @@ zh:{
   /* logs */
   logs_upgrade_title:'📅 活動履歷（服務／活動／訓練班紀錄）',
   logs_upgrade_desc:'⚠️ 此旅團後端尚未升級至 <b>v5.2</b>，暫未能使用活動履歷／成員申報。進度、審批、用戶管理等現有功能完全不受影響。',
-  logs_upgrade_how:'升級方法（約 5 分鐘）：Apps Script 貼上最新 Code.gs → 執行 initializeSheets() 補建「活動履歷」及「待批履歷」工作表 → 部署 → 管理部署 → 編輯 → 版本選「新版本」→ 部署。URL 不變。',
+  logs_upgrade_how:'升級方法（約 5 分鐘）：Apps Script 貼上最新 Code.gs → 選單「🔗 旅系統 → 🔧 初始化／更新」按一次（等同 initializeSheets()，只會補建缺少的工作表，不會刪改舊資料）→ 部署 → 管理部署 → 編輯 → 版本選「新版本」→ 部署。URL 不變。',
   logs_recheck:'🔄 重新檢查',
   log_service:'服務', log_activity:'活動', log_training:'訓練班', log_total_hours:'服務總時數', log_add_btn:'➕ 新增紀錄',
   log_none:'暫無紀錄', log_none_leader:'，可按上方「➕ 新增紀錄」補登',
@@ -1095,7 +1095,7 @@ zh:{
   setup_portal_card:'<h3 style="color:var(--blue)">🌟 先了解一下：主系統平台是什麼？</h3><p style="font-size:12px">你而家用緊嘅 <b>童軍進度追蹤</b> 係一個 Tier 3 元件，可以獨立用，但其實屬於更龐大的 <b>scoutsystem-2.0 主系統平台</b>：</p><ul style="font-size:11px;margin:6px 0 0 16px"><li>📊 Dashboard 儀表板：全旅團人數、活動、財政一目了然</li><li>👥 成員管理、✅集會考勤 QR Code、💰財務、📅活動報名</li><li>🧩 插件市場：本系統是其中一個插件，可一鍵加入卡片</li><li>🔐 單一登入：點卡片自動帶入身份，唔使再輸 YMIS/密碼</li></ul><p style="font-size:11px;margin-top:8px;background:#fff;padding:6px;border-radius:6px"><b>重點：有主系統 ≠ 一定要接上本系統</b>，可自由選擇獨立用或接上，兩條路並存不衝突。藉此告訴用家有更大平台可用。</p>',
   setup_map_card:'<h3>🗺️ 部署地圖 - 兩條路</h3><p style="font-size:11px">共通：下載 Code.gs → 建 Sheet → 執行初始化 → 部署 → 交付 URL+API Key<br><b>軌道A 無主系統/有但想獨立用：</b> 將資料交 scoutbadge 管理員，以受保護部署設定登記 → 完成 → 用法：選擇旅團登入<br><b>軌道B 有主系統並想接上：</b> 同樣交資料給主系統管理員設定卡片 → 用法：主系統 Dashboard 點卡片 → 自動帶入旅團及嵌入模式</p>',
   s1h:'共通：下載後端程式碼 (單一檔案版)', s1p:'包含待批、其他獎章、批量、資料修復、PNG、私隱開關', s1btn:'⬇️ 下載 Code.gs (最新)',
-  s2h:'共通：建立 Google Sheet 並部署', s2p:'<b>2.1</b> 建新試算表<br><b>2.2</b> 擴充功能→Apps Script，貼上 Code.gs<br><b>2.3</b> 儲存→執行 initializeSheets，授權，抄下彈窗顯示的 API Key<br><b>2.4</b> 部署為網頁應用程式 (執行身分我，存取權任何人)：部署網址由 Google「部署 → 管理部署」視窗提供；GS 彈窗及選單只提供 API Key，不顯示自動取得或推算的網址。旅團編號毋須在 Sheet／Apps Script 預先設定',
+  s2h:'共通：建立 Google Sheet 並部署', s2p:'<b>2.1</b> 建新試算表<br><b>2.2</b> 擴充功能→Apps Script，貼上 Code.gs<br><b>2.3</b> 儲存 → 選單「🔗 旅系統 → 🔧 初始化／更新」按一次（等同 initializeSheets，只增不刪、可重跑）→ 授權<br><b>2.4</b> 部署為網頁應用程式 (執行身分我，存取權任何人)：部署網址由 Google「部署 → 管理部署」視窗提供；GS 彈窗及選單只提供 API Key，不顯示自動取得或推算的網址。旅團編號毋須在 Sheet／Apps Script 預先設定',
   s3h:'提交資料給 scoutbadge 管理員', s3p:'取得 API Key，並在 Google 部署視窗取得部署 URL 後，填寫下方接入申請（ADMIN FORM）：旅團編號直接在 ADMIN FORM 填寫，毋須在 GS 設定。登記完成後首頁會出現旅團卡片',
   s_fl_h:'首次登入（預設管理員帳號）',
   s_fl_p:'登記完成後，首頁揀該旅團卡片 → 用「<b>👤 成員</b>」分頁登入：<br>YMIS <b>1111111111</b>　密碼 <b>changeme</b>（初始化時自動建立嘅預設管理員，唔好用「領袖=Email」分頁）<br>首次登入會<b>強制改密碼</b>（至少4位）。之後喺「審批中心」批成員申請、喺「用戶管理」開返各領袖自己真YMIS嘅帳號並設權限',
@@ -1136,7 +1136,7 @@ zh:{
   login_back:'← 返回首頁', login_page_h1:'童軍進度追蹤 v5.1',
   nav_progress:'📊 我的進度', nav_overview:'👥 全團總覽', nav_requests:'✅ 審批中心', nav_logs:'📅 活動履曆', nav_forms:'🖨️ 表格列印', nav_help:'❓ 教學', nav_info:'📚 資料庫', nav_users:'👥 用戶管理', logout:'登出',
   pending_hint:'已暫存於瀏覽器', savebar_discard:'捨棄', savebar_confirm:'✅ 確認寫入雲端',
-  cm_title:'📧 提交旅團接入申請', cm_tid:'旅團編號 *', cm_tname:'旅團名稱', cm_tname_ph:'第 82 旅', cm_url:'Apps Script URL (…/exec) *', cm_url_hint:'網址必須係 /macros/s/…/exec。若見到 /a/macros/學校域名/… 即代表只限網域內使用，提交時系統會先自動檢查，唔通會即時提示（學校 Workspace 帳戶通常要改用個人 Google 帳戶部署）。', cm_key:'API Key *', cm_note:'聯絡 Email / 備註', cm_note_ph:'請留下聯絡方式...',
+  cm_title:'📧 提交旅團接入申請', cm_tid:'旅團編號 *', cm_tname:'旅團名稱', cm_tname_ph:'第 82 旅', cm_url:'Apps Script URL (…/exec) *', cm_url_hint:'網址必須係 /macros/s/…/exec。若見到 /a/macros/學校域名/… 即代表只限網域內使用，提交時系統會先自動檢查，唔通會即時提示（學校 Workspace 帳戶通常要改用個人 Google 帳戶部署）。後端亦須先按選單「🔧 初始化／更新」（initializeSheets）完成初始化，否則會被拒絕。', cm_key:'API Key *', cm_note:'聯絡 Email / 備註', cm_note_ph:'請留下聯絡方式...',
   dm_title:'考驗說明', sm_title:'📚 訓練綱要',
   perm_title:'⚙️ 設定可勾選權限 - ', perm_desc:'設定該用戶可勾選之權限範圍。領袖默認全部 (*)，旅長／管理員可設定及更改可考核之項目範圍。', perm_prog:'進度性獎章 (進度項目層級)', perm_other:'其他獎章 (逐個勾)', perm_all:'全選', perm_none:'全不選', perm_set_all:'設為領袖全部 (*)', perm_save_btn:'💾 儲存權限', perm_saved:'✅ 權限已更新', perm_fail:'儲存失敗：', perm_other_all:'其他獎章 全部',
   reqm_date:'完成日期 *', reqm_evidence:'現場核實備註（例如：證書編號、服務時數、活動日期）', reqm_evidence_ph:'例如：2026-05-01 區際服務，服務 4 小時；證書編號 ABC123，正本已交領袖現場核實',
@@ -1455,7 +1455,7 @@ en:{
   template_dl:'Member template CSV downloaded',
   logs_upgrade_title:'📅 Activity Records (service / activity / training course)',
   logs_upgrade_desc:'⚠️ This troop\'s backend has not been upgraded to <b>v5.2</b>, so activity records / member claims are unavailable. Progress, approvals and user management are unaffected.',
-  logs_upgrade_how:'Upgrade (~5 min): paste the latest Code.gs into Apps Script → run initializeSheets() to add the "Activity Records" and "Pending Log Claims" sheets → Deploy → Manage deployments → Edit → choose "New version" → Deploy. URL stays the same.',
+  logs_upgrade_how:'Upgrade (~5 min): paste the latest Code.gs into Apps Script → run the menu “🔗 旅系統 → 🔧 初始化／更新” once (same as initializeSheets(); only adds missing sheets, never changes existing data) → Deploy → Manage deployments → Edit → choose "New version" → Deploy. URL stays the same.',
   logs_recheck:'🔄 Re-check',
   log_service:'Service', log_activity:'Activities', log_training:'Training', log_total_hours:'Total service hours', log_add_btn:'➕ Add record',
   log_none:'No records yet', log_none_leader:' — leaders can add one via "➕ Add record" above',
@@ -1520,7 +1520,7 @@ en:{
   setup_portal_card:'<h3 style="color:var(--blue)">🌟 First: what is the main platform?</h3><p style="font-size:12px">This <b>Scout Progress Tracker</b> is a Tier-3 component. It works standalone, but it belongs to the larger <b>scoutsystem-2.0 platform</b>:</p><ul style="font-size:11px;margin:6px 0 0 16px"><li>📊 Dashboard: troop members, activities and finance at a glance</li><li>👥 Member management, ✅ meeting attendance QR codes, 💰 finance, 📅 activity sign-up</li><li>🧩 Plugin marketplace: this system is one of the plugins, added as a card in one click</li><li>🔐 Single sign-on: tap the card and your identity is carried over — no YMIS/password re-entry</li></ul><p style="font-size:11px;margin-top:8px;background:#fff;padding:6px;border-radius:6px"><b>Key point: having the main platform ≠ must integrate with this system</b> — standalone or integrated use both work side by side.</p>',
   setup_map_card:'<h3>🗺️ Deployment Map — two tracks</h3><p style="font-size:11px">Shared: download Code.gs → create a Sheet → initialise → deploy → provide URL + API key<br><b>Track A — standalone:</b> provide the details to the app administrator for protected deployment registration, then choose the troop and sign in.<br><b>Track B — with the main platform:</b> provide the same details to the main-platform administrator; the Dashboard card opens the selected troop in embedded mode.</p>',
   s1h:'Shared: download the backend code (single file)', s1p:'Includes pending approvals, other badges, batch tools, data repair, PNG, privacy switches', s1btn:'⬇️ Download Code.gs (latest)',
-  s2h:'Shared: create a Google Sheet and deploy', s2p:'<b>2.1</b> Create a new spreadsheet<br><b>2.2</b> Extensions → Apps Script, paste Code.gs<br><b>2.3</b> Save → run initializeSheets, authorise, copy the API Key shown in the dialog<br><b>2.4</b> Deploy as a web app (execute as me, access: anyone): Google provides the deployment URL in its “Deploy → Manage deployments” dialog; GS dialogs and menus provide only the API Key, never an automatically discovered or inferred URL. No troop ID needs to be configured in the Sheet or Apps Script',
+  s2h:'Shared: create a Google Sheet and deploy', s2p:'<b>2.1</b> Create a new spreadsheet<br><b>2.2</b> Extensions → Apps Script, paste Code.gs<br><b>2.3</b> Save → run the menu “🔗 旅系統 → 🔧 初始化／更新” once (same as initializeSheets; additive only, safe to re-run) → authorise<br><b>2.4</b> Deploy as a web app (execute as me, access: anyone): Google provides the deployment URL in its “Deploy → Manage deployments” dialog; GS dialogs and menus provide only the API Key, never an automatically discovered or inferred URL. No troop ID needs to be configured in the Sheet or Apps Script',
   s3h:'Submit the details to the scoutbadge admin', s3p:'Once you have the API Key and the deployment URL from Google\'s deployment dialog, use the join request below (ADMIN FORM). Enter the troop ID directly in the ADMIN FORM; no GS setting is needed. The troop card then appears on the home page',
   s_fl_h:'First sign-in (default admin account)',
   s_fl_p:'Once registered, pick the troop card on the home page → sign in via the "<b>👤 Member</b>" tab:<br>YMIS <b>1111111111</b>　password <b>changeme</b> (the default admin created at initialisation — do not use the "Leader = Email" tab)<br>The first sign-in <b>forces a password change</b> (min 4 chars). Then approve applications in the Approval Centre and create each leader\'s own real-YMIS account with roles in User Management',
@@ -1561,7 +1561,7 @@ en:{
   login_back:'← Back to Home', login_page_h1:'Scout Progress Tracker v5.1',
   nav_progress:'📊 My Progress', nav_overview:'👥 Troop Overview', nav_requests:'✅ Approvals', nav_logs:'📅 Activity Records', nav_forms:'🖨️ Forms & Printing', nav_help:'📖 User Guide', nav_info:'ℹ️ System Info', nav_users:'👥 User Management', logout:'Sign Out',
   pending_hint:'cached in browser', savebar_discard:'Discard', savebar_confirm:'✅ Confirm & write to cloud',
-  cm_title:'📧 Submit Troop Integration Request', cm_tid:'Troop ID *', cm_tname:'Troop Name', cm_tname_ph:'Troop 82', cm_url:'Apps Script URL (…/exec) *', cm_url_hint:'The URL must be …/macros/s/…/exec. An /a/macros/school-domain/… URL only works inside that domain. The server checks reachability before submitting and tells you if it fails (school Workspace accounts usually need a personal Google account).', cm_key:'API Key *', cm_note:'Contact Email / Notes', cm_note_ph:'Leave your contact...',
+  cm_title:'📧 Submit Troop Integration Request', cm_tid:'Troop ID *', cm_tname:'Troop Name', cm_tname_ph:'Troop 82', cm_url:'Apps Script URL (…/exec) *', cm_url_hint:'The URL must be …/macros/s/…/exec. An /a/macros/school-domain/… URL only works inside that domain. The server checks reachability before submitting and tells you if it fails (school Workspace accounts usually need a personal Google account). The backend must also have run the menu “🔧 初始化／更新” (initializeSheets) once, or the application is refused.', cm_key:'API Key *', cm_note:'Contact Email / Notes', cm_note_ph:'Leave your contact...',
   dm_title:'Requirement Details', sm_title:'📚 Training Scheme',
   perm_title:'⚙️ Configure Ticking Permission - ', perm_desc:'Set what this user may tick. Leaders default to all (*); the GSL/admin can set the assessable scope.', perm_prog:'Progressive awards (item level)', perm_other:'Other badges (one by one)', perm_all:'Select all', perm_none:'Select none', perm_set_all:'Set to leader default: all (*)', perm_save_btn:'💾 Save permission', perm_saved:'✅ Permission updated', perm_fail:'Save failed: ', perm_other_all:'All other badges',
   reqm_date:'Completion date *', reqm_evidence:'On-site verification note (e.g. certificate no., service hours, activity date)', reqm_evidence_ph:'e.g. 2026-05-01 district service, 4 hours; cert no. ABC123, original shown to leader',
@@ -2200,7 +2200,7 @@ let itemsData=null,progressFlat={},progressRich={},members=[],pendingChanges=[],
  *   ok          全部完成（前端顯示綠色「已核對」）
  *   unchecked   尚未核對（沒有任何回報）
  */
-const GS_LATEST=Object.freeze({updated:'2026-11-02',gsVersion:'6.2.0',initializeRequired:true});
+const GS_LATEST=Object.freeze({updated:'2026-11-03',gsVersion:'6.3.0',initializeRequired:true});
 let backendReleaseState={code:'unchecked',gsVersion:'',initializedGsVersion:''};
 
 function compareVersions(a, b) {
@@ -2269,18 +2269,20 @@ function renderHomeReleaseNotice(st, inEn) {
   const gsLabel = inEn() ? 'GS' : 'GS';
   const download = inEn() ? '⬇️ Download Code.gs' : '⬇️ 下載 Code.gs';
   const stepsTitle = inEn() ? 'Update steps' : '更新步驟';
-  const initRequired = inEn() ? 'This version requires running initializeSheets() once.' : '此版本必須執行一次 initializeSheets()。';
+  const initRequired = inEn()
+    ? 'This version needs one initialization: menu “🔗 旅系統 → 🔧 初始化／更新” (same as initializeSheets()). To use email password reset, run testPasswordResetMail() once to authorise sending mail.'
+    : '此版本必須執行一次初始化：選單「🔗 旅系統 → 🔧 初始化／更新」（等同 initializeSheets()，只增不刪）。如使用電郵重設密碼，首次另需執行一次 testPasswordResetMail() 授權寄信。';
   const noPatch = inEn() ? 'No per-version patch list — install this latest version only.' : '不設逐級補丁清單，只需安裝此最新版本。';
   const steps = inEn()
-    ? '1. Download and replace Code.gs → 2. Save → 3. Run initializeSheets() (and testPasswordResetMail() once to authorize email reset) → 4. Deploy → Manage deployments → Edit → New version → Deploy (URL stays the same).'
-    : '1. 下載並取代 Code.gs → 2. 儲存 → 3. 執行 initializeSheets()（並執行一次 testPasswordResetMail() 授權寄送重設電郵） → 4. 部署 → 管理部署 → 編輯 → 新版本 → 部署（URL 不變）。';
+    ? '1. Download and replace Code.gs → 2. Save → 3. Run the menu “🔗 旅系統 → 🔧 初始化／更新” once (same as initializeSheets(); additive only, safe to re-run) → 4. Deploy → Manage deployments → Edit → New version → Deploy (URL stays the same)'
+    : '1. 下載並取代 Code.gs → 2. 儲存 → 3. 選單「🔗 旅系統 → 🔧 初始化／更新」按一次（等同 initializeSheets()；只增不刪，可重跑）→ 4. 部署 → 管理部署 → 編輯 → 新版本 → 部署（URL 不變）';
   let statusHTML = '';
   if (st.code === 'unchecked') {
     statusHTML = '<div class="release-status">' + (inEn() ? '⏳ Checking backend version…' : '⏳ 正在核對後端版本…') + '</div>';
   } else if (st.code === 'outdated') {
     statusHTML = '<div class="release-status" style="color:var(--red)">⚠️ ' + (inEn() ? 'GS not updated' : 'GS 未更新') + ' — backend is on <b>' + (st.gsVersion || 'old') + '</b>, latest is <b>' + latest.gsVersion + '</b>.</div>';
   } else if (st.code === 'needs_init') {
-    statusHTML = '<div class="release-status" style="color:#D97706">⚠️ ' + (inEn() ? 'GS updated but not initialized' : 'GS 已更新但未初始化') + ' — run initializeSheets() and press 重新檢查.</div>';
+    statusHTML = '<div class="release-status" style="color:#D97706">⚠️ ' + (inEn() ? 'GS updated but not initialized' : 'GS 已更新但未初始化') + (inEn() ? ' — run the menu “🔧 初始化／更新”, then press Re-check.</div>' : ' — 按選單「🔧 初始化／更新」後再按「重新檢查」.</div>');
   } else if (st.code === 'ok') {
     statusHTML = '<div class="release-status" style="color:var(--green)">✅ ' + (inEn() ? 'Verified — GS version and initialization match.' : '已核對 — GS 版本與初始化版本一致。') + '</div>';
   }
@@ -2303,18 +2305,20 @@ function renderMainReleaseNotice(st, inEn) {
   const download = inEn() ? '⬇️ Download Code.gs' : '⬇️ 下載 Code.gs';
   const recheck = inEn() ? '🔄 Re-check' : '🔄 重新檢查';
   const stepsTitle = inEn() ? 'Update steps' : '更新步驟';
-  const initRequired = inEn() ? 'This version requires running initializeSheets() once.' : '此版本必須執行一次 initializeSheets()。';
+  const initRequired = inEn()
+    ? 'This version needs one initialization: menu “🔗 旅系統 → 🔧 初始化／更新” (same as initializeSheets()). To use email password reset, run testPasswordResetMail() once to authorise sending mail.'
+    : '此版本必須執行一次初始化：選單「🔗 旅系統 → 🔧 初始化／更新」（等同 initializeSheets()，只增不刪）。如使用電郵重設密碼，首次另需執行一次 testPasswordResetMail() 授權寄信。';
   const noPatch = inEn() ? 'No per-version patch list — install this latest version only.' : '不設逐級補丁清單，只需安裝此最新版本。';
   const steps = inEn()
-    ? '1. Download and replace Code.gs → 2. Save → 3. Run initializeSheets() (and testPasswordResetMail() once to authorize email reset) → 4. Deploy → Manage deployments → Edit → New version → Deploy (URL stays the same).'
-    : '1. 下載並取代 Code.gs → 2. 儲存 → 3. 執行 initializeSheets()（並執行一次 testPasswordResetMail() 授權寄送重設電郵） → 4. 部署 → 管理部署 → 編輯 → 新版本 → 部署（URL 不變）。';
+    ? '1. Download and replace Code.gs → 2. Save → 3. Run the menu “🔗 旅系統 → 🔧 初始化／更新” once (same as initializeSheets(); additive only, safe to re-run) → 4. Deploy → Manage deployments → Edit → New version → Deploy (URL stays the same)'
+    : '1. 下載並取代 Code.gs → 2. 儲存 → 3. 選單「🔗 旅系統 → 🔧 初始化／更新」按一次（等同 initializeSheets()；只增不刪，可重跑）→ 4. 部署 → 管理部署 → 編輯 → 新版本 → 部署（URL 不變）';
   let statusHTML = '';
   if (st.code === 'unchecked') {
     statusHTML = '<div class="release-status">' + (inEn() ? '⏳ Checking backend version…' : '⏳ 正在核對後端版本…') + '</div>';
   } else if (st.code === 'outdated') {
     statusHTML = '<div class="release-status" style="color:var(--red)">⚠️ ' + (inEn() ? 'GS not updated' : 'GS 未更新') + ' — backend is on <b>' + (st.gsVersion || 'old') + '</b>, latest is <b>' + latest.gsVersion + '</b>.</div>';
   } else if (st.code === 'needs_init') {
-    statusHTML = '<div class="release-status" style="color:#D97706">⚠️ ' + (inEn() ? 'GS updated but not initialized' : 'GS 已更新但未初始化') + ' — run initializeSheets() and press 重新檢查.</div>';
+    statusHTML = '<div class="release-status" style="color:#D97706">⚠️ ' + (inEn() ? 'GS updated but not initialized' : 'GS 已更新但未初始化') + (inEn() ? ' — run the menu “🔧 初始化／更新”, then press Re-check.</div>' : ' — 按選單「🔧 初始化／更新」後再按「重新檢查」.</div>');
   } else if (st.code === 'ok') {
     statusHTML = '<div class="release-status" style="color:var(--green)">✅ ' + (inEn() ? 'Verified — GS version and initialization match.' : '已核對 — GS 版本與初始化版本一致。') + '</div>';
   }

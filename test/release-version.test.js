@@ -19,6 +19,10 @@ const path = require('path');
 const vm = require('vm');
 const { makeGas } = require('./gasvm');
 
+const CODE_GS = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'Code.gs'), 'utf8');
+const GS_VERSION = (CODE_GS.match(/const GS_VERSION = '([^']+)'/) || [])[1];
+const GS_RELEASE_DATE = (CODE_GS.match(/const GS_RELEASE_DATE = '([^']+)'/) || [])[1];
+
 function snapshotRows(backend, names) {
   return Object.fromEntries(names.map(name => [name, JSON.parse(JSON.stringify(backend.sheets.get(name)._rows))]));
 }
@@ -32,9 +36,11 @@ function snapshotRows(backend, names) {
   const gs = gas.match(/const GS_VERSION = '([^']+)'/);
   const gsDate = gas.match(/const GS_RELEASE_DATE = '([^']+)'/);
   assert.ok(gs && gsDate, 'Apps Script exposes its latest GS version and release date');
-  assert.equal(release[1], '2026-11-02');
+  assert.equal(release[1], '2026-11-03');
+  assert.equal(release[1], GS_RELEASE_DATE);
   assert.equal(release[1], gsDate[1], 'frontend release date and backend GS_RELEASE_DATE must match');
-  assert.equal(release[2], '6.2.0');
+  assert.equal(release[2], '6.3.0');
+  assert.equal(release[2], GS_VERSION);
   assert.equal(release[2], gs[1], 'frontend required GS and backend reported GS must match');
   assert.equal(release[3], 'true', 'this release explicitly requires initializeSheets()');
   assert.match(gas, /setProperty\(GS_INIT_PROP,\s*GS_VERSION\)/);
@@ -75,7 +81,7 @@ function snapshotRows(backend, names) {
   // ---- ecStatus：未初始化 ----
   const before = backend.get({ action: 'ecStatus' });
   assert.equal(before.success, true);
-  assert.equal(before.gsVersion, '6.2.0');
+  assert.equal(before.gsVersion, GS_VERSION);
   assert.equal(before.initializedGsVersion, '', 'new Code.gs alone must not count as initialized');
   assert.equal(before.initRequired, true);
   console.log('[PASS] ecStatus 回報 gsVersion 和 initializedGsVersion（未初始化）');
@@ -149,14 +155,81 @@ function snapshotRows(backend, names) {
   console.log('[PASS] 前端分辨「GS 未更新」');
 
   // GS 已更新但未初始化
-  const needsInit = sandbox.gsReleaseStatusOf({ gsVersion: '6.2.0', initializedGsVersion: '' });
+  const needsInit = sandbox.gsReleaseStatusOf({ gsVersion: GS_VERSION, initializedGsVersion: '' });
   assert.equal(needsInit.code, 'needs_init');
   console.log('[PASS] 前端分辨「GS 已更新但未初始化」');
 
   // 全部完成
-  const ok = sandbox.gsReleaseStatusOf({ gsVersion: '6.2.0', initializedGsVersion: '6.2.0' });
+  const ok = sandbox.gsReleaseStatusOf({ gsVersion: GS_VERSION, initializedGsVersion: GS_VERSION });
   assert.equal(ok.code, 'ok');
   console.log('[PASS] 前端分辨「全部完成」（顯示綠色「已核對」）');
+})();
+
+// ---- 8. 單一更新入口：選單「🔧 初始化／更新」＝ initializeSheets() ----
+(function testSingleUpgradeEntryPoint() {
+  assert.ok(CODE_GS.includes(".addItem('🔧 初始化／更新（執行 initializeSheets）','menuInitializeSheets')"),
+    'the menu exposes exactly one upgrade action');
+  assert.match(CODE_GS, /function menuInitializeSheets\(\)\{[\s\S]*?initializeSheets\(\)/,
+    'the menu action must call initializeSheets() itself (no second function to hunt for)');
+
+  const backend = makeGas({ apiKey: 'TESTKEY123', execUrl: 'http://127.0.0.1:0/exec' });
+  // Freshly pasted Code.gs on a brand-new Sheet: nothing is initialised yet.
+  assert.equal(backend.props.get('INITIALIZED_GS_VERSION'), undefined);
+  const result = backend.sandbox.menuInitializeSheets();
+  assert.equal(result.success, true);
+  assert.equal(backend.props.get('INITIALIZED_GS_VERSION'), GS_VERSION, 'the menu action writes the init marker');
+  assert.equal(backend.props.get('API_KEY'), 'TESTKEY123', 'the menu action never rotates an existing key');
+  const users = backend.sheets.get('Users')._rows;
+  assert.ok(users.some(r => String(r[0]) === '1111111111'), 'the default admin is created by the same action');
+  console.log('[PASS] 單一更新入口：選單「🔧 初始化／更新」＝ initializeSheets()，可重跑且不換 Key');
+})();
+
+// ---- 9. 未初始化時，Key 對話框要講清楚（唔可以扮完成）----
+(function testUninitialisedKeyDialogWarns() {
+  const uninitAlerts = [];
+  const before = makeGas({ execUrl: 'https://script.google.com/macros/s/AKfy_DEPLOY/exec', uiAlerts: uninitAlerts });
+  const warn = before.sandbox.initStatusWarningLines_();
+  assert.ok(warn.length > 0, 'uninitialised backend must produce a warning block');
+  assert.ok(warn.join('\n').includes('initializeSheets'), warn.join('\n'));
+  before.sandbox.showApiKey();
+  const beforeText = uninitAlerts.join('\n---\n');
+  assert.ok(beforeText.includes('尚未完成初始化'), beforeText);
+  assert.ok(beforeText.includes('API Key'), 'the key is still shown, so the applicant can finish setup');
+
+  const afterAlerts = [];
+  const after = makeGas({ execUrl: 'https://script.google.com/macros/s/AKfy_DEPLOY/exec', uiAlerts: afterAlerts });
+  after.sandbox.menuInitializeSheets();
+  assert.deepEqual(after.sandbox.initStatusWarningLines_(), [], 'an initialised backend shows no warning');
+  after.sandbox.showApiKey();
+  const afterText = afterAlerts.join('\n---\n');
+  assert.ok(!afterText.includes('尚未完成初始化'), afterText);
+  assert.ok(afterText.includes('API Key'), afterText);
+  console.log('[PASS] 未初始化時 Key 對話框顯示警告；初始化後警告消失');
+})();
+
+// ---- 10. 同一部署的兩種 /exec 形式：雜湊前一律正規化 ----
+(function testCanonicalServiceUrl() {
+  const backend = makeGas({ apiKey: 'TESTKEY123', execUrl: 'https://script.google.com/a/macros/60hkg.org/s/AKfy_TEST/exec' });
+  const table = [
+    ['https://script.google.com/a/macros/60hkg.org/s/AKfy_TEST/exec', 'https://script.google.com/macros/s/AKfy_TEST/exec'],
+    ['https://script.google.com/a/60hkg.org/macros/s/AKfy_TEST/exec', 'https://script.google.com/macros/s/AKfy_TEST/exec'],
+    ['https://script.google.com/macros/s/AKfy_TEST/exec', 'https://script.google.com/macros/s/AKfy_TEST/exec'],
+    ['', '']
+  ];
+  for (const [input, expected] of table) {
+    assert.equal(backend.sandbox.canonicalServiceUrl_(input), expected, input);
+  }
+  const { canonicalBackendUrl } = require('../lib/registry');
+  for (const [input, expected] of table) {
+    assert.equal(canonicalBackendUrl(input), expected, 'Vercel side must agree with Code.gs: ' + input);
+  }
+  // Both sides compute the same hash for both forms of one deployment, and
+  // still different hashes for different deployments.
+  const { backendHash } = require('../lib/super-auth');
+  const leaf = backend.sandbox.sha256Hex(backend.sandbox.canonicalServiceUrl_('https://script.google.com/a/macros/60hkg.org/s/AKfy_TEST/exec'));
+  assert.equal(leaf, backendHash(canonicalBackendUrl('https://script.google.com/macros/s/AKfy_TEST/exec')));
+  assert.notEqual(leaf, backendHash(canonicalBackendUrl('https://script.google.com/macros/s/AKfy_OTHER/exec')));
+  console.log('[PASS] /a/macros/<域名>/s/… 與 /macros/s/… 雜湊一致，唔同部署仍然唔同');
 })();
 
 console.log('\n=== 最新版本公告、GS 初始化核對及資料保全測試：全部通過 ===');
