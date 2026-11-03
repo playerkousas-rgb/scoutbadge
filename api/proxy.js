@@ -246,6 +246,16 @@ async function handleRegistration(res, payload, startedAt) {
   // Scout Admin's Apps Script contract uses type=apply, backendUrl, and
   // responds with { status: 'success' }. Adapt the browser-facing ScoutBadge
   // payload here so the frontend contract can remain unchanged.
+  //
+  // The note is tagged with an app marker so Scout Admin can attribute an
+  // incoming application to ScoutBadge even when the applicant leaves the
+  // note blank. Older applications keep their original note; Scout Admin
+  // renders them as unlabelled.
+  const note = clampText(payload.note, 500);
+  const taggedNote = note
+    ? (note.toLowerCase().startsWith('[scoutbadge]') ? note : `[scoutbadge] ${note}`)
+    : '[scoutbadge]';
+
   const regPayload = {
     type: 'apply',
     troopId: clampText(payload.troopId, 32),
@@ -253,7 +263,7 @@ async function handleRegistration(res, payload, startedAt) {
     backendUrl: clampText(payload.scriptUrl, 300),
     apiKey: clampText(payload.apiKey, 120),
     appType: 'scoutbadge',
-    note: clampText(payload.note, 500)
+    note: taggedNote
   };
   if (!regPayload.troopId || !regPayload.backendUrl || !regPayload.apiKey) {
     return fail(res, 400, '申請資料不完整');
