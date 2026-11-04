@@ -22,7 +22,9 @@
 - **反枚舉 dummy 雜湊快取**：`dummyPasswordHash_()` 改用 `CacheService`（6 小時）重用，
   令「帳號不存在／錯密碼」只做一次 KDF（原本每個執行都要重新計一次）。
 - **新增 `benchmarkPasswordKdf()`** ＋ Sheet 選單「⏱️ 密碼雜湊效能測試」：即場量度
-  120,000 次與本版迭代次數的實際毫秒數，用來判斷「登入逾時」係唔係 KDF 造成。
+  120,000 次與本版迭代次數的實際毫秒數，並換算成四條登入路徑（舊 64-hex 1×／新種或已升級
+  `pbkdf2$120000$` 2×／停用・不存在・鎖定 dummy 1–2×）各自要幾秒，用嚟解釋
+  「同一團為何只有部分帳號入唔到」，以及判斷「登入逾時」係唔係 KDF 造成。
 - **新增 `forceResetUserPasswordFromSheet()`** ＋ Sheet 選單「🔑 重設某帳號密碼（救援）」：
   擁有 Sheet 的管理員**不需要登入 App** 就可以把某帳號改寫成本版雜湊，同時清 `LOGIN_FAIL:<ymis>`
   鎖定、`destroyUserTokens()` 踢走舊 session、設 `force_change_password=true`；只改第 5 欄及第 16 欄，

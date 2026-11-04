@@ -512,13 +512,24 @@ function benchmarkPasswordKdf(){
     lines.push('・'+r.label+'：'+ms+' ms（'+(ms/1000).toFixed(1)+' 秒）');
   });
   lines.push('');
+  // 為什麼「同一個旅團，只有某幾個帳號入唔到」：唔同帳號走唔同數量嘅 KDF。
+  const sec=function(ms){ return (ms/1000).toFixed(1); };
+  lines.push('各條登入路徑嘅實際成本（GS 6.2.0／6.3.0 舊雜湊，proxy 上限 25 秒）：');
+  lines.push('・舊 64-hex 帳號（驗證快，但要即場升級）＝ 1×≈'+sec(legacyMs)+' 秒');
+  lines.push('・新種／已升級 pbkdf2$120000$ 帳號（驗證＋預設密碼檢查）＝ 2×≈'+sec(legacyMs*2)+' 秒');
+  lines.push('・停用／已刪除／連續錯密鎖定／保留帳號（dummy KDF）＝ 1–2×≈'+sec(legacyMs)+'–'+sec(legacyMs*2)+' 秒');
+  lines.push('→ 所以同一團可以「舊成員入得（慢）、新開或預設管理員帳號逾時」，唔係 API Key 或個別帳號壞。');
+  lines.push('（本版 GS '+GS_VERSION+' 之後，以上全部收斂為 1×≈'+sec(currentMs)+' 秒。）');
+  lines.push('');
   if(legacyMs>25000){
     lines.push('❌ 舊 120,000 次格式要 '+Math.round(legacyMs/1000)+' 秒，遠超 Vercel proxy 嘅 25 秒上游上限：');
     lines.push('   呢個就係「超管入得、一般帳號登入回『後端服務連線逾時』」嘅成因（中央 sheep 登入免密碼核對）。');
     lines.push('   處理：本版（GS '+GS_VERSION+'）已改為 '+PBKDF2_ITERATIONS+' 次；舊雜湊帳號登入成功一次會自動改寫，');
     lines.push('        或者用選單「🔑 重設某帳號密碼（救援）」即時改寫，唔使等。');
   } else if(legacyMs>8000){
-    lines.push('⚠️ 舊 120,000 次格式要 '+(legacyMs/1000).toFixed(1)+' 秒：未超 25 秒但已經好慢，舊雜湊帳號第一次登入會明顯卡。');
+    lines.push('⚠️ 舊 120,000 次格式要 '+(legacyMs/1000).toFixed(1)+' 秒：未超 25 秒但已經好慢，');
+    lines.push('   2× 路徑（新種帳號、停用／鎖定帳號）會接近或超過 25 秒——正好解釋「只有部分帳號入唔到」。');
+    lines.push('   處理：部署本版 GS '+GS_VERSION+'，或用「🔑 重設某帳號密碼（救援）」改寫個別帳號。');
   } else {
     lines.push('✅ 舊格式仍在 8 秒內，PBKDF2 唔係今次逾時嘅主因，請改查 Vercel log 嘅 duration 同後端執行紀錄。');
   }
