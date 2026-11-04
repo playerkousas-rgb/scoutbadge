@@ -44,7 +44,7 @@ sig     = HMAC-SHA256( apiKey, message )   // 小寫 hex
 | 欄位 | 說明 |
 |---|---|
 | `childId` | 全域 ID（例 `PROG_0082S`）。若 leaf 設咗 Script Property `PORTAL_GLOBAL_ID`，兩邊經 `normId()` 後必須相等（`82S` 同 `0082S` 唔會撞號）。 |
-| `sub` | 身分：**成員用 YMIS**（10 位數字）；**領袖／家長用 EMAIL**。 |
+| `sub` | 身分：**成員用 SCOUT ID**（10 位數字）；**領袖／家長用 EMAIL**。 |
 | `scope` | **原始 JSON 字串**（簽名必須用同 leaf 端收到嘅完全一樣嘅字串）。例：`{"role":"member"}`、`{"role":"parent","children_ids":["SCOUT_童_1234560001"]}`。家長 scope 只能是 `children_ids`。 |
 | `exp` | Unix 秒。上限 3600 秒（`PORTAL_SIG_MAX_TTL`），leaf 容許 60 秒時鐘偏差。 |
 | `sig` | 小寫 hex HMAC-SHA256。 |
@@ -60,7 +60,7 @@ sig     = HMAC-SHA256( apiKey, message )   // 小寫 hex
 
 | `sub` 形式 | 身份 | 條件 |
 |---|---|---|
-| 10 位數字 YMIS | **成員** | 本團 `Users`／名冊有呢個 YMIS |
+| 10 位數字 SCOUT ID | **成員** | 本團 `Users`／名冊有呢個 SCOUT ID |
 | EMAIL（領袖） | **領袖** | `getUserByEmail` 搵到、角色係領袖（`can_tick`） |
 | EMAIL（家長） | **家長** | `role==='parent'`（空視同 parent）；`children_ids` 必須至少一個**喺本團**；只可讀子女聯集 |
 
@@ -105,7 +105,7 @@ sig     = HMAC-SHA256( apiKey, message )   // 小寫 hex
   家長用 sig bearer 每個請求附帶 sig）。
 
 ### `getRegistrySafe`（server-side 名冊，供上層「吃」）
-**只接受 API Key**。回傳**剝皮版**名冊（`getMembers()`）：YMIS、姓名、email、小隊
+**只接受 API Key**。回傳**剝皮版**名冊（`getMembers()`）：SCOUT ID、姓名、email、小隊
 —— **無密碼 hash、無 token、無私隱欄**。
 ```json
 { "action":"getRegistrySafe", "apikey":"..." }  →  { "success":true, "members":[...] }
@@ -131,7 +131,7 @@ sig     = HMAC-SHA256( apiKey, message )   // 小寫 hex
 ### `upsertUser`（帳號同步與直插匯入）
 **只接受 API Key 或 sig**。支援上游轉移使用者，直接插入既有密碼雜湊，使用者照舊密碼登入，毋須重設或強制 `1234 + mustChangePw`。
 - 支援 `transferId`：若同一 `transferId` 重複傳入，視為冪等成功放行。
-- 防衝突：自動檢查 YMIS 與 Email 唯一性，避免與既有不同帳戶相撞。
+- 防衝突：自動檢查 SCOUT ID 與 Email 唯一性，避免與既有不同帳戶相撞。
 - **經旅系統 sig 推送嘅鏡像（`upsertUser`）及選單「📥 匯入 JSON」嘅寫入更嚴格**：只收 64 位 hex `password_hash`；帶明文 `password`、假 hash、新帳戶冇 hash 一律拒；冇帶 hash 時保留原密碼。詳見 Git 內 `operations/TROOP_LINK_UPGRADE.md`（維運文件，不部署）。
 
 ### `setPw` / `verifyPw` / `setStatus`（伺服器對伺服器帳號維護）
@@ -142,7 +142,26 @@ sig     = HMAC-SHA256( apiKey, message )   // 小寫 hex
 ### 家長只讀 action
 `load`（名冊／進度／flat／pending／其他獎章／履歷全部收縮到子女聯集）、
 `getOtherBadges`、`getServiceRecords`、`getMembers`（都接受 sig 或 token）。
-定向讀（`targetYmis`）唔喺子女聯集 → `code:403`。
+定向讀（`targetScoutId`）唔喺子女聯集 → `code:403`。
+
+---
+
+## SCOUT ID 命名與舊 `ymis` 相容（GS 6.5.0 起）
+
+人在系統文件、介面、CSV 一律叫 **SCOUT ID**（童軍總會 YMIS 內那 10 位數字童軍成員編號）；
+JSON 正式欄位係 **`scoutId`**（同 ROVERBOOK／ROVERBADGE 一致）。
+
+leaf 對舊上游**完全向後相容**，上游毋須即刻改：
+
+| 位置 | 接受（讀） | 送出（寫） |
+| --- | --- | --- |
+| 請求 body／query | `scoutId`、`scout_id`、`ymis`、`YMIS`；定向操作另接受 `targetScoutId`、`target_scoutId`、`target_ymis` | — |
+| 回應物件 | — | `scoutId` **＋** `ymis` 鏡像（同值） |
+| Sheet 表頭（既有旅團） | `scout_id`、`scoutId`、`SCOUT ID`、`ymis`、`YMIS`（忽略大小寫／空格／底線） | 只寫入既有那個 ID 欄，永不新增第二個 ID 欄 |
+
+- `initializeSheets()` 新建的 Sheet 用 `scout_id`；**既有旅團 Sheet 不會被改欄名**，毋須手改。
+- 同一請求若同時送 `scoutId` 與 `ymis`，以 `scoutId` 為準；**唔好送兩個唔同值**。
+- 下游讀回應照用 `ymis` 仍然得；新建議一律讀 `scoutId`。
 
 ---
 

@@ -30,9 +30,9 @@ async function main() {
     apikey: 'KEY_A',
     execUrl: `http://127.0.0.1:${MOCK_PORT}/exec`,
     users: [
-      { ymis: '1234567890', name: '陳大文', email: 'leader@example.org', role: 'group_leader', password: 'PassA!234567' },
-      { ymis: '1234560001', name: '成員甲', email: 'member@example.org', role: 'member', password: 'MemberA!234' },
-      { ymis: 'S1', name: '中央管代', email: '', role: 'super_admin', password: 'irrelevant' }
+      { scoutId: '1234567890', name: '陳大文', email: 'leader@example.org', role: 'group_leader', password: 'PassA!234567' },
+      { scoutId: '1234560001', name: '成員甲', email: 'member@example.org', role: 'member', password: 'MemberA!234' },
+      { scoutId: 'S1', name: '中央管代', email: '', role: 'super_admin', password: 'irrelevant' }
     ]
   });
   console.log(`mock GAS 旅團 0082 on http://127.0.0.1:${MOCK_PORT}/exec`);

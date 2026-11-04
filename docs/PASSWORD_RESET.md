@@ -13,7 +13,7 @@
 1. 在首頁揀選你的旅團卡片，進入登入頁。
 2. 按密碼欄旁邊顯眼的 **「🔑 忘記密碼？」** 按鈕。
 3. **第 1 步（索取重設碼）**：
-   - 在單一輸入欄填寫你的 **童軍編號（YMIS）** 或 **登記電郵**（二選一即可）。
+   - 在單一輸入欄填寫你的 **童軍編號（SCOUT ID）** 或 **登記電郵**（二選一即可）。
    - 按 **「📨 發送 8 位重設碼」**。
    - 為保護帳戶私隱，無論帳號是否存在，畫面都會顯示同一句提示：「若此帳號已登記電郵，重設碼已發送到登記電郵（15 分鐘內有效）。」
 4. **第 2 步（輸入重設碼並設定新密碼）**：
@@ -76,7 +76,7 @@
 This platform provides **exact three password-recovery paths**:
 
 1. **Scout members without a registered email**: ask a troop leader to issue a temporary password in **👥 User Management → Reset Password** (forces password change on next sign-in, clears any 15-minute login lockout, and revokes old sessions).
-2. **Leaders / accounts with a registered email**: tap **🔑 Forgot password?** on the sign-in page → enter your Scout ID (YMIS) or registered email → check your inbox for the **8-character code** (valid for 15 minutes, case-insensitive, spaces/hyphens stripped automatically on paste, max 5 attempts) → set a new password (4–32 characters).
+2. **Leaders / accounts with a registered email**: tap **🔑 Forgot password?** on the sign-in page → enter your Scout ID (SCOUT ID) or registered email → check your inbox for the **8-character code** (valid for 15 minutes, case-insensitive, spaces/hyphens stripped automatically on paste, max 5 attempts) → set a new password (4–32 characters).
 3. **Default troop admin (`1111111111`)**: tap **🐛💬 Report · Feedback** to ask the **APP ADMIN** to reset it.
 
 **Troop admin setup after updating `Code.gs` (`6.2.0`)**:

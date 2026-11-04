@@ -3,6 +3,73 @@
 版號、歷史更新及開發背景集中保留在 Git，不放入可下載的 GS 或用戶提示。
 本文件不納入網站部署：`build.js` 只發布本目錄的 `Code.gs`，`.vercelignore` 亦排除其餘檔案。
 
+## 2026-11-05：YMIS → SCOUT ID 改名（GS 6.5.0，前端 v5.2）
+
+- **改名理由**：YMIS 是童軍總會（青少年成員資訊系統）的名字，本系統只用它裡面那 10 位數字的
+  **童軍成員編號**，所以介面、文件、CSV 一律叫 **SCOUT ID**；JSON 欄位統一叫 `scoutId`
+  （與 ROVERBOOK／ROVERBADGE 一致）。`syncIdentity()` 的等價寫法：`scoutId = memberNo`。
+- **完全向後相容（既有旅團毋須做任何事）**：
+  - 讀取表頭：`isScoutIdHeader_()` 正規化（去空格／底線、忽略大小寫）後接受
+    `scout_id`／`scoutId`／`ymis`／`YMIS`；`scoutIdColumnIndex_()` 以它定位 ID 欄，
+    `headerIndexOf_()` 供所有寫入（`addUser`／`upsertUser`／`setCell`／`setCol`／`setNew`）使用。
+  - 輸入：`aliasLegacyScoutId_()` 在 `doGet`／`doPost` 入口把 `ymis`／`YMIS`／`scout_id`
+    補成 `scoutId`，`target_ymis`／`target_scoutId` 補成 `targetScoutId`。
+  - 輸出：`withLegacyScoutId_()`／`withLegacyScoutIdList_()` 在 `getMembers`、
+    `getRegistrySafe`、`getAllUsers`、`handleLogin`／`handleSuperLogin`、
+    `buildUsersExport`、`importUsersFromText()` 結果同時附 `ymis` 鏡像（同值），舊系統照讀。
+  - 新表：`SHEET_SPECS`／`LOG_HEADERS`／`PWD_RESET_HEADERS`／`LINK_USERS_HEADERS` 等改用
+    `scout_id`；`getPasswordResetSheet()` 補欄時若舊表已有 `ymis` 就唔會再加一個 `scout_id`。
+- **前端**：`assets/ymis-parse.js` → `assets/scout-id-parse.js`（全域 `ScoutIdParse`）；
+  CSV 範本首欄改 `scout_id`，解析器同時接受 `ymis`／`SCOUT ID` 等舊表頭；UI 標籤一律「SCOUT ID」。
+- **批量開戶腳本**（`assets/batch-onboard/Code.gs`）：新表用 `scout_id`，舊表 `ymis` 照寫。
+- **回歸測試**：新增 `test/scout-id-compat.test.js`（新表頭／舊表頭／舊輸入／鏡像輸出／CSV／批量開戶）。
+
+## 2026-11-04：密碼 KDF 成本修正（登入 504 逾時）、KDF 效能測試、Sheet 救援重設（GS 6.4.0）
+
+- **問題（旅團 1187 事故）**：GS 6.2.0／6.3.0 的 `PBKDF2-HMAC-SHA256 120,000` 次迭代，
+  在 Apps Script 上要 20–40 秒（`Utilities.computeHmacSha256Signature()` 每次都要過
+  JS↔Java 邊界，約 0.1–0.3 ms），超過 Vercel proxy 的 25 秒上游上限，令**所有密碼登入**
+  回「後端服務連線逾時，請稍後再試」。中央 `sheep` 登入只驗短效票、免密碼核對，所以
+  出現「超管入得、一般帳號入唔到」；與 API Key 完全無關（Key 錯會 1–2 秒回 403，不會逾時）。
+- **`PBKDF2_ITERATIONS` 120,000 → 10,000**：新雜湊格式為 `pbkdf2$10000$<salt>$<dk>`
+  （每戶 16-byte 隨機鹽不變）。驗證一律使用雜湊字串自帶的迭代次數，`PBKDF2_MIN_ITERATIONS`
+  = 1,000、`PBKDF2_MAX_ITERATIONS` = 2,000,000，所以舊 `pbkdf2$120000$` 及舊 64-hex
+  SHA-256 **照樣登入得**，不會鎖死既有帳號；超出範圍的迭代次數直接拒絕（防止被改大拖死一次執行）。
+- **登入成本由 240,000 次降到 10,000 次**：`handleLogin()` 不再為「密碼是否仍是預設值」額外
+  跑一次 PBKDF2——成功驗證後直接比較輸入密碼與 `ADMIN_PASS`（等價，因為同一密碼已驗證過
+  stored hash）；`isDefaultPasswordHash_()` 只保留零成本的 64-hex 比對。
+- **舊雜湊透明改寫**：新增 `storedHashIterations_()`／`passwordHashNeedsRehash_()`；舊 64-hex
+  及舊 `pbkdf2$120000$` 帳號成功登入一次後自動改寫為本版格式（原密碼不變，本版格式不再重寫）。
+- **反枚舉 dummy 雜湊快取**：`dummyPasswordHash_()` 改用 `CacheService`（6 小時）重用，
+  令「帳號不存在／錯密碼」只做一次 KDF（原本每個執行都要重新計一次）。
+- **新增 `benchmarkPasswordKdf()`** ＋ Sheet 選單「⏱️ 密碼雜湊效能測試」：即場量度
+  120,000 次與本版迭代次數的實際毫秒數，並換算成四條登入路徑（舊 64-hex 1×／新種或已升級
+  `pbkdf2$120000$` 2×／停用・不存在・鎖定 dummy 1–2×）各自要幾秒，用嚟解釋
+  「同一團為何只有部分帳號入唔到」，以及判斷「登入逾時」係唔係 KDF 造成。
+- **新增 `forceResetUserPasswordFromSheet()`** ＋ Sheet 選單「🔑 重設某帳號密碼（救援）」：
+  擁有 Sheet 的管理員**不需要登入 App** 就可以把某帳號改寫成本版雜湊，同時清 `LOGIN_FAIL:<scoutId>`
+  鎖定、`destroyUserTokens()` 踢走舊 session、設 `force_change_password=true`；只改第 5 欄及第 16 欄，
+  不刪列、不改其他資料，並寫入 `操作紀錄`（`sheet_reset_password`）。拒絕未知帳號、短於 4 位的新密碼
+  及舊版殘留 `super_admin` 列。
+- **`assets/batch-onboard/Code.gs` 同步改為 10,000 次**，兩邊雜湊（`pbkdf2$<iter>$…`）仍然互通。
+- **Vercel 端配套**（`api/proxy.js`）：密碼類 action（`login`／`changePassword`／`resetPassword`／
+  `setPw`／`verifyPw`／`confirmPasswordReset`／`addUser`／`bulkAddUsers`／`importUsers`／`importAll`／
+  `upsertUser`）上游逾時 25 → 45 秒，一般 action 維持 25 秒；`index.html` 登入請求等 50 秒。
+  只為「舊雜湊第一次登入」留一次機會，新雜湊登入仍舊 1–3 秒。
+- **前線可見性（唔使用戶先投訴）**：前端「最新更新公告」在後端仍回報 GS `6.2.x`／`6.3.x` 時
+  直接標紅「🔴 此版本登入會逾時 …請更新到 GS 6.4.0」（中英同步，登入頁／首頁／主畫面三處）；
+  `api/proxy.js` 對超過 8 秒的 `login`／`changePassword`／`resetPassword` 額外輸出
+  `[proxy] slow_password_kdf troop=…`，方便在 Vercel log 一次列出未更新的旅團。
+- **版本與資料保全**：`GS_VERSION` = `6.4.0`、`GS_RELEASE_DATE` = `2026-11-04`、
+  `GS_INIT_REQUIRED` = `true`（與前端 `GS_LATEST` 同步）。回退方法：切回 6.3.0 `Code.gs`
+  只會令所有密碼登入重新變慢／逾時，資料不受影響（已改寫成 `pbkdf2$10000$` 的帳號在 6.3.0 讀不到，
+  要由領袖重設一次密碼，或用「🔑 重設某帳號密碼（救援）」）。
+- **測試**：新增 `test/password-kdf.test.js`（迭代次數預算、舊 `pbkdf2$120000$`／64-hex 仍可驗證、
+  登入一次自動改寫、成功登入只做一個 KDF、Sheet 救援重設、proxy 逾時預算及前端 timeout），
+  已納入 `npm test`；`test/auth-hardening.test.js`、`test/troop_link.test.js`、
+  `test/troop_upgrade.test.js` 及 `test/release-version.test.js` 改為由原始碼讀出迭代次數與版本，
+  不再硬編碼 120,000／6.3.0。
+
 ## 2026-11-03：單一更新入口、正規化 /exec 雜湊、未初始化提示（GS 6.3.0）
 
 - **單一更新入口**：新增選單「🔗 旅系統 → 🔧 初始化／更新」（`menuInitializeSheets()`），內部只呼叫
@@ -35,10 +102,10 @@
 
 - **A3 密碼雜湊全面升級**：`hashPassword`／`hashPasswordV2` 及 `assets/batch-onboard/Code.gs` 改用 `PBKDF2-HMAC-SHA256`（`120,000` 次迭代＋每用戶獨立 16-byte 隨機鹽，儲存格式 `pbkdf2$<iter>$<salt>$<dk>`）。涵蓋申請批核、新增用戶、批量開戶、直插設密、自行改密、領袖重設及電郵重設所有寫密入口。
 - **舊帳平滑升級與匯入相容**：`verifyPassword` 同時支援 `pbkdf2$...` 與舊版 64-hex 無鹽 SHA-256；舊帳首次成功登入時自動將 `Users.password_hash` 重算升級為 `PBKDF2-HMAC-SHA256`（原密碼不變）。`upsertUser`／`linkUpsertUser`／`importUsers`／`setPw`／`verifyPw` 同時接受新舊兩種雜湊格式並拒絕明文（匯入專用入口）。
-- **A5 登入鎖定與改密踢舊 session**：同一帳號連續 5 次密碼錯誤即寫入 Script Properties `LOGIN_FAIL:<ymis>` 鎖定 15 分鐘，鎖定期內即使輸入正確密碼亦拒絕，並寫入 `操作紀錄` 的 `login_locked`；成功登入或重設密碼自動清零。用戶自行 `changePassword` 後保留當前 token，踢走該帳號所有其他舊裝置 session（`destroyUserTokensExcept`）。
+- **A5 登入鎖定與改密踢舊 session**：同一帳號連續 5 次密碼錯誤即寫入 Script Properties `LOGIN_FAIL:<scoutId>` 鎖定 15 分鐘，鎖定期內即使輸入正確密碼亦拒絕，並寫入 `操作紀錄` 的 `login_locked`；成功登入或重設密碼自動清零。用戶自行 `changePassword` 後保留當前 token，踢走該帳號所有其他舊裝置 session（`destroyUserTokensExcept`）。
 - **A17 公開入口反枚舉**：未登入公開入口（`handleLogin`、`handleRequestPasswordReset`、`handleConfirmPasswordReset`）對帳號不存在、無電郵、預設管理員或密碼錯誤一律回傳完全一致訊息（如 `帳號或密碼錯誤` 或中性發信提示），並在帳號不存在／不可重設時執行 `dummyPasswordHash_()` 消除 KDF 時間差；領袖後台查詢（`getAllUsers`／`getMembers`／電郵唯一性檢查）維持正常顯示存在與否。
-- **重設密碼權限階梯與強制善後**：`canManageUser` 與 `handleResetPassword` 在 handler 內部強制驗證已認證 `manager` 物件的角色（涵蓋本機 token 與上游 `sig` 入口，絕不單憑自報 `ymis` 反查提權）：只准較高職級重設較低職級（只有 `SUPER_ADMIN` 可重設 `ADMIN`；`ADMIN` 不可重設另一 `ADMIN`；同級不可互改；`member` 不可重設任何人；`super_admin` 保留帳號不可被重設）。重設成功後強制同步執行三件事：清除 `LOGIN_FAIL:<target>`、踢走目標帳號全部既有 session（不影響操作者 session）、設 `force_change_password = true`。
-- **領袖電郵自助重設密碼（第 2 條路徑）**：新增 `requestPasswordReset`、`confirmPasswordReset` 公開 action 及 `testPasswordResetMail()` 授權輔助函式；新增 `密碼重設` 工作表（`reset_id`／`ymis`／`email`／`code_hash`／`created_ms`／`expires_ms`／`attempts`／`status`／`used_at`），未跑 `initializeSheets()` 時首次使用亦會自動補建空白表。8 位不分大小寫重設碼只存 SHA-256 雜湊、15 分鐘有效、最多錯 5 次即作廢、單次使用、每鍵 30 分鐘限 3 次及全團每小時上限 30 次、自動清理 24 小時前舊列。`ADMIN_EMAIL` 維持 `admin@example.com` 不可收信（第 3 條路徑維持回報 APP ADMIN 以 `SUPER_KEY` 重設）。
+- **重設密碼權限階梯與強制善後**：`canManageUser` 與 `handleResetPassword` 在 handler 內部強制驗證已認證 `manager` 物件的角色（涵蓋本機 token 與上游 `sig` 入口，絕不單憑自報 `scoutId` 反查提權）：只准較高職級重設較低職級（只有 `SUPER_ADMIN` 可重設 `ADMIN`；`ADMIN` 不可重設另一 `ADMIN`；同級不可互改；`member` 不可重設任何人；`super_admin` 保留帳號不可被重設）。重設成功後強制同步執行三件事：清除 `LOGIN_FAIL:<target>`、踢走目標帳號全部既有 session（不影響操作者 session）、設 `force_change_password = true`。
+- **領袖電郵自助重設密碼（第 2 條路徑）**：新增 `requestPasswordReset`、`confirmPasswordReset` 公開 action 及 `testPasswordResetMail()` 授權輔助函式；新增 `密碼重設` 工作表（`reset_id`／`scoutId`／`email`／`code_hash`／`created_ms`／`expires_ms`／`attempts`／`status`／`used_at`），未跑 `initializeSheets()` 時首次使用亦會自動補建空白表。8 位不分大小寫重設碼只存 SHA-256 雜湊、15 分鐘有效、最多錯 5 次即作廢、單次使用、每鍵 30 分鐘限 3 次及全團每小時上限 30 次、自動清理 24 小時前舊列。`ADMIN_EMAIL` 維持 `admin@example.com` 不可收信（第 3 條路徑維持回報 APP ADMIN 以 `SUPER_KEY` 重設）。
 - **Proxy 白名單與欄位剝除**：`api/proxy.js` 新增明確 `PUBLIC_ACTIONS`＋`AUTH_ACTIONS` 白名單（未知 action 直接回 `400`），並在轉發 `requestPasswordReset`／`confirmPasswordReset` 前剝除任何 `token`、`role`、`on_behalf`、`sig` 等欄位。
 - **版本與資料保全**：`GS_VERSION` = `6.2.0`、`GS_RELEASE_DATE` = `2026-11-02`、`GS_INIT_REQUIRED` = `true`（與前端 `GS_LATEST` 同步）；`initializeSheets()` 維持冪等只增不刪。回退方法：直接切回上一版 `Code.gs`（已升級為 `pbkdf2$` 的帳號如要回退至舊版 GS，需由領袖重設一次密碼；不回退 GS 而只回退前端則零影響）。
 
@@ -170,15 +237,15 @@
 ### v5.3.0
 
 - 全團只可有一位在職團長；開戶及角色更新均檢查，換人須先將現任轉為其他角色。
-- 領袖以電郵登入，使用內部唯一 `L` 編號；成員申請仍須填寫 10 位 YMIS。
-- 原檔首曾記載領袖 YMIS 選填；實作中的領袖自助申請會忽略傳入 YMIS，批准時編配 `L` 編號。領袖直接開戶則可在 YMIS 留空且有電郵時自動編配。
+- 領袖以電郵登入，使用內部唯一 `L` 編號；成員申請仍須填寫 10 位 SCOUT ID。
+- 原檔首曾記載領袖 SCOUT ID 選填；實作中的領袖自助申請會忽略傳入 SCOUT ID，批准時編配 `L` 編號。領袖直接開戶則可在 SCOUT ID 留空且有電郵時自動編配。
 - 開戶者只可建立自己可管理的角色；審批申請只可建立成員／支部領袖，避免手改 Sheet 繞過限制。
 - 審批回應提供 `final_role` 與 `temp_password`，首次登入須更改密碼。
 - 缺少 `force_change_password` 欄時自動補上，毋須重新初始化工作表。
 
 ### v5.3.1
 
-- YMIS／Email 唯一性檢查涵蓋停用帳戶、成員名單及待審批申請，禁止重複開戶。
+- SCOUT ID／Email 唯一性檢查涵蓋停用帳戶、成員名單及待審批申請，禁止重複開戶。
 - 用戶管理合併 Users 與成員名單，讓匯入但尚未開登入帳號的團員也可見、可管理。
 
 ### v5.3.2

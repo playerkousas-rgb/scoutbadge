@@ -259,17 +259,17 @@ function buildPair() {
 
 function seedAccounts(node, accounts) {
   for (const acc of accounts) {
-    const res = node.context.handleAddUser(acc, { ymis: '1111111111', name: '管理員', role: 'admin', can_tick: true });
+    const res = node.context.handleAddUser(acc, { scoutId: '1111111111', name: '管理員', role: 'admin', can_tick: true });
     const parsed = JSON.parse(res.getContent());
     if (!parsed.success) throw new Error('seed 失敗：' + JSON.stringify(parsed));
   }
 }
 
-function readUser(node, ymis) {
-  const rec = node.context.linkReadUserRow(ymis);
+function readUser(node, scoutId) {
+  const rec = node.context.linkReadUserRow(scoutId);
   if (!rec) return null;
   return {
-    ymis: String(rec.data[rec.map.ymis]),
+    scoutId: String(rec.data[rec.map.scoutId]),
     name: String(rec.data[rec.map.name]),
     role: String(rec.data[rec.map.role]),
     branch: String(rec.data[rec.map.branch] || ''),
@@ -300,8 +300,8 @@ function run() {
     assert.strictEqual(g.localLoginAllowed(), true, '未設定應視為開啟');
     assert.strictEqual(String(node.props.get('ALLOW_LOCAL_LOGIN') || ''), '', 'initializeSheets() 不應寫入掣值');
     seedAccounts(node, [
-      { ymis: '1234560001', name: '陳大文', email: 'chan@example.org', role: 'member', password: 'OldPass123' },
-      { ymis: '1234560002', name: '林領袖', email: 'leader@example.org', role: 'branch_leader', password: 'LeaderPass456' }
+      { scoutId: '1234560001', name: '陳大文', email: 'chan@example.org', role: 'member', password: 'OldPass123' },
+      { scoutId: '1234560002', name: '林領袖', email: 'leader@example.org', role: 'branch_leader', password: 'LeaderPass456' }
     ]);
     const login = postTo(node, { action: 'login', login_id: '1234560001', password: 'OldPass123', apikey: 'sc_standalone_key_0003' });
     assert.strictEqual(login.success, true, '直接入口開放時登入照舊');
@@ -322,7 +322,7 @@ function run() {
   console.log('\n2. 閂口後本地入口一律拒（只回「只接受上游簽名（sig）」）');
   {
     const { down } = buildPair();
-    seedAccounts(down, [{ ymis: '1234560001', name: '陳大文', email: 'chan@example.org', role: 'member', password: 'OldPass123' }]);
+    seedAccounts(down, [{ scoutId: '1234560001', name: '陳大文', email: 'chan@example.org', role: 'member', password: 'OldPass123' }]);
     down.context.setLocalLoginAllowed(false, 'test');
     assert.strictEqual(down.context.localLoginAllowed(), false);
     assert.strictEqual(String(down.props.get('ALLOW_LOCAL_LOGIN')), 'false', '掣寫在下游 Script Properties');
@@ -332,7 +332,7 @@ function run() {
     assert.strictEqual(login.upstream_only, true);
     assert.match(String(login.error), /只接受上游簽名（sig）/);
 
-    const apply = postTo(down, { action: 'apply', ymis: '1234560009', name: '新團員', email: 'new@example.org', requested_role: 'member', apikey: DOWNSTREAM_KEY });
+    const apply = postTo(down, { action: 'apply', scoutId: '1234560009', name: '新團員', email: 'new@example.org', requested_role: 'member', apikey: DOWNSTREAM_KEY });
     assert.strictEqual(apply.success, false);
     assert.strictEqual(apply.upstream_only, true);
 
@@ -342,13 +342,13 @@ function run() {
     assert.strictEqual(getFrom(down, { action: 'getLoginMode', apikey: DOWNSTREAM_KEY }).success, false);
 
     // 舊 Portal/apikey 直接寫入：apikey 唔再等於授權
-    const save = postTo(down, { action: 'save', apikey: DOWNSTREAM_KEY, changes: [{ ymis: '1234560001', itemId: 'L1', date: '2026-01-01' }] });
+    const save = postTo(down, { action: 'save', apikey: DOWNSTREAM_KEY, changes: [{ scoutId: '1234560001', itemId: 'L1', date: '2026-01-01' }] });
     assert.strictEqual(save.success, false, '閂口後 apikey 直接寫入要被拒');
     assert.strictEqual(sheetRows(down, '進度追蹤').length <= 1, true, '進度不應被寫入');
 
     // 本地 token 操作亦拒
     const fresh = buildPair();
-    seedAccounts(fresh.down, [{ ymis: '1234560001', name: '陳大文', role: 'member', password: 'OldPass123' }]);
+    seedAccounts(fresh.down, [{ scoutId: '1234560001', name: '陳大文', role: 'member', password: 'OldPass123' }]);
     const before = postTo(fresh.down, { action: 'login', login_id: '1234560001', password: 'OldPass123', apikey: DOWNSTREAM_KEY });
     assert.strictEqual(before.success, true);
     fresh.down.context.setLocalLoginAllowed(false, 'test');
@@ -386,7 +386,7 @@ function run() {
     const SU_ID = vm.runInContext('SUPER_ADMIN_ID', g);
     assert.strictEqual(typeof SU_ID, 'string');
     // 閂口前先攞一個一般用戶 token（對照組）
-    seedAccounts(down, [{ ymis: '1234560001', name: '陳大文', role: 'member', password: 'OldPass123' }]);
+    seedAccounts(down, [{ scoutId: '1234560001', name: '陳大文', role: 'member', password: 'OldPass123' }]);
     const norm = postTo(down, { action: 'login', login_id: '1234560001', password: 'OldPass123', apikey: DOWNSTREAM_KEY });
     assert.strictEqual(norm.success, true);
     g.setLocalLoginAllowed(false, 'test');
@@ -427,12 +427,12 @@ function run() {
 
       // 工作表零蹤跡：保留帳號做嘅操作，任何 Sheet 欄位都唔可以出現帳號／顯示名稱（一律中性 system）
       const SU_NAME = vm.runInContext('SUPER_ADMIN_NAME', g);
-      const saved = postTo(down, { action: 'save', token: su.token, changes: [{ ymis: '1234560001', itemId: 'L1', date: '2026-04-04' }], confirmer: SU_NAME });
+      const saved = postTo(down, { action: 'save', token: su.token, changes: [{ scoutId: '1234560001', itemId: 'L1', date: '2026-04-04' }], confirmer: SU_NAME });
       assert.strictEqual(saved.success, true, JSON.stringify(saved));
       const progRow = sheetRows(down, '進度追蹤').find(r => String(r[0]) === '1234560001' && String(r[1]) === 'L1');
       assert.ok(progRow, '進度應已寫入');
       assert.strictEqual(String(progRow[4]), 'system', '進度「確認者」欄要寫中性 system，唔可以落保留帳號名稱：' + progRow[4]);
-      const added = postTo(down, { action: 'addUser', token: su.token, ymis: '2222222222', name: '測試成員', role: 'member' });
+      const added = postTo(down, { action: 'addUser', token: su.token, scoutId: '2222222222', name: '測試成員', role: 'member' });
       assert.strictEqual(added.success, true, JSON.stringify(added));
       const userRow = sheetRows(down, 'Users').find(r => String(r[0]) === '2222222222');
       assert.ok(userRow, '新帳號應已寫入 Users 表');
@@ -484,7 +484,7 @@ function run() {
     assert.strictEqual(ping.success, true, 'sig 連線測試要通過：' + JSON.stringify(ping));
     assert.strictEqual(ping.allow_local_login, true);
 
-    const saved = up.context.callDownstream('progress', 'save', { changes: [{ ymis: '1234560001', itemId: 'L1', date: '2026-02-02' }], confirmer: '上游團長', on_behalf: '1111111111' });
+    const saved = up.context.callDownstream('progress', 'save', { changes: [{ scoutId: '1234560001', itemId: 'L1', date: '2026-02-02' }], confirmer: '上游團長', on_behalf: '1111111111' });
     assert.strictEqual(saved.success, true, JSON.stringify(saved));
     assert.strictEqual(saved.processed, 1);
     assert.strictEqual(sheetRows(down, '進度追蹤').some((r) => String(r[0]) === '1234560001' && String(r[1]) === 'L1'), true, '進度應寫入下游工作表');
@@ -499,7 +499,7 @@ function run() {
     const stillWorks = up.context.callDownstream('progress', 'getLinkState', {});
     assert.strictEqual(stillWorks.success, true, '閂口後上游 sig 仍然可讀');
     assert.strictEqual(stillWorks.allow_local_login, false);
-    const wrote = up.context.callDownstream('progress', 'save', { changes: [{ ymis: '1234560001', itemId: 'L2', date: '2026-02-03' }] });
+    const wrote = up.context.callDownstream('progress', 'save', { changes: [{ scoutId: '1234560001', itemId: 'L2', date: '2026-02-03' }] });
     assert.strictEqual(wrote.success, true, '閂口後上游 sig 仍然可寫');
     assert.strictEqual(up.context.setDownstreamLocalLogin('progress', true).success, true, '上游亦可重開下游入口');
     assert.strictEqual(down.context.localLoginAllowed(), true);
@@ -513,13 +513,13 @@ function run() {
   {
     const { up, down } = buildPair();
     up.context.registerDownstream('progress', DOWNSTREAM_URL, DOWNSTREAM_KEY, '進度節點');
-    const body = { action: 'save', changes: [{ ymis: '1234560001', itemId: 'L1', date: '2026-03-03' }], on_behalf: '1111111111' };
+    const body = { action: 'save', changes: [{ scoutId: '1234560001', itemId: 'L1', date: '2026-03-03' }], on_behalf: '1111111111' };
     const raw = JSON.stringify(body);
 
     assert.strictEqual(postTo(down, body, signRequest(down, 'save', raw, 'sc_not_the_registered_key')).success, false, '用錯 key 簽署必須被拒');
 
     const good = signRequest(down, 'save', raw);
-    const tampered = { ...body, changes: [{ ymis: '9999999999', itemId: 'L1', date: '2026-03-03' }] };
+    const tampered = { ...body, changes: [{ scoutId: '9999999999', itemId: 'L1', date: '2026-03-03' }] };
     assert.strictEqual(postTo(down, tampered, good).success, false, '竄改 body 必須被拒');
 
     assert.strictEqual(postTo(down, body, signRequest(down, 'save', raw, undefined, Date.now() - 10 * 60 * 1000)).success, false, '超出時間窗口必須被拒');
@@ -568,7 +568,7 @@ function run() {
   {
     const { up, down } = buildPair();
     up.context.registerDownstream('progress', DOWNSTREAM_URL, DOWNSTREAM_KEY, '進度節點');
-    up.context.createAccountForDownstream('progress', { ymis: '1234560007', name: '測試戶', role: 'member', password: '1234' }, { ymis: '1111111111', name: '管理員', role: 'admin', can_tick: true });
+    up.context.createAccountForDownstream('progress', { scoutId: '1234560007', name: '測試戶', role: 'member', password: '1234' }, { scoutId: '1111111111', name: '管理員', role: 'admin', can_tick: true });
     up.context.setDownstreamLocalLogin('progress', false);
     up.context.exportUsersJson();
     for (const node of [up, down]) {
@@ -593,28 +593,28 @@ function run() {
     up.context.setDownstreamLocalLogin('progress', false); // 閂口後先開戶
 
     const result = up.context.createAccountForDownstream('progress', {
-      ymis: '2345678901', name: '李四', email: 'li4@example.org', role: 'branch_leader', password: '4321'
-    }, { ymis: '1111111111', name: '管理員', role: 'admin', can_tick: true });
+      scoutId: '2345678901', name: '李四', email: 'li4@example.org', role: 'branch_leader', password: '4321'
+    }, { scoutId: '1111111111', name: '管理員', role: 'admin', can_tick: true });
     assert.strictEqual(result.success, true, JSON.stringify(result));
     const upstream = readUser(up, '2345678901');
     const downstream = readUser(down, '2345678901');
     assert.ok(upstream && downstream, '上下游都應有帳戶');
     assert.strictEqual(downstream.password_hash, upstream.password_hash, '下游必須直插同一 hash');
-    assert.match(downstream.password_hash, /^pbkdf2\$120000\$[0-9a-f]{32}\$[0-9a-f]{64}$/, '新帳戶必須用 PBKDF2-HMAC-SHA256');
+    assert.match(downstream.password_hash, /^pbkdf2\$\d+\$[0-9a-f]{32}\$[0-9a-f]{64}$/, '新帳戶必須用 PBKDF2-HMAC-SHA256');
     assert.strictEqual(down.context.verifyPassword('4321', downstream.password_hash), true);
     assert.strictEqual(downstream.force_change_password, true, '首登仍然強制改密碼');
     assert.strictEqual(downstream.role, 'branch_leader');
 
     // 下游已閂口，但上游仍可直接寫下游進度
-    assert.strictEqual(up.context.callDownstream('progress', 'save', { changes: [{ ymis: '2345678901', itemId: 'L1', date: '2026-04-04' }] }).success, true);
+    assert.strictEqual(up.context.callDownstream('progress', 'save', { changes: [{ scoutId: '2345678901', itemId: 'L1', date: '2026-04-04' }] }).success, true);
     // 上游重複開同一帳戶 → 拒（唔會重複開戶）
-    const again = up.context.createAccountForDownstream('progress', { ymis: '2345678901', name: '李四', role: 'branch_leader', password: '4321' }, { ymis: '1111111111', name: '管理員', role: 'admin', can_tick: true });
+    const again = up.context.createAccountForDownstream('progress', { scoutId: '2345678901', name: '李四', role: 'branch_leader', password: '4321' }, { scoutId: '1111111111', name: '管理員', role: 'admin', can_tick: true });
     assert.strictEqual(again.success, false, '上游不可重複開同一帳戶');
 
     // 鏡像：冇帶 branch 唔可以洗走下游既有支部；冇帶 hash 保留原密碼；冪等更新
-    assert.strictEqual(up.context.callDownstream('progress', 'upsertUser', { user: { ymis: '2345678901', name: '李四', role: 'branch_leader', branch: '第 82 旅童軍' }, on_behalf: '1111111111' }).success, true);
+    assert.strictEqual(up.context.callDownstream('progress', 'upsertUser', { user: { scoutId: '2345678901', name: '李四', role: 'branch_leader', branch: '第 82 旅童軍' }, on_behalf: '1111111111' }).success, true);
     assert.strictEqual(readUser(down, '2345678901').branch, '第 82 旅童軍');
-    const mirrored = up.context.callDownstream('progress', 'upsertUser', { user: { ymis: '2345678901', name: '李四（改名）', role: 'branch_leader' }, on_behalf: '1111111111' });
+    const mirrored = up.context.callDownstream('progress', 'upsertUser', { user: { scoutId: '2345678901', name: '李四（改名）', role: 'branch_leader' }, on_behalf: '1111111111' });
     assert.strictEqual(mirrored.success, true);
     assert.strictEqual(mirrored.action, 'updated');
     assert.strictEqual(mirrored.password_kept, true, '冇帶 hash 時必須保留原密碼');
@@ -624,7 +624,7 @@ function run() {
     assert.strictEqual(down.context.verifyPassword('4321', readUser(down, '2345678901').password_hash), true);
     assert.strictEqual(sheetRows(down, 'Users').filter((r) => String(r[0]) === '2345678901').length, 1, '不可出現重複列');
     // 保留帳號不可經 sig 操作
-    assert.strictEqual(up.context.callDownstream('progress', 'upsertUser', { user: { ymis: 'sheep', name: 'x', password_hash: sha256('x') } }).success, false, 'SUPER 保留帳號不可操作');
+    assert.strictEqual(up.context.callDownstream('progress', 'upsertUser', { user: { scoutId: 'sheep', name: 'x', password_hash: sha256('x') } }).success, false, 'SUPER 保留帳號不可操作');
   }
   ok('上游開戶後兩邊同一 hash、首登強改密碼；冪等、保留原密碼、不洗既有支部、保留帳號拒操作');
 
@@ -638,8 +638,8 @@ function run() {
     oldNode.context.initializeSheets();
     newNode.context.initializeSheets();
     seedAccounts(oldNode, [
-      { ymis: '1234560001', name: '陳大文', email: 'chan@example.org', role: 'member', password: 'abcd' },
-      { ymis: '2345678901', name: '李四', email: 'li@example.org', role: 'branch_leader', password: 'wxyz' }
+      { scoutId: '1234560001', name: '陳大文', email: 'chan@example.org', role: 'member', password: 'abcd' },
+      { scoutId: '2345678901', name: '李四', email: 'li@example.org', role: 'branch_leader', password: 'wxyz' }
     ]);
     // 舊密碼被用戶自行改過，hash 必須原樣搬走
     assert.strictEqual(oldNode.context.handleChangePassword('1234560001', 'abcd', 'newpass1').getContent().includes('"success":true'), true);
@@ -653,8 +653,8 @@ function run() {
     assert.match(stored.fileName, /^scoutbadge-users-\d{8}-\d{6}\.json$/, '檔名格式 scoutbadge-users-<yyyyMMdd-HHmmss>.json');
     const payload = JSON.parse(stored.content);
     assert.strictEqual(payload.format, 'scoutbadge-users-export');
-    const chen = payload.users.find((u) => u.ymis === '1234560001');
-    assert.match(chen.password_hash, /^pbkdf2\$120000\$[0-9a-f]{32}\$[0-9a-f]{64}$/, '匯出必須含 PBKDF2 hash');
+    const chen = payload.users.find((u) => u.scoutId === '1234560001');
+    assert.match(chen.password_hash, /^pbkdf2\$\d+\$[0-9a-f]{32}\$[0-9a-f]{64}$/, '匯出必須含 PBKDF2 hash');
     assert.strictEqual(oldNode.context.verifyPassword('newpass1', chen.password_hash), true);
     assert.strictEqual(JSON.stringify(sheetRows(oldNode, '操作紀錄')).includes(chen.password_hash), false, 'hash 不可寫入操作紀錄');
     assert.strictEqual(oldNode.ss.getSheets().some((sh) => sh.getName().includes('匯出')), false, '匯出不可另開工作表');
@@ -686,7 +686,7 @@ function run() {
     {
       const clash = makeNode({ name: '撞 Email 支部', apikey: 'sc_clash_key_0007', url: 'https://script.google.com/macros/s/CLASH_NODE/exec' });
       clash.context.initializeSheets();
-      clash.context.linkUpsertUser({ ymis: '9999999999', name: '同 Email 另一戶', email: 'li@example.org', password_hash: sha256('zz') }, 'seed');
+      clash.context.linkUpsertUser({ scoutId: '9999999999', name: '同 Email 另一戶', email: 'li@example.org', password_hash: sha256('zz') }, 'seed');
       const retry = clash.context.importUsersFromDrive(exported.file_url, 'menu-import');
       assert.strictEqual(retry.success, false, '有失敗筆數時 success 應為 false');
       assert.ok(retry.failed >= 1, '李四的 Email 與既有帳戶相撞應計入失敗');
@@ -698,12 +698,12 @@ function run() {
       assert.match(String(menuMsg), /匯出檔已保留/, '選單訊息要講明保留原因：' + String(menuMsg));
     }
 
-    // 匯入守衛：明文密碼、假 hash、壞 JSON、缺 YMIS、超額
-    assert.strictEqual(newNode.context.importUsersFromText(JSON.stringify({ users: [{ ymis: '3456789012', name: '王五', password: 'plain1' }] }), 'x').success, false);
-    assert.match(String(newNode.context.linkUpsertUser({ ymis: '3456789012', name: '王五', password: 'plain1' }, 'x').error), /明文/);
-    assert.match(String(newNode.context.linkUpsertUser({ ymis: '3456789012', name: '王五', password_hash: 'not-a-hash' }, 'x').error), /64 位/);
-    assert.strictEqual(newNode.context.linkUpsertUser({ ymis: '3456789012', name: '王五' }, 'x').success, false, '新帳戶冇 hash 要被拒');
-    assert.strictEqual(newNode.context.linkUpsertUser({ name: '無 YMIS', password_hash: sha256('x') }, 'x').success, false);
+    // 匯入守衛：明文密碼、假 hash、壞 JSON、缺 SCOUT ID、超額
+    assert.strictEqual(newNode.context.importUsersFromText(JSON.stringify({ users: [{ scoutId: '3456789012', name: '王五', password: 'plain1' }] }), 'x').success, false);
+    assert.match(String(newNode.context.linkUpsertUser({ scoutId: '3456789012', name: '王五', password: 'plain1' }, 'x').error), /明文/);
+    assert.match(String(newNode.context.linkUpsertUser({ scoutId: '3456789012', name: '王五', password_hash: 'not-a-hash' }, 'x').error), /64 位/);
+    assert.strictEqual(newNode.context.linkUpsertUser({ scoutId: '3456789012', name: '王五' }, 'x').success, false, '新帳戶冇 hash 要被拒');
+    assert.strictEqual(newNode.context.linkUpsertUser({ name: '無 SCOUT ID', password_hash: sha256('x') }, 'x').success, false);
     assert.strictEqual(newNode.context.importUsersFromText('{ 壞 JSON', 'x').success, false);
     assert.strictEqual(sheetRows(newNode, 'Users').some((r) => String(r[0]) === '3456789012'), false, '被拒的匯入不可留下帳戶');
 
@@ -722,15 +722,15 @@ function run() {
     const { up, down } = buildPair();
     up.context.registerDownstream('progress', DOWNSTREAM_URL, DOWNSTREAM_KEY, '進度節點');
     const users = [
-      { ymis: '1234560001', name: '陳大文', role: 'member', password_hash: sha256('abcd') },
-      { ymis: '2345678901', name: '李四', role: 'branch_leader', password_hash: sha256('wxyz'), email: 'li@example.org' }
+      { scoutId: '1234560001', name: '陳大文', role: 'member', password_hash: sha256('abcd') },
+      { scoutId: '2345678901', name: '李四', role: 'branch_leader', password_hash: sha256('wxyz'), email: 'li@example.org' }
     ];
     const pushed = up.context.callDownstream('progress', 'importUsers', { users, on_behalf: '1111111111' });
     assert.strictEqual(pushed.success, true, JSON.stringify(pushed));
     assert.strictEqual(pushed.created, 2);
     const list = up.context.callDownstream('progress', 'getAllUsers', { on_behalf: '1111111111' });
     assert.strictEqual(list.success, true);
-    assert.strictEqual(list.users.some((u) => u.ymis === '2345678901'), true);
+    assert.strictEqual(list.users.some((u) => u.scoutId === '2345678901'), true);
     assert.strictEqual(JSON.stringify(list).includes(sha256('wxyz')), false, 'getAllUsers 不可回傳 hash');
     // 簽名寫入要留一行操作紀錄（操作者 upstream，詳情含 on_behalf）
     const audit = sheetRows(up, '操作紀錄');
@@ -753,7 +753,7 @@ function run() {
     up.context.registerDownstream('progress', DOWNSTREAM_URL, DOWNSTREAM_KEY, '進度節點');
     const evil = '=CMD("calc")';
     const pushed = up.context.callDownstream('progress', 'upsertUser', {
-      user: { ymis: '1234560001', name: evil, password_hash: sha256('abcd') },
+      user: { scoutId: '1234560001', name: evil, password_hash: sha256('abcd') },
       on_behalf: evil, on_behalf_name: evil
     });
     assert.strictEqual(pushed.success, true, JSON.stringify(pushed));

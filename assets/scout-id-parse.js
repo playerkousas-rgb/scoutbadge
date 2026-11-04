@@ -1,20 +1,20 @@
 /*!
- * ymis-parse.js — 解析 YMIS「自訂報表」PDF / 文字，轉成批量開戶所需的成員陣列
+ * scout-id-parse.js — 解析 SCOUT ID「自訂報表」PDF / 文字，轉成批量開戶所需的成員陣列
  *
- * 支援的 YMIS 匯出格式（欄位次序必須為）：
+ * 支援的 SCOUT ID 匯出格式（欄位次序必須為）：
  *   第一欄 童軍成員編號 → 第二欄 中文姓名 → 第三欄 電郵地址
  *
- * 本檔同時支援瀏覽器 (window.YmisParse) 及 Node (require) ，方便寫單元測試。
+ * 本檔同時支援瀏覽器 (window.ScoutIdParse) 及 Node (require) ，方便寫單元測試。
  */
 (function (root, factory) {
   var api = factory();
   if (typeof module === 'object' && module.exports) module.exports = api;
-  if (root) root.YmisParse = api;
+  if (root) root.ScoutIdParse = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
   var EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
-  var YMIS_TOKEN_RE = /\b\d{6,12}\b/;
+  var SCOUT_ID_TOKEN_RE = /\b\d{6,12}\b/;
 
   // 報表抬頭 / 頁尾 / 欄位標題，遇到即整行略過
   // 抬頭 / 欄名 / 頁尾等非資料列（多頁報表每頁都會重複出現）
@@ -23,7 +23,7 @@
     /童軍成員編號/, /成員編號/, /中文姓名/, /英文姓名/, /電郵地址/, /聯絡電郵/,
     /香港童軍總會/, /青少年成員資訊系統/, /自訂報表/, /報告/, /列印日期/, /列印時間/,
     /總數|合共|小計|以上/,
-    // 英文欄名 / 抬頭（YMIS 報表為中英雙行標題）
+    // 英文欄名 / 抬頭（SCOUT ID 報表為中英雙行標題）
     /Scout\s*Association/i, /^scout\s*id$/i, /Member\s*(No|Number|ID)/i,
     /Name\s*in\s*Chinese/i, /Chinese\s*Name/i, /^name$/i,
     /Email\s*Address/i, /^e-?mail$/i,
@@ -144,7 +144,7 @@
       var joined = cells.join(' ').trim();
       if (isSkipLine(joined)) return;
 
-      var ymis = '';
+      var scoutId = '';
       var email = '';
       var nameParts = [];
 
@@ -159,10 +159,10 @@
           if (!c) return;
         }
         // 2) 再抽童軍成員編號（姓名不會含 6–12 位連續數字）
-        if (!ymis) {
-          var num = c.match(YMIS_TOKEN_RE);
+        if (!scoutId) {
+          var num = c.match(SCOUT_ID_TOKEN_RE);
           if (num) {
-            ymis = num[0];
+            scoutId = num[0];
             c = cleanCell(c.replace(num[0], ''));
             if (!c) return;
           }
@@ -173,7 +173,7 @@
 
       var name = nameParts.join(' ').replace(/\s+/g, ' ').trim();
 
-      if (!ymis) {
+      if (!scoutId) {
         // 續行：長電郵被 PDF 換行拆到下一行 → 補回上一位成員
         if (email && out.length && !out[out.length - 1].email) {
           var prev = out[out.length - 1];
@@ -181,25 +181,25 @@
           prev.warn = prev.warn.filter(function (w) { return w !== 'no_email'; });
           return;
         }
-        skipped.push({ line: idx + 1, text: joined, reason: 'no_ymis' });
+        skipped.push({ line: idx + 1, text: joined, reason: 'no_scoutId' });
         return;
       }
 
       // 只有數字、既無姓名亦無電郵 → 多數是頁尾流水號 / 時間戳，不當成成員
       if (!name && !email) { skipped.push({ line: idx + 1, text: joined, reason: 'no_name_email' }); return; }
 
-      var digits = ymis.replace(/\D/g, '');
+      var digits = scoutId.replace(/\D/g, '');
       if (opts.padTo10 && digits.length < 10) digits = ('0000000000' + digits).slice(-10);
 
       if (seen[digits]) { skipped.push({ line: idx + 1, text: joined, reason: 'duplicate' }); return; }
       seen[digits] = true;
 
       var warn = [];
-      if (digits.length !== 10) warn.push('ymis_len');
+      if (digits.length !== 10) warn.push('scoutId_len');
       if (!name) warn.push('no_name');
       if (!email) warn.push('no_email');
 
-      out.push({ ymis: digits, name: name, email: email, warn: warn, raw: joined });
+      out.push({ scoutId: digits, name: name, email: email, warn: warn, raw: joined });
     });
 
     return { members: out, skipped: skipped };

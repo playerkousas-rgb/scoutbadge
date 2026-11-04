@@ -6,7 +6,7 @@ var CONFIG = {
   USERS_SHEET: 'Users'                // 主資料表內存放成員的工作表名稱（需與 app 後端相同：Users）
 };
 
-var USERS_HEADER = ['ymis','name','email','role','password_hash','branch','can_tick','auth_by','auth_date','created_at','last_login','status','allowed_badges','squad','squad_role','force_change_password'];
+var USERS_HEADER = ['scout_id','name','email','role','password_hash','branch','can_tick','auth_by','auth_date','created_at','last_login','status','allowed_badges','squad','squad_role','force_change_password'];
 
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('批量開戶')
@@ -16,7 +16,10 @@ function onOpen() {
     .addToUi();
 }
 
-var PBKDF2_ITERATIONS = 120000;
+// 2026-11-04：120,000 → 10,000。Apps Script 每次 computeHmacSha256Signature 都要過
+// JS↔Java 邊界（約 0.1–0.3 ms），120,000 次要 20–40 秒，登入核對會逾時。
+// 主系統 apps-script/Code.gs（GS 6.4.0）同步改為 10,000，兩邊雜湊仍然互通。
+var PBKDF2_ITERATIONS = 10000;
 
 function utf8SignedBytes_(str) {
   var s = String(str === undefined || str === null ? '' : str);
@@ -83,7 +86,7 @@ function readRows() {
   for (var i = 1; i < data.length; i++) {
     var obj = {};
     headers.forEach(function (h, idx) { obj[h] = data[i][idx]; });
-    if (obj.ymis) rows.push(obj);
+    if (obj.scoutId) rows.push(obj);
   }
   return rows;
 }
@@ -91,7 +94,7 @@ function readRows() {
 function toJson(rows) {
   return rows.map(function (r) {
     return {
-      ymis: String(r.ymis).trim(),
+      scoutId: String(r.scoutId).trim(),
       name: String(r.name || '').trim(),
       email: String(r.email || '').trim(),
       squad: String(r.squad || '').trim(),
@@ -117,7 +120,7 @@ function pushToBackend() {
       action: m.password ? 'addUser' : 'addMember',
       apikey: CONFIG.APIKEY,
       token: '',
-      ymis: m.ymis,
+      scoutId: m.scoutId,
       name: m.name,
       email: m.email,
       squad: m.squad,
@@ -133,12 +136,21 @@ function pushToBackend() {
         payload: JSON.stringify(payload)
       });
       var d = JSON.parse(res.getContentText());
-      if (d.success) ok++; else { fail++; fails.push(m.ymis + ': ' + (d.error || '失敗')); }
-    } catch (e) { fail++; fails.push(m.ymis + ': ' + e.message); }
+      if (d.success) ok++; else { fail++; fails.push(m.scoutId + ': ' + (d.error || '失敗')); }
+    } catch (e) { fail++; fails.push(m.scoutId + ': ' + e.message); }
   });
   SpreadsheetApp.getUi().alert('推送完成：成功 ' + ok + ' 筆，失敗 ' + fail + ' 筆' + (fails.length ? '\n\n' + fails.join('\n') : ''));
 }
 
+// SCOUT ID 欄位名相容（2026-11-04 改名）：主表可能仍然用舊表頭 ymis／YMIS
+function isScoutIdHeader_(name) {
+  var k = String(name === undefined || name === null ? '' : name).trim().toLowerCase().replace(/[\s_]/g, '');
+  return k === 'scoutid' || k === 'ymis';
+}
+function scoutIdColumnIndex_(headers) {
+  for (var i = 0; i < headers.length; i++) { if (isScoutIdHeader_(headers[i])) return i; }
+  return -1;
+}
 function ensureUsersSheet(ss) {
   var sh = ss.getSheetByName(CONFIG.USERS_SHEET);
   if (!sh) {
@@ -147,7 +159,7 @@ function ensureUsersSheet(ss) {
   var needsHeader = true;
   if (sh.getLastRow() >= 1 && sh.getLastColumn() >= 1) {
     var firstRow = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(function (h) { return String(h).trim(); });
-    if (firstRow.indexOf('ymis') >= 0) needsHeader = false;
+    if (scoutIdColumnIndex_(firstRow) >= 0) needsHeader = false;
   }
   if (needsHeader) {
     sh.clearContents();
@@ -166,12 +178,12 @@ function writeToMainSheet() {
   var sh = info.sh;
 
   var headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(function (h) { return String(h).trim(); });
-  var ymisCol = headers.indexOf('ymis');
-  if (ymisCol < 0) { SpreadsheetApp.getUi().alert('主資料表找不到 ymis 欄位'); return; }
+  var scoutIdCol = scoutIdColumnIndex_(headers);
+  if (scoutIdCol < 0) { SpreadsheetApp.getUi().alert('主資料表找不到 SCOUT ID 欄位（scout_id／scoutId／ymis 任何一個都可以）'); return; }
 
   var lastRow = sh.getLastRow();
   var existing = lastRow > 1
-    ? sh.getRange(2, ymisCol + 1, lastRow - 1, 1).getValues().map(function (r) { return String(r[0]).trim(); })
+    ? sh.getRange(2, scoutIdCol + 1, lastRow - 1, 1).getValues().map(function (r) { return String(r[0]).trim(); })
     : [];
 
   var mSheet = null, mExisting = {};
@@ -186,11 +198,11 @@ function writeToMainSheet() {
   var nowStr = Utilities.formatDate(new Date(), 'Asia/Hong_Kong', 'yyyy-MM-dd HH:mm:ss');
   var added = 0, dup = 0, skipped = 0;
   json.forEach(function (m) {
-    if (existing.indexOf(m.ymis) >= 0) { dup++; return; }
-    if (!/^\d{10}$/.test(m.ymis)) { skipped++; return; } // 防呆：YMIS 須 10 位數字
+    if (existing.indexOf(m.scoutId) >= 0) { dup++; return; }
+    if (!/^\d{10}$/.test(m.scoutId)) { skipped++; return; } // 防呆：SCOUT ID 須 10 位數字
     var row = new Array(headers.length).fill('');
-    function set(name, val) { var c = headers.indexOf(name); if (c >= 0) row[c] = (val === undefined ? '' : val); }
-    set('ymis', m.ymis);
+    function set(name, val) { var c = name === 'scoutId' ? scoutIdColumnIndex_(headers) : headers.indexOf(name); if (c >= 0) row[c] = (val === undefined ? '' : val); }
+    set('scoutId', m.scoutId);
     set('name', m.name);
     set('email', m.email);
     set('role', m.role);
@@ -211,9 +223,9 @@ function writeToMainSheet() {
     set('created_at', nowStr);
     sh.appendRow(row);
     added++;
-    if (mSheet && !mExisting[m.ymis]) {
-      mSheet.appendRow([m.ymis, m.name, new Date(), '', '', m.squad]);
-      mExisting[m.ymis] = true;
+    if (mSheet && !mExisting[m.scoutId]) {
+      mSheet.appendRow([m.scoutId, m.name, new Date(), '', '', m.squad]);
+      mExisting[m.scoutId] = true;
     }
   });
   SpreadsheetApp.getUi().alert('寫入主資料表完成：新增 ' + added + ' 筆，略過重複 ' + dup + ' 筆' + (skipped ? '，跳過無效 ' + skipped + ' 筆' : '') + (info.needsHeader ? '（已自動建立 Users 表頭）' : ''));

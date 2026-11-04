@@ -193,7 +193,7 @@ async function run() {
   try {
     // ---- 1. 中央帳號識別（含舊別名）----
     assert.strictEqual(isCentralLoginCandidate('sheep'), true);
-    assert.strictEqual(isCentralLoginCandidate('1234560001'), false, 'YMIS 行本團登入');
+    assert.strictEqual(isCentralLoginCandidate('1234560001'), false, 'SCOUT ID 行本團登入');
     assert.strictEqual(isCentralLoginCandidate('leader@example.org'), false, 'email 行本團登入');
     assert.strictEqual(centralSubject('sheep@scoutbadge.local'), 'sheep', '舊別名要摺返去中央帳號');
     assert.strictEqual(centralSubject('  SHEEP  '), 'SHEEP');

@@ -13,6 +13,32 @@ const loginRateLimit = require('../lib/login-rate-limit');
 
 const UPSTREAM_TIMEOUT_MS = 25_000;
 
+// 密碼相關 action 要等後端做 PBKDF2 核對。GS 6.2.0／6.3.0 寫入的舊雜湊
+// （pbkdf2$120000$）在 Apps Script 上要 20–40 秒（每次 HMAC 都要過 JS↔Java
+// 邊界），用 25 秒上限就會令所有密碼登入回 504「後端服務連線逾時」——中央
+// sheep 登入免密碼核對，所以會出現「超管入得、一般帳號入唔到」。
+// GS 6.4.0 起新雜湊只需 1–3 秒；這個較長上限只為「舊雜湊第一次登入」留一次
+// 機會（成功後後端會把該帳號改寫成新雜湊，之後即回復正常速度）。
+// Vercel 這個 function 的 maxDuration 是 60 秒（vercel.json）。
+const PASSWORD_TIMEOUT_MS = 45_000;
+const PASSWORD_ACTIONS = new Set([
+  'login',
+  'setPw',
+  'verifyPw',
+  'changePassword',
+  'resetPassword',
+  'confirmPasswordReset',
+  'addUser',
+  'bulkAddUsers',
+  'importUsers',
+  'importAll',
+  'upsertUser'
+]);
+
+function upstreamTimeoutMs(action) {
+  return PASSWORD_ACTIONS.has(action) ? PASSWORD_TIMEOUT_MS : UPSTREAM_TIMEOUT_MS;
+}
+
 // 公開入口白名單（未登入可呼叫；其中忘記密碼兩個 action 會強制剝除任何 token／自報身分欄位）
 const PUBLIC_ACTIONS = new Set([
   'login',
@@ -140,10 +166,22 @@ function sanitizeForwardPayload(payload, troopConfig) {
   return forward;
 }
 
+// A login that spends more than this in the upstream is a warning sign on its
+// own: GS 6.2.0／6.3.0 hashed passwords with PBKDF2-HMAC-SHA256 ×120,000, which
+// Apps Script needs 20–40 s for (each Utilities.computeHmacSha256Signature call
+// crosses the JS↔Java boundary), so a login lands near or past the upstream
+// timeout. Logging the slow ones by troop lets support find the troops that have
+// not been updated yet without reading every deployment's version.
+const SLOW_LOGIN_MS = 8_000;
+
 function logResult({ troopId, action, status, startedAt, success, central, centralFail }) {
   // Keep diagnostics useful without logging a password, ticket, API key,
   // backend URL, browser token, or request body.
-  console.log(`[proxy] troop=${troopId} action=${action} status=${status} duration=${Date.now() - startedAt}ms success=${success} central=${central}${centralFail ? ` centralFail=${centralFail}` : ''}`);
+  const duration = Date.now() - startedAt;
+  console.log(`[proxy] troop=${troopId} action=${action} status=${status} duration=${duration}ms success=${success} central=${central}${centralFail ? ` centralFail=${centralFail}` : ''}`);
+  if ((action === 'login' || action === 'changePassword' || action === 'resetPassword') && duration > SLOW_LOGIN_MS) {
+    console.warn(`[proxy] slow_password_kdf troop=${troopId} action=${action} duration=${duration}ms — 後端密碼核對過慢：多數係未更新到 GS 6.4.0（PBKDF2 120,000 次）。見 docs/TROUBLESHOOT_82.md`);
+  }
 }
 
 
@@ -228,7 +266,7 @@ const REGISTRATION_BLOCKING = {
 // domain-scoped registration (/a/macros/<domain>/…) would force a Google
 // sign-in the proxy cannot perform. The registered string itself is never
 // rewritten — tickets and sessions stay bound to it (see registry).
-async function getUpstream(troopConfig, forwardPayload, action) {
+async function getUpstream(troopConfig, forwardPayload, action, timeoutMs) {
   const target = new URL(canonicalBackendUrl(troopConfig.backend));
   target.searchParams.set('action', action || 'load');
   if (forwardPayload.token) target.searchParams.set('token', forwardPayload.token);
@@ -242,7 +280,7 @@ async function getUpstream(troopConfig, forwardPayload, action) {
   }
   target.searchParams.set('apikey', troopConfig.apikey);
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs || UPSTREAM_TIMEOUT_MS);
   try {
     return await fetch(target, {
       method: 'GET',
@@ -255,9 +293,9 @@ async function getUpstream(troopConfig, forwardPayload, action) {
   }
 }
 
-async function postUpstream(backend, payload) {
+async function postUpstream(backend, payload, timeoutMs) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs || UPSTREAM_TIMEOUT_MS);
   try {
     return await fetch(canonicalBackendUrl(backend), {
       method: 'POST',
@@ -586,9 +624,10 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    const timeoutMs = upstreamTimeoutMs(action);
     let upstream = (action === 'load' || action === 'ecStatus')
-      ? await getUpstream(troopConfig, forwardPayload, action)
-      : await postUpstream(troopConfig.backend, forwardPayload);
+      ? await getUpstream(troopConfig, forwardPayload, action, timeoutMs)
+      : await postUpstream(troopConfig.backend, forwardPayload, timeoutMs);
 
     let raw = await upstream.text();
     let result;
@@ -663,7 +702,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json(result);
   } catch (error) {
     if (error && error.name === 'AbortError') {
-      console.error(`[proxy] upstream_timeout troop=${troopId || 'unknown'} action=${action || 'unknown'} duration=${Date.now() - startedAt}ms`);
+      console.error(`[proxy] upstream_timeout troop=${troopId || 'unknown'} action=${action || 'unknown'} limit=${upstreamTimeoutMs(action)}ms duration=${Date.now() - startedAt}ms`);
       return fail(res, 504, '後端服務連線逾時，請稍後再試');
     }
     // Do not expose configuration, fetch, or parsing details to the browser.

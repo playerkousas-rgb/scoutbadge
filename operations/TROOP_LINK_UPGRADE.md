@@ -103,7 +103,7 @@ sig       = hex( HMAC-SHA256( canonical, sigKey ) )
 - **永不接受（即使有 sig）**：`login`、`apply`、`logout`、`changePassword`、`updateConfig`、`requestLogRecord`、`cancelLogRequest`、`portalLogin`，以及白名單以外任何 action。
 - 每筆簽名**寫入**都會喺下游「操作紀錄」留一行（操作者 `upstream`，詳情含 `on_behalf`），**讀取唔留**。上游傳嚟嘅標籤會先消毒（`linkActorLabel`，只留 `0-9A-Za-z_.@-`），寫入工作表嘅文字經 `safeSheetText`，防儲存格算式注入。
 - **上游讀得到下游幾多**：讀 action 令上游可以直接讀下游（成員、用戶清單、日誌…）；回應永不含 `password_hash`（測試 8 守）。hash 讀唔到，所以搬舊密碼只可以行第 7 節嘅「JSON 吐出」。
-- 少數管理 handler（`resetPassword`／`updateUserRole`／`updatePermissions`）會用 `getUser(managerYmis)` 再核對本地權限；上游操作者唔一定有本地帳戶，所以只在真的搵唔到時才退回本機管理員（`ADMIN_YMIS`），審計紀錄照樣記 `upstream` 及 `on_behalf`。
+- 少數管理 handler（`resetPassword`／`updateUserRole`／`updatePermissions`）會用 `getUser(managerScoutId)` 再核對本地權限；上游操作者唔一定有本地帳戶，所以只在真的搵唔到時才退回本機管理員（`ADMIN_SCOUT_ID`），審計紀錄照樣記 `upstream` 及 `on_behalf`。
 - 舊 Portal 通道（`portalLogin`、`childId|sub|scope|exp` sig、`exportAll`／`upsertUser` 等 apikey 直入）**仍然存在**，但**只會在直接入口開啟時生效**；閂口後一律拒（第 5 節）。
 
 ### 3.2 回傳／回調（★ 對齊 VS／RS 實測做法）
@@ -144,12 +144,12 @@ sig       = hex( HMAC-SHA256( canonical, sigKey ) )
 
 **閂口後新戶在上游揀團開戶，經 `sig` 落下游寫。**
 
-- 上游選單「**👤 為下游開戶（揀團）**」（程式介面 `createAccountForDownstream(id, rawUser, manager)`）：① 上游本地開戶（角色權限、YMIS／Email 唯一性照舊）→ ② 讀回 `password_hash` → ③ `sig` 打下游 `upsertUser`。
+- 上游選單「**👤 為下游開戶（揀團）**」（程式介面 `createAccountForDownstream(id, rawUser, manager)`）：① 上游本地開戶（角色權限、SCOUT ID／Email 唯一性照舊）→ ② 讀回 `password_hash` → ③ `sig` 打下游 `upsertUser`。
 - 兩邊**同一個 hash**，所以同一個臨時密碼兩邊都啱用；首登仍然強制改密碼（`force_change_password=true`）。
-- `upsertUser` 語義：新戶必須帶 64 位 hex `password_hash`；**帶明文 `password` 一律拒**；同 YMIS（或同 Email 認回同一身份）→ 更新；冇帶 hash → **保留原密碼**；冇帶 branch 唔洗走既有支部；`SUPER_ADMIN_ID`（`sheep`）保留帳號絕不可操作；冪等（重覆推送只更新，唔會開重複列）。
+- `upsertUser` 語義：新戶必須帶 64 位 hex `password_hash`；**帶明文 `password` 一律拒**；同 SCOUT ID（或同 Email 認回同一身份）→ 更新；冇帶 hash → **保留原密碼**；冇帶 branch 唔洗走既有支部；`SUPER_ADMIN_ID`（`sheep`）保留帳號絕不可操作；冪等（重覆推送只更新，唔會開重複列）。
 - 上游開戶成功但下游寫入失敗時明講「上游已開戶，但下游寫入失敗：…」，重推用 `upsertUser` 即可。
 - **身份錨點**（本檔已內含，唔使翻其他文件）：
-  - 成員（SCOUT_ID／YMIS）＝喺該團支部 SHEET 誕生（人手／CSV／批核申請／接收移交）；進度 leaf 唔會自己開成員戶口，搵唔到就係「該團未開戶」，唔會自己補。
+  - 成員（SCOUT_ID／SCOUT ID）＝喺該團支部 SHEET 誕生（人手／CSV／批核申請／接收移交）；進度 leaf 唔會自己開成員戶口，搵唔到就係「該團未開戶」，唔會自己補。
   - 領袖（EMAIL）＝所屬層：只帶一團 → 該團支部；旅長／跨團 → 旅層 + 跨支部清單。
   - 家長（EMAIL）：有旅系統 → 旅層；冇旅系統 → 該團支部。
   - 進度 leaf 只係**身份消費者**：唔開戶、唔反寫上游，`upsertUser` 只用作接收上游鏡像／匯入舊數。
@@ -164,10 +164,10 @@ sig       = hex( HMAC-SHA256( canonical, sigKey ) )
    - 寫成 Drive 檔 `scoutbadge-users-<yyyyMMdd-HHmmss>.json`（建立後即設 `Access.PRIVATE` + `Permission.NONE`），彈窗給連結及檔案 ID；
    - Drive 寫入失敗時，完整 JSON 會寫入「檢視 → 執行紀錄（Logger）」作後備；
    - **只寫 Drive／Logger，绝不寫入任何工作表**；「操作紀錄」只記筆數同檔案 ID（唔記 hash）。
-   - 格式：`{ "format": "scoutbadge-users-export", "schema": 1, "exported_at": …, "node": …, "count": n, "users": [ { ymis, name, email, role, branch, squad, can_tick, allowed_badges, status, force_change_password, password_hash, auth_by, created_at, last_login } ] }`
+   - 格式：`{ "format": "scoutbadge-users-export", "schema": 1, "exported_at": …, "node": …, "count": n, "users": [ { scoutId, name, email, role, branch, squad, can_tick, allowed_badges, status, force_change_password, password_hash, auth_by, created_at, last_login } ] }`
    - 舊 API `exportAll`（前端備份用，可 `include_hash`）**照舊保留**，只會在直接入口開啟時可用。
 2. **新支部 Sheet**：選單「**📥 匯入 JSON（upsertUser 直插 hash）**」→ 貼 Drive 連結或檔案 ID → `importUsersFromDrive()` → 逐個 `upsertUser` 直插 hash（保留舊密碼）
-   - 只收 64 位 hex `password_hash`；**帶明文 `password` 一律拒**（唔會喺搬數途中重設密碼）；假 hash／壞 JSON／缺 YMIS 一律拒；
+   - 只收 64 位 hex `password_hash`；**帶明文 `password` 一律拒**（唔會喺搬數途中重設密碼）；假 hash／壞 JSON／缺 SCOUT ID 一律拒；
    - `force_change_password` 跟隨匯出值（搬舊數唔會逼人即時改密碼）；
    - 一次最多 2000 筆；完成彈窗顯示「新增 X、更新 Y、失敗 Z」及首 8 筆失敗原因；
    - 上游亦可用 sig 推：`callDownstream(id, 'importUsers', { users: [...] })`（或 `{ json: "…" }`／`{ drive_file_id: "…" }`）。
@@ -228,7 +228,7 @@ npm run build      # 產生 public/（部署內容）
 4. `sig` 防護：錯 key、竄改 body、過期／未來時間戳、重放 nonce、混合傳送重放、白名單外（`login`、`changePassword`、未知 action）— 全部被拒；query 及 body 兩種傳送都通過
 5. ABCD 只存 Script Properties，上下游所有工作表都掃唔到 URL／KEY／掣名
 6. 上游揀團開戶 → 下游同一 `password_hash`；重複推送係更新唔係開新列；冇帶 hash 時保留原密碼、冇帶 branch 唔洗走既有支部；保留帳號拒操作
-7. 匯出含 hash（Drive 私人檔）→ 匯入 `upsertUser` 後舊密碼直接可登入；重匯冪等；明文密碼／假 hash／壞 JSON／缺 YMIS 全部被拒，操作紀錄冇 hash
+7. 匯出含 hash（Drive 私人檔）→ 匯入 `upsertUser` 後舊密碼直接可登入；重匯冪等；明文密碼／假 hash／壞 JSON／缺 SCOUT ID 全部被拒，操作紀錄冇 hash
 8. 上游以 `sig` 批量 `importUsers` ＋ `getAllUsers`（回應唔洩漏 hash）；簽名寫入留紀錄、簽名讀取唔留
 9. 上游傳來的標籤不可變成工作表算式（`auth_by`／操作紀錄消毒）
 10. GS 內冇版號註解

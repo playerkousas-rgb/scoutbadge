@@ -53,11 +53,11 @@ async function main() {
     // Seed a leader and a member without email, then DELETE 密碼重設 to simulate an old un-initialized troop sheet
     gas.post({
       action: 'addUser', apikey: API_KEY,
-      ymis: '1234560201', name: '林領袖', email: 'lam.leader@troop.org', role: 'branch_leader', password: 'InitPass#201'
+      scoutId: '1234560201', name: '林領袖', email: 'lam.leader@troop.org', role: 'branch_leader', password: 'InitPass#201'
     });
     gas.post({
       action: 'addUser', apikey: API_KEY,
-      ymis: '1234560202', name: '無電郵團員', email: '', role: 'member', password: 'MemPass#202'
+      scoutId: '1234560202', name: '無電郵團員', email: '', role: 'member', password: 'MemPass#202'
     });
     gas.sheets.delete('密碼重設');
     assert.strictEqual(gas.sheets.has('密碼重設'), false);
@@ -68,7 +68,7 @@ async function main() {
     assert.strictEqual(gas.sheets.has('密碼重設'), true, '舊 Sheet 未跑 initializeSheets() 時首次呼叫必須自動補建 密碼重設 表');
     assert.deepStrictEqual(
       Array.from(gas.sheets.get('密碼重設')._rows[0]),
-      ['reset_id', 'ymis', 'email', 'code_hash', 'created_ms', 'expires_ms', 'attempts', 'status', 'used_at']
+      ['reset_id', 'scout_id', 'email', 'code_hash', 'created_ms', 'expires_ms', 'attempts', 'status', 'used_at']
     );
     assert.strictEqual(gas.sentMails.length, 1);
 
@@ -89,7 +89,7 @@ async function main() {
     gas.sandbox.initializeSheets();
     gas.post({
       action: 'addUser', apikey: API_KEY,
-      ymis: '1234560210', name: '陳團長', email: 'Chan.GSL@Troop.org', role: 'group_leader', password: 'OldGslPassword!1'
+      scoutId: '1234560210', name: '陳團長', email: 'Chan.GSL@Troop.org', role: 'group_leader', password: 'OldGslPassword!1'
     });
 
     // Open two active sessions for this leader, then lock the account with 5 wrong logins
@@ -101,7 +101,7 @@ async function main() {
     }
     assert.strictEqual(gas.props.has('LOGIN_FAIL:1234560210'), true);
 
-    // Request reset using YMIS (and pass forged token/role/on_behalf to verify handler ignores them)
+    // Request reset using SCOUT ID (and pass forged token/role/on_behalf to verify handler ignores them)
     const reqRes = gas.post({
       action: 'requestPasswordReset', apikey: API_KEY,
       login_id: '1234560210', token: 'forged-token', role: 'super_admin', on_behalf: '1111111111'
@@ -165,11 +165,11 @@ async function main() {
     gas.sandbox.initializeSheets();
     gas.post({
       action: 'addUser', apikey: API_KEY,
-      ymis: '1234560220', name: '李領袖', email: 'lee@troop.org', role: 'branch_leader', password: 'LeeOldPass#1'
+      scoutId: '1234560220', name: '李領袖', email: 'lee@troop.org', role: 'branch_leader', password: 'LeeOldPass#1'
     });
     gas.post({
       action: 'addUser', apikey: API_KEY,
-      ymis: '1234560221', name: '張領袖', email: 'cheung@troop.org', role: 'branch_leader', password: 'CheungOld#1'
+      scoutId: '1234560221', name: '張領袖', email: 'cheung@troop.org', role: 'branch_leader', password: 'CheungOld#1'
     });
 
     // Seed a >24h stale row to verify automatic pruning
@@ -245,17 +245,17 @@ async function main() {
     gas.sandbox.initializeSheets();
     gas.post({
       action: 'addUser', apikey: API_KEY,
-      ymis: '1234560230', name: '真領袖', email: 'real.leader@troop.org', role: 'branch_leader', password: 'Leader#230'
+      scoutId: '1234560230', name: '真領袖', email: 'real.leader@troop.org', role: 'branch_leader', password: 'Leader#230'
     });
     gas.post({
       action: 'addUser', apikey: API_KEY,
-      ymis: '1234560231', name: '無電郵團員', email: '', role: 'member', password: 'Member#231'
+      scoutId: '1234560231', name: '無電郵團員', email: '', role: 'member', password: 'Member#231'
     });
 
     const rUnknownEmail = gas.post({ action: 'requestPasswordReset', apikey: API_KEY, login_id: 'ghost@troop.org' });
-    const rUnknownYmis = gas.post({ action: 'requestPasswordReset', apikey: API_KEY, login_id: '9876543210' });
+    const rUnknownScoutId = gas.post({ action: 'requestPasswordReset', apikey: API_KEY, login_id: '9876543210' });
     const rNoEmailMem = gas.post({ action: 'requestPasswordReset', apikey: API_KEY, login_id: '1234560231' });
-    const rDefaultAdminYmis = gas.post({ action: 'requestPasswordReset', apikey: API_KEY, login_id: '1111111111' });
+    const rDefaultAdminScoutId = gas.post({ action: 'requestPasswordReset', apikey: API_KEY, login_id: '1111111111' });
     const rDefaultAdminEmail = gas.post({ action: 'requestPasswordReset', apikey: API_KEY, login_id: 'admin@example.com' });
     const rCentral = gas.post({ action: 'requestPasswordReset', apikey: API_KEY, login_id: 'sheep' });
     assert.strictEqual(gas.sentMails.length, 0, '無合資格電郵帳號時絕不可寄出任何電郵（含預設管理員 admin@example.com）');
@@ -271,7 +271,7 @@ async function main() {
     const rRealOk = gas.post({ action: 'requestPasswordReset', apikey: API_KEY, login_id: 'real.leader@troop.org' });
     assert.strictEqual(gas.sentMails.length, 1);
 
-    for (const r of [rUnknownEmail, rUnknownYmis, rNoEmailMem, rDefaultAdminYmis, rDefaultAdminEmail, rCentral, rMailFail]) {
+    for (const r of [rUnknownEmail, rUnknownScoutId, rNoEmailMem, rDefaultAdminScoutId, rDefaultAdminEmail, rCentral, rMailFail]) {
       assert.deepStrictEqual(r, rRealOk, '所有公開 requestPasswordReset 回應結構與文字必須完全一致（零枚舉訊號）');
     }
 

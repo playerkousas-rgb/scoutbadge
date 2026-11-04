@@ -36,10 +36,10 @@ function snapshotRows(backend, names) {
   const gs = gas.match(/const GS_VERSION = '([^']+)'/);
   const gsDate = gas.match(/const GS_RELEASE_DATE = '([^']+)'/);
   assert.ok(gs && gsDate, 'Apps Script exposes its latest GS version and release date');
-  assert.equal(release[1], '2026-11-03');
+  assert.equal(release[1], GS_RELEASE_DATE);
   assert.equal(release[1], GS_RELEASE_DATE);
   assert.equal(release[1], gsDate[1], 'frontend release date and backend GS_RELEASE_DATE must match');
-  assert.equal(release[2], '6.3.0');
+  assert.equal(release[2], GS_VERSION);
   assert.equal(release[2], GS_VERSION);
   assert.equal(release[2], gs[1], 'frontend required GS and backend reported GS must match');
   assert.equal(release[3], 'true', 'this release explicitly requires initializeSheets()');
