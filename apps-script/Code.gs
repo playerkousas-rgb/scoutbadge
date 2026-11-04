@@ -24,8 +24,8 @@ const SUPER_VERIFY_URL = 'https://scoutbadge.vercel.app/api/verify-super-ticket'
 // INITIALIZED_GS_VERSION（Script Property）只在 initializeSheets() 成功走完最後一步才寫入，
 // 表示「此 GS 版本的初始化已完成」。initializeSheets() 只做增補（缺表／缺欄位標題／缺預設管理員），
 // 不刪除、不改寫任何既有用戶、進度、紀錄或金鑰資料（見 docs/LEADER_GUIDE.md「資料保全規則」）。
-const GS_VERSION = '6.3.0';
-const GS_RELEASE_DATE = '2026-11-03';
+const GS_VERSION = '6.4.0';
+const GS_RELEASE_DATE = '2026-11-04';
 const GS_INIT_REQUIRED = true;
 const GS_INIT_PROP = 'INITIALIZED_GS_VERSION';
 function gsVersionInfo_(){
@@ -39,10 +39,16 @@ function setHeaderIfEmpty_(sheet, col, label){
   if(!String(sheet.getRange(1,col).getValue()||'').trim()) sheet.getRange(1,col).setValue(label);
 }
 // 密碼雜湊仍等於預設密碼（changeme）＝ 必須首次登入強制改密（讀取時判斷，不寫入資料；支援舊 SHA-256 與 PBKDF2）
+// 2026-11-04（GS 6.4.0）：唔再為此額外跑一次 PBKDF2。原因見 PBKDF2_ITERATIONS 註解——
+// 呢個附帶核對等於每個成功登入多做一次完整 KDF（舊版 120,000 次＝多 10–20 秒），
+// 而 handleLogin 已經用同一個密碼成功驗證過 stored hash，所以「輸入密碼 === ADMIN_PASS」
+// 同「stored hash === ADMIN_PASS 嘅 hash」等價；handleLogin 直接比較輸入密碼就夠。
+// 舊 64-hex 雜湊仍然可以零成本比對（單次 SHA-256）。
 function isDefaultPasswordHash_(hash){
-  const h=String(hash||'');
+  const h=String(hash||'').trim();
   if(!h) return false;
-  return verifyPassword(ADMIN_PASS, h);
+  if(isLegacyPasswordHash_(h)) return safeEqualText(sha256Hex(ADMIN_PASS), h.toLowerCase());
+  return false;
 }
 // 舊版殘留保留帳號列（角色 super_admin 或 YMIS 等於保留識別字）：保留不刪（資料保全），但不可作為登入身分
 function isLegacySuperRow_(row){
@@ -379,10 +385,20 @@ function repairSheets() {
   return jsonResponse({success:true, before:diag, after:after, apiKey: result.apiKey, repaired: true});
 }
 
-// ===== 密碼雜湊：PBKDF2-HMAC-SHA256（120,000 次迭代 + 每用戶 16-byte 隨機 salt）=====
+// ===== 密碼雜湊：PBKDF2-HMAC-SHA256（10,000 次迭代 + 每用戶 16-byte 隨機 salt）=====
 // 新格式寫入 Users.password_hash 同一欄：pbkdf2$<iter>$<saltHex>$<dkHex>
-// 舊格式（64 位單次 SHA-256 hex）仍可驗證，並於登入成功時自動升級為新格式（密碼本身不變）。
-const PBKDF2_ITERATIONS = 120000;
+// 舊格式（64 位單次 SHA-256 hex）及舊 pbkdf2$120000$ 仍可驗證，並於登入成功時自動改寫為本版格式。
+//
+// 2026-11-04（GS 6.4.0）120,000 → 10,000：Apps Script 每次 Utilities.computeHmacSha256Signature()
+// 都要過一次 JS↔Java 邊界（實測約 0.1–0.3 ms／次，唔係瀏覽器或 Node 嘅幾微秒），
+// 120,000 次等於 20–40 秒。Vercel proxy 對上游只等 25 秒，所以 GS 6.2.0／6.3.0 期間
+// 所有「密碼登入」都回「後端服務連線逾時」（中央 sheep 登入免密碼核對，所以照樣入得）。
+// 10,000 次只需 1–3 秒，仍然係「每用戶隨機鹽＋慢雜湊」；線上猜密碼另有 5 次錯密鎖 15 分鐘
+// 同反枚舉 dummy KDF。驗證時一律用雜湊字串自帶嘅迭代次數，所以舊雜湊唔會失效；
+// 舊 pbkdf2$120000$ 帳號登入成功後會自動改寫為本版格式（見 passwordHashNeedsRehash_）。
+const PBKDF2_ITERATIONS = 10000;
+const PBKDF2_MIN_ITERATIONS = 1000;   // 驗證時接受嘅下限（本版 10,000）
+const PBKDF2_MAX_ITERATIONS = 2000000; // 驗證時接受嘅上限（防被改大雜湊拖死後端）
 function sha256Hex(text){
   const raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(text===undefined||text===null?'':text), Utilities.Charset.UTF_8);
   let out='';
@@ -434,6 +450,19 @@ function hashPassword(p){ return hashPasswordV2(p); }
 function isLegacyPasswordHash_(h){ return /^[0-9a-f]{64}$/i.test(String(h||'')); }
 function isV2PasswordHash_(h){ return /^pbkdf2\$\d{4,7}\$[0-9a-f]{16,128}\$[0-9a-f]{64}$/i.test(String(h||'')); }
 function isValidPasswordHashFormat_(h){ return isLegacyPasswordHash_(h) || isV2PasswordHash_(h); }
+// 雜湊字串自帶迭代次數：舊 pbkdf2$120000$ 照樣用 120,000 次驗證（唔會失效），
+// 只有「唔係本版格式／次數唔同」先需要登入成功後改寫一次。
+function storedHashIterations_(stored){
+  const parts=String(stored||'').trim().split('$');
+  if(parts.length!==4 || parts[0]!=='pbkdf2') return 0;
+  return parseInt(parts[1],10)||0;
+}
+function passwordHashNeedsRehash_(stored){
+  const h=String(stored||'').trim();
+  if(isLegacyPasswordHash_(h)) return true;
+  if(!isV2PasswordHash_(h)) return false;
+  return storedHashIterations_(h)!==PBKDF2_ITERATIONS;
+}
 function verifyPassword(p, stored){
   stored=String(stored||'').trim();
   if(!stored) return false;
@@ -441,7 +470,8 @@ function verifyPassword(p, stored){
     const parts=stored.split('$');
     if(parts.length!==4) return false;
     const iter=parseInt(parts[1],10)||0;
-    if(iter<100000 || iter>2000000) return false;
+    // 只接受合理範圍：太細＝假雜湊；太大＝可以拖死一次執行（DoS）。
+    if(iter<PBKDF2_MIN_ITERATIONS || iter>PBKDF2_MAX_ITERATIONS) return false;
     const salt=hexToSignedBytes_(parts[2]);
     if(salt.length<8 || !/^[0-9a-f]{64}$/i.test(parts[3])) return false;
     const dk=pbkdf2HmacSha256_(String(p===undefined||p===null?'':p), salt, iter);
@@ -453,9 +483,94 @@ function verifyPassword(p, stored){
   return false;
 }
 let __dummyPasswordHash_ = null;
+// 反枚舉用嘅假雜湊：每個 Apps Script 執行都係新 context，global 變數幫唔到手，
+// 所以寫入 CacheService（6 小時）重用，令「帳號不存在」只花一次 KDF 而唔係兩次。
 function dummyPasswordHash_(){
-  if(!__dummyPasswordHash_) __dummyPasswordHash_ = hashPasswordV2('scoutbadge-timing-equalizer');
+  if(__dummyPasswordHash_) return __dummyPasswordHash_;
+  try{
+    const cached=String(CacheService.getScriptCache().get('DUMMY_PW_HASH')||'');
+    if(isV2PasswordHash_(cached)){ __dummyPasswordHash_=cached; return cached; }
+  }catch(e){}
+  __dummyPasswordHash_ = hashPasswordV2('scoutbadge-timing-equalizer');
+  try{ CacheService.getScriptCache().put('DUMMY_PW_HASH', __dummyPasswordHash_, 21600); }catch(e){}
   return __dummyPasswordHash_;
+}
+// ===== 密碼雜湊效能測試（診斷「後端服務連線逾時」用）=====
+// 喺 Apps Script 編輯器直接執行，或按 Sheet 選單「🔗 旅系統 → ⏱️ 密碼雜湊效能測試」。
+// 呢個數字係判斷「登入 504 逾時」嘅唯一可靠方法：Vercel proxy 對上游只等 25 秒，
+// 一次密碼核對（PBKDF2）超過 25 秒，前端就只會見到「後端服務連線逾時，請稍後再試」。
+function benchmarkPasswordKdf(){
+  const salt=hexToSignedBytes_('00112233445566778899aabbccddeeff');
+  const lines=[];
+  let legacyMs=-1, currentMs=-1;
+  [{iter:120000,label:'GS 6.2.0／6.3.0 舊格式：120,000 次'},
+   {iter:PBKDF2_ITERATIONS,label:'本版格式：'+(PBKDF2_ITERATIONS/1000)+',000 次'}].forEach(function(r){
+    const t0=Date.now();
+    pbkdf2HmacSha256_('scoutbadge-benchmark', salt, r.iter);
+    const ms=Date.now()-t0;
+    if(r.iter===PBKDF2_ITERATIONS) currentMs=ms; else legacyMs=ms;
+    lines.push('・'+r.label+'：'+ms+' ms（'+(ms/1000).toFixed(1)+' 秒）');
+  });
+  lines.push('');
+  if(legacyMs>25000){
+    lines.push('❌ 舊 120,000 次格式要 '+Math.round(legacyMs/1000)+' 秒，遠超 Vercel proxy 嘅 25 秒上游上限：');
+    lines.push('   呢個就係「超管入得、一般帳號登入回『後端服務連線逾時』」嘅成因（中央 sheep 登入免密碼核對）。');
+    lines.push('   處理：本版（GS '+GS_VERSION+'）已改為 '+PBKDF2_ITERATIONS+' 次；舊雜湊帳號登入成功一次會自動改寫，');
+    lines.push('        或者用選單「🔑 重設某帳號密碼（救援）」即時改寫，唔使等。');
+  } else if(legacyMs>8000){
+    lines.push('⚠️ 舊 120,000 次格式要 '+(legacyMs/1000).toFixed(1)+' 秒：未超 25 秒但已經好慢，舊雜湊帳號第一次登入會明顯卡。');
+  } else {
+    lines.push('✅ 舊格式仍在 8 秒內，PBKDF2 唔係今次逾時嘅主因，請改查 Vercel log 嘅 duration 同後端執行紀錄。');
+  }
+  if(currentMs>8000){
+    lines.push('⚠️ 本版格式仍要 '+(currentMs/1000).toFixed(1)+' 秒（Apps Script 特別慢）：可把 PBKDF2_ITERATIONS 再調低，再建立新版本。');
+  } else {
+    lines.push('✅ 本版格式 '+(currentMs/1000).toFixed(1)+' 秒，正常登入唔會再撞 25 秒上限。');
+  }
+  const text=lines.join('\n');
+  try{ Logger.log(text); }catch(e){}
+  return text;
+}
+
+// ===== 救援：由 Sheet 選單直接重設某個帳號的密碼 =====
+// 用途：GS 6.2.0／6.3.0 期間寫入嘅 pbkdf2$120000$ 雜湊，登入核對要 20–40 秒，
+// 會撞 Vercel proxy 25 秒上限。擁有 Sheet 的旅團管理員可以用呢個功能（唔需要登入 App）
+// 把該帳號即時改寫為本版雜湊，之後登入即刻返正常；用戶下次登入仍會強制改密。
+// 只改 Users 表第 5 欄（password_hash）及第 16 欄（force_change_password），
+// 同時清錯密鎖定、踢走該帳號既有 session；不刪列、不改其他資料。
+function forceResetUserPasswordFromSheet(loginId, newPassword){
+  const login=String(loginId===undefined||loginId===null?'':loginId).trim();
+  const pw=String(newPassword===undefined||newPassword===null?'':newPassword);
+  if(!login) return {success:false,error:'請提供 YMIS 或電郵'};
+  if(pw.length<MIN_PASSWORD_LEN) return {success:false,error:'新密碼至少 '+MIN_PASSWORD_LEN+' 位'};
+  if(pw.length>32) return {success:false,error:'新密碼不可超過 32 位'};
+  const sheet=getSheet().getSheetByName('Users');
+  if(!sheet) return {success:false,error:'找不到 Users 工作表（請先執行一次初始化／更新）'};
+  const targetY=normalizeYmis(login);
+  const targetE=normalizeEmail(login);
+  const data=sheet.getDataRange().getValues();
+  let rowIndex=-1, target='';
+  for(let i=1;i<data.length;i++){
+    if(isLegacySuperRow_(data[i])) continue;
+    const rowY=normalizeYmis(data[i][0]);
+    const rowE=normalizeEmail(data[i][2]);
+    if((targetY && rowY===targetY) || (targetE && rowE && rowE===targetE)){
+      rowIndex=i; target=rowY||String(data[i][0]||''); break;
+    }
+  }
+  if(rowIndex<0) return {success:false,error:'Users 表找不到此帳號：'+login};
+  const hash=hashPassword(pw);
+  sheet.getRange(rowIndex+1, 5).setValue(hash);
+  setHeaderIfEmpty_(sheet, FORCE_CHANGE_COL, 'force_change_password');
+  sheet.getRange(rowIndex+1, FORCE_CHANGE_COL).setValue(true);
+  clearLoginLock_(target);
+  destroyUserTokens(target);
+  try{ writeAudit('sheet-admin','sheet_reset_password',target,'由 Sheet 選單重設密碼（救援）'); }catch(e){}
+  return {
+    success:true, ymis:target, name:String(data[rowIndex][1]||''),
+    hash_iterations:PBKDF2_ITERATIONS,
+    message:'已重設 '+target+(data[rowIndex][1]?'（'+String(data[rowIndex][1])+'）':'')+' 的密碼，並改寫為本版雜湊（'+PBKDF2_ITERATIONS+' 次）。用戶下次登入會強制改密。'
+  };
 }
 function generateToken(){ return Utilities.getUuid().replace(/-/g,'') + Date.now().toString(36); }
 function now(){ return Utilities.formatDate(new Date(), 'Asia/Hong_Kong', 'yyyy-MM-dd HH:mm:ss'); }
@@ -2401,15 +2516,20 @@ function handleLogin(loginId,password){
   if(verifyPassword(password, storedHash)){
     try{ props.deleteProperty(failKey); }catch(e){}
     let currentHash = storedHash;
-    // A3 舊帳透明升級：成功登入後自動將舊版 64-hex SHA-256 升級為 PBKDF2-HMAC-SHA256（原密碼不變）
-    if(isLegacyPasswordHash_(storedHash)){
+    // A3 舊帳透明升級：成功登入後自動改寫為本版雜湊（原密碼不變）。
+    // 舊版 64-hex SHA-256 及舊 pbkdf2$120000$ 都會收斂到本版 pbkdf2$10000$，
+    // 令下一次登入唔使再等 20–40 秒（見 PBKDF2_ITERATIONS 註解）。
+    if(passwordHashNeedsRehash_(storedHash)){
       currentHash = hashPasswordV2(password);
-      sheet.getRange(matchedRow+1, 5).setValue(currentHash);
+      try{ sheet.getRange(matchedRow+1, 5).setValue(currentHash); }catch(e){}
     }
     const token=createToken(user.ymis);
     sheet.getRange(matchedRow+1,11).setValue(now());
-    // 強制改密：旗標為 TRUE，或密碼仍是預設值（讀取時判斷；不寫入用戶資料）
-    const force=(sheet.getLastColumn()>=FORCE_CHANGE_COL && (data[matchedRow][FORCE_CHANGE_COL-1]===true || String(data[matchedRow][FORCE_CHANGE_COL-1]).toUpperCase()==='TRUE')) || isDefaultPasswordHash_(currentHash);
+    // 強制改密：旗標為 TRUE，或密碼仍是預設值（讀取時判斷；不寫入用戶資料）。
+    // 預設密碼判斷改為直接比較輸入密碼（上面已驗證成功，兩者等價），唔再額外跑一次 KDF。
+    const force=(sheet.getLastColumn()>=FORCE_CHANGE_COL && (data[matchedRow][FORCE_CHANGE_COL-1]===true || String(data[matchedRow][FORCE_CHANGE_COL-1]).toUpperCase()==='TRUE'))
+      || isDefaultPasswordHash_(currentHash)
+      || String(password)===String(ADMIN_PASS);
     return jsonResponse({success:true,token:token,user:user,force_change_password:force});
   }
   const nextCount = Number(failState.count || 0) + 1;
@@ -3408,6 +3528,8 @@ function onOpen(){
       .addItem('🧭 本機接駁狀態','menuShowLinkState')
       .addItem('🔑 顯示 API KEY（交 ADMIN）','menuShowLinkCredentials')
       .addItem('🔧 初始化／更新（執行 initializeSheets）','menuInitializeSheets')
+      .addItem('⏱️ 密碼雜湊效能測試（登入逾時排查）','menuBenchmarkPasswordKdf')
+      .addItem('🔑 重設某帳號密碼（救援）','menuForceResetUserPassword')
       .addSeparator()
       .addItem('➕ 登記下游（URL + SHEET KEY）','menuRegisterDownstream')
       .addItem('📡 測試下游連線（sig）','menuPingDownstream')
@@ -3492,6 +3614,18 @@ function menuInitializeSheets(){
       '／initializedGsVersion=' + String((r && r.initializedGsVersion) || ''));
   } catch (e) {}
   return r;
+}
+function menuForceResetUserPassword(){
+  const ymis=linkPrompt('重設帳號密碼（救援）1/2','要重設的 YMIS（10 位數字）或已登記電郵：\n\n（唔需要登入 App；用嚟救「後端服務連線逾時」入唔到嘅帳號——重設後該帳號即時改用本版較快嘅密碼雜湊）');
+  if(ymis===null) return '';
+  if(!ymis) return linkAlert('重設帳號密碼','已取消：未輸入帳號');
+  const pw=linkPrompt('重設帳號密碼（救援）2/2','輸入新密碼（至少 '+MIN_PASSWORD_LEN+' 位；用戶下次登入會強制改密）：');
+  if(pw===null) return '';
+  const r=forceResetUserPasswordFromSheet(ymis,pw);
+  return linkAlert('重設帳號密碼',r.success?r.message:'重設失敗：'+String(r.error||''));
+}
+function menuBenchmarkPasswordKdf(){
+  return linkAlert('密碼雜湊效能測試', benchmarkPasswordKdf());
 }
 function menuShowLinkCredentials(){
   // 只顯示 API Key（不顯示、不推算、不探測任何部署網址；亦不改動任何既有屬性）。

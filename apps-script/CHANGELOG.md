@@ -3,6 +3,46 @@
 版號、歷史更新及開發背景集中保留在 Git，不放入可下載的 GS 或用戶提示。
 本文件不納入網站部署：`build.js` 只發布本目錄的 `Code.gs`，`.vercelignore` 亦排除其餘檔案。
 
+## 2026-11-04：密碼 KDF 成本修正（登入 504 逾時）、KDF 效能測試、Sheet 救援重設（GS 6.4.0）
+
+- **問題（旅團 1187 事故）**：GS 6.2.0／6.3.0 的 `PBKDF2-HMAC-SHA256 120,000` 次迭代，
+  在 Apps Script 上要 20–40 秒（`Utilities.computeHmacSha256Signature()` 每次都要過
+  JS↔Java 邊界，約 0.1–0.3 ms），超過 Vercel proxy 的 25 秒上游上限，令**所有密碼登入**
+  回「後端服務連線逾時，請稍後再試」。中央 `sheep` 登入只驗短效票、免密碼核對，所以
+  出現「超管入得、一般帳號入唔到」；與 API Key 完全無關（Key 錯會 1–2 秒回 403，不會逾時）。
+- **`PBKDF2_ITERATIONS` 120,000 → 10,000**：新雜湊格式為 `pbkdf2$10000$<salt>$<dk>`
+  （每戶 16-byte 隨機鹽不變）。驗證一律使用雜湊字串自帶的迭代次數，`PBKDF2_MIN_ITERATIONS`
+  = 1,000、`PBKDF2_MAX_ITERATIONS` = 2,000,000，所以舊 `pbkdf2$120000$` 及舊 64-hex
+  SHA-256 **照樣登入得**，不會鎖死既有帳號；超出範圍的迭代次數直接拒絕（防止被改大拖死一次執行）。
+- **登入成本由 240,000 次降到 10,000 次**：`handleLogin()` 不再為「密碼是否仍是預設值」額外
+  跑一次 PBKDF2——成功驗證後直接比較輸入密碼與 `ADMIN_PASS`（等價，因為同一密碼已驗證過
+  stored hash）；`isDefaultPasswordHash_()` 只保留零成本的 64-hex 比對。
+- **舊雜湊透明改寫**：新增 `storedHashIterations_()`／`passwordHashNeedsRehash_()`；舊 64-hex
+  及舊 `pbkdf2$120000$` 帳號成功登入一次後自動改寫為本版格式（原密碼不變，本版格式不再重寫）。
+- **反枚舉 dummy 雜湊快取**：`dummyPasswordHash_()` 改用 `CacheService`（6 小時）重用，
+  令「帳號不存在／錯密碼」只做一次 KDF（原本每個執行都要重新計一次）。
+- **新增 `benchmarkPasswordKdf()`** ＋ Sheet 選單「⏱️ 密碼雜湊效能測試」：即場量度
+  120,000 次與本版迭代次數的實際毫秒數，用來判斷「登入逾時」係唔係 KDF 造成。
+- **新增 `forceResetUserPasswordFromSheet()`** ＋ Sheet 選單「🔑 重設某帳號密碼（救援）」：
+  擁有 Sheet 的管理員**不需要登入 App** 就可以把某帳號改寫成本版雜湊，同時清 `LOGIN_FAIL:<ymis>`
+  鎖定、`destroyUserTokens()` 踢走舊 session、設 `force_change_password=true`；只改第 5 欄及第 16 欄，
+  不刪列、不改其他資料，並寫入 `操作紀錄`（`sheet_reset_password`）。拒絕未知帳號、短於 4 位的新密碼
+  及舊版殘留 `super_admin` 列。
+- **`assets/batch-onboard/Code.gs` 同步改為 10,000 次**，兩邊雜湊（`pbkdf2$<iter>$…`）仍然互通。
+- **Vercel 端配套**（`api/proxy.js`）：密碼類 action（`login`／`changePassword`／`resetPassword`／
+  `setPw`／`verifyPw`／`confirmPasswordReset`／`addUser`／`bulkAddUsers`／`importUsers`／`importAll`／
+  `upsertUser`）上游逾時 25 → 45 秒，一般 action 維持 25 秒；`index.html` 登入請求等 50 秒。
+  只為「舊雜湊第一次登入」留一次機會，新雜湊登入仍舊 1–3 秒。
+- **版本與資料保全**：`GS_VERSION` = `6.4.0`、`GS_RELEASE_DATE` = `2026-11-04`、
+  `GS_INIT_REQUIRED` = `true`（與前端 `GS_LATEST` 同步）。回退方法：切回 6.3.0 `Code.gs`
+  只會令所有密碼登入重新變慢／逾時，資料不受影響（已改寫成 `pbkdf2$10000$` 的帳號在 6.3.0 讀不到，
+  要由領袖重設一次密碼，或用「🔑 重設某帳號密碼（救援）」）。
+- **測試**：新增 `test/password-kdf.test.js`（迭代次數預算、舊 `pbkdf2$120000$`／64-hex 仍可驗證、
+  登入一次自動改寫、成功登入只做一個 KDF、Sheet 救援重設、proxy 逾時預算及前端 timeout），
+  已納入 `npm test`；`test/auth-hardening.test.js`、`test/troop_link.test.js`、
+  `test/troop_upgrade.test.js` 及 `test/release-version.test.js` 改為由原始碼讀出迭代次數與版本，
+  不再硬編碼 120,000／6.3.0。
+
 ## 2026-11-03：單一更新入口、正規化 /exec 雜湊、未初始化提示（GS 6.3.0）
 
 - **單一更新入口**：新增選單「🔗 旅系統 → 🔧 初始化／更新」（`menuInitializeSheets()`），內部只呼叫

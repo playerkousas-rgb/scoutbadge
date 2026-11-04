@@ -91,7 +91,7 @@ auth_date, created_at, last_login, status, allowed_badges, squad, squad_role, fo
 
 - 若 `Users` 工作表不存在 → 自動建立。
 - 若 `Users` 工作表沒有 `ymis` 表頭（空白新表）→ 自動寫入標準 16 欄表頭。
-- 有填 `password` 的成員會以 `PBKDF2-HMAC-SHA256`（120,000 次迭代＋每戶獨立 16-byte 隨機鹽，格式 `pbkdf2$<iter>$<salt>$<dk>`）雜湊儲存密碼，開戶後即可登入（首次登入強制修改密碼）。
+- 有填 `password` 的成員會以 `PBKDF2-HMAC-SHA256`（10,000 次迭代＋每戶獨立 16-byte 隨機鹽，格式 `pbkdf2$<iter>$<salt>$<dk>`；與主系統 GS `6.4.0` 一致）雜湊儲存密碼，開戶後即可登入（首次登入強制修改密碼）。
 
 > 提示：若你想要這份 Sheet 完全由 app 使用（含進度追蹤、操作紀錄等其他工作表），
 > 請先執行 app 後端的 `initializeSheets()` 一次性建立所有工作表，再執行批量開戶。

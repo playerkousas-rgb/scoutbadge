@@ -16,7 +16,10 @@ function onOpen() {
     .addToUi();
 }
 
-var PBKDF2_ITERATIONS = 120000;
+// 2026-11-04：120,000 → 10,000。Apps Script 每次 computeHmacSha256Signature 都要過
+// JS↔Java 邊界（約 0.1–0.3 ms），120,000 次要 20–40 秒，登入核對會逾時。
+// 主系統 apps-script/Code.gs（GS 6.4.0）同步改為 10,000，兩邊雜湊仍然互通。
+var PBKDF2_ITERATIONS = 10000;
 
 function utf8SignedBytes_(str) {
   var s = String(str === undefined || str === null ? '' : str);

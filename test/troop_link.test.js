@@ -600,7 +600,7 @@ function run() {
     const downstream = readUser(down, '2345678901');
     assert.ok(upstream && downstream, '上下游都應有帳戶');
     assert.strictEqual(downstream.password_hash, upstream.password_hash, '下游必須直插同一 hash');
-    assert.match(downstream.password_hash, /^pbkdf2\$120000\$[0-9a-f]{32}\$[0-9a-f]{64}$/, '新帳戶必須用 PBKDF2-HMAC-SHA256');
+    assert.match(downstream.password_hash, /^pbkdf2\$\d+\$[0-9a-f]{32}\$[0-9a-f]{64}$/, '新帳戶必須用 PBKDF2-HMAC-SHA256');
     assert.strictEqual(down.context.verifyPassword('4321', downstream.password_hash), true);
     assert.strictEqual(downstream.force_change_password, true, '首登仍然強制改密碼');
     assert.strictEqual(downstream.role, 'branch_leader');
@@ -654,7 +654,7 @@ function run() {
     const payload = JSON.parse(stored.content);
     assert.strictEqual(payload.format, 'scoutbadge-users-export');
     const chen = payload.users.find((u) => u.ymis === '1234560001');
-    assert.match(chen.password_hash, /^pbkdf2\$120000\$[0-9a-f]{32}\$[0-9a-f]{64}$/, '匯出必須含 PBKDF2 hash');
+    assert.match(chen.password_hash, /^pbkdf2\$\d+\$[0-9a-f]{32}\$[0-9a-f]{64}$/, '匯出必須含 PBKDF2 hash');
     assert.strictEqual(oldNode.context.verifyPassword('newpass1', chen.password_hash), true);
     assert.strictEqual(JSON.stringify(sheetRows(oldNode, '操作紀錄')).includes(chen.password_hash), false, 'hash 不可寫入操作紀錄');
     assert.strictEqual(oldNode.ss.getSheets().some((sh) => sh.getName().includes('匯出')), false, '匯出不可另開工作表');

@@ -16,7 +16,7 @@
 
 - **最新 GS：`6.3.0`**。只需安裝這個最新版，無須逐級下載補丁；貼上新 `Code.gs` 後按一次選單「🔗 旅系統 → 🔧 初始化／更新」即可完成更新（只增不刪、可重跑）。
 - **這次必須執行一次 `initializeSheets()`（並執行一次 `testPasswordResetMail()` 完成寄信授權）**。更新步驟：下載並取代 `Code.gs` → 儲存 → 執行 `initializeSheets()`（補建 `密碼重設` 表，不改動任何既有資料）→ 執行一次 `testPasswordResetMail()` 授權 `MailApp` 寄送重設電郵 → 管理部署 → 編輯現有部署 → 選「新版本」→ 部署（沿用原 URL）。
-- **登入與密碼安全升級**：密碼雜湊全面升級為 `PBKDF2-HMAC-SHA256`（120,000 次迭代＋隨機鹽），舊版 64-hex 帳號首次成功登入後自動平滑升級、原密碼不變；連續 5 次錯密鎖定 15 分鐘；領袖支援以登記電郵收取 8 位重設碼自助重設密碼（見 [PASSWORD_RESET.md](PASSWORD_RESET.md)）。
+- **登入與密碼安全升級**：密碼雜湊全面升級為 `PBKDF2-HMAC-SHA256`（10,000 次迭代＋隨機鹽；舊 120,000 次在 Apps Script 太慢會令登入逾時，見 [TROUBLESHOOT_82.md](TROUBLESHOOT_82.md)），舊版 64-hex 及舊 120,000 次帳號首次成功登入後自動改寫、原密碼不變；連續 5 次錯密鎖定 15 分鐘；領袖支援以登記電郵收取 8 位重設碼自助重設密碼（見 [PASSWORD_RESET.md](PASSWORD_RESET.md)）。
 - 首頁、登入頁及登入後主頁都會顯示最新日期、GS 版本及下載入口。系統會分別核對 **GS 程式版本**及**初始化版本**：只貼新程式但未初始化，仍會顯示警告；綠色「已核對」才代表兩者都完成。
 - 初始化只補齊缺失的設定及工作表，並在 Script Properties 記錄版本；不得更改上述用戶資料，亦不應更換現有 API Key。完成後在公告按「重新檢查」。
 - **接入資料只提供 API Key**：初始化彈窗及選單「🔗 旅系統 → 🔑 顯示 API KEY（交 ADMIN）」只顯示 `API Key = …`，不再顯示自動取得或快取的部署網址。
@@ -101,7 +101,7 @@
 
 - **Latest GS: `6.3.0`**. Install this latest version only — no per-version patch list. After pasting the new `Code.gs`, run the menu “🔗 旅系統 → 🔧 初始化／更新” once; it only adds what is missing and is safe to re-run.
 - **This release requires running `initializeSheets()` once (and `testPasswordResetMail()` once to authorize email reset).** Update steps: download and replace `Code.gs` → save → run `initializeSheets()` → run `testPasswordResetMail()` once → deploy → manage deployments → edit → new version → deploy (URL stays the same).
-- **Authentication & password-reset hardening**: all passwords now use `PBKDF2-HMAC-SHA256` (120,000 iterations + random salt) with transparent login upgrade for legacy hashes; 5 consecutive wrong passwords lock the account for 15 minutes; leaders with a registered email can self-reset via an 8-character email code (see [PASSWORD_RESET.md](PASSWORD_RESET.md)).
+- **Authentication & password-reset hardening**: all passwords now use `PBKDF2-HMAC-SHA256` (10,000 iterations + random salt; the old 120,000 count took 20–40 s in Apps Script and made logins time out — see [TROUBLESHOOT_82.md](TROUBLESHOOT_82.md)) with transparent rehash for legacy hashes; 5 consecutive wrong passwords lock the account for 15 minutes; leaders with a registered email can self-reset via an 8-character email code (see [PASSWORD_RESET.md](PASSWORD_RESET.md)).
 - The home, login and main views all show the latest date, GS version and download link. The system checks **GS code version** and **initialization version** separately: pasting new code without initializing still shows a warning; the green "Verified" only appears when both match.
 - Initialization only fills in missing settings and sheets, and records the version in Script Properties; it must not change any of the above user data, nor rotate the existing API key. After completion, press "Re-check" in the notice.
 - **Credential displays show the API Key only**: the initialization dialog and the “🔗 Troop system → 🔑 Show API KEY (to ADMIN)” menu show `API Key = …` and never an automatically discovered or cached deployment URL.

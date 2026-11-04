@@ -2200,7 +2200,7 @@ let itemsData=null,progressFlat={},progressRich={},members=[],pendingChanges=[],
  *   ok          全部完成（前端顯示綠色「已核對」）
  *   unchecked   尚未核對（沒有任何回報）
  */
-const GS_LATEST=Object.freeze({updated:'2026-11-03',gsVersion:'6.3.0',initializeRequired:true});
+const GS_LATEST=Object.freeze({updated:'2026-11-04',gsVersion:'6.4.0',initializeRequired:true});
 let backendReleaseState={code:'unchecked',gsVersion:'',initializedGsVersion:''};
 
 function compareVersions(a, b) {
@@ -2517,7 +2517,10 @@ async function doLogin(){
   if(!lid||!pw){ msg.textContent=t('login_fill_all'); msg.className='login-msg error'; return; }
   btn.disabled=true; btn.textContent=t('login_working');
   try{
-    const d = await apiRequest('login', { login_id: lid, password: pw }, { troopId: currentTroopId });
+    // 密碼登入要等後端做 PBKDF2 核對；舊雜湊（GS 6.2.0／6.3.0 的 pbkdf2$120000$）
+    // 在 Apps Script 上要 20–40 秒，所以這裡等 50 秒（proxy 對上游等 45 秒）。
+    // GS 6.4.0 起新雜湊只需 1–3 秒，正常唔會再等咁久。
+    const d = await apiRequest('login', { login_id: lid, password: pw }, { troopId: currentTroopId, timeout: 50000 });
     if(d.success){
       currentUser={...d.user,isPortal:portalLaunch}; currentToken=d.token;
       if(d.force_change_password){

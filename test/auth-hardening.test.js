@@ -9,6 +9,13 @@ const { makeGas } = require('./gasvm');
 
 const API_KEY = 'sc_auth_hardening_key_2026';
 
+// GS 6.4.0：120,000 → 10,000（Apps Script 每次 HMAC 都要過 JS↔Java 邊界，120,000 次要
+// 20–40 秒，會撞 Vercel proxy 25 秒上游上限）。測試一律由原始碼讀出，避免再硬編碼。
+const CODE_GS_SRC = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'Code.gs'), 'utf8');
+const KDF_ITERATIONS = Number((CODE_GS_SRC.match(/const PBKDF2_ITERATIONS = (\d+);/) || [])[1]);
+const LEGACY_KDF_ITERATIONS = 120000;
+assert.ok(KDF_ITERATIONS > 0, 'Code.gs 必須宣告 PBKDF2_ITERATIONS');
+
 let passed = 0;
 function ok(label) {
   passed += 1;
@@ -67,12 +74,12 @@ console.log('1. A3 PBKDF2-HMAC-SHA256 密碼雜湊、全寫入入口與舊版 64
     assert.notStrictEqual(h1, h2, '相同密碼必須產生不同 16-byte 隨機鹽');
     const m = h1.match(/^pbkdf2\$(\d+)\ encompassing?|^pbkdf2\$(\d+)\$([0-9a-f]{32})\$([0-9a-f]{64})$/);
     assert.ok(m, `雜湊格式不符 pbkdf2$<iter>$<salt>$<dk>: ${h1}`);
-    assert.strictEqual(Number(m[2]), 120000, '迭代次數必須為 120,000');
-    assert.strictEqual(m[4], pbkdf2HexNode(samplePw, m[3], 120000), 'PBKDF2 衍生金鑰必須與標準 Node crypto.pbkdf2Sync 完全一致');
+    assert.strictEqual(Number(m[2]), KDF_ITERATIONS, `迭代次數必須為 ${KDF_ITERATIONS}`);
+    assert.strictEqual(m[4], pbkdf2HexNode(samplePw, m[3], KDF_ITERATIONS), 'PBKDF2 衍生金鑰必須與標準 Node crypto.pbkdf2Sync 完全一致');
     assert.strictEqual(gas.sandbox.verifyPassword(samplePw, h1), true);
     assert.strictEqual(gas.sandbox.verifyPassword(samplePw + 'x', h1), false);
   }
-  ok('Code.gs PBKDF2-HMAC-SHA256（120,000 iter + 16B salt）與 Node crypto 標準向量完全一致（含中文／符號）');
+  ok(`Code.gs PBKDF2-HMAC-SHA256（${KDF_ITERATIONS} iter + 16B salt）與 Node crypto 標準向量完全一致（含中文／符號）`);
 
   // Verify assets/batch-onboard/Code.gs hashPassword also produces exact PBKDF2-HMAC-SHA256
   const batchCtx = {
@@ -88,22 +95,23 @@ console.log('1. A3 PBKDF2-HMAC-SHA256 密碼雜湊、全寫入入口與舊版 64
     { filename: 'assets/batch-onboard/Code.gs' }
   );
   const bh = batchCtx.hashPassword('BatchPass#82');
-  const bm = bh.match(/^pbkdf2\$120000\$([0-9a-f]{32})\$([0-9a-f]{64})$/);
-  assert.ok(bm, `batch-onboard 雜湊格式必須為 pbkdf2$120000$: ${bh}`);
-  assert.strictEqual(bm[2], pbkdf2HexNode('BatchPass#82', bm[1], 120000));
+  const bm = bh.match(/^pbkdf2\$(\d+)\$([0-9a-f]{32})\$([0-9a-f]{64})$/);
+  assert.ok(bm, `batch-onboard 雜湊格式必須為 pbkdf2$<iter>$: ${bh}`);
+  assert.strictEqual(Number(bm[1]), KDF_ITERATIONS, 'batch-onboard 的迭代次數必須同主 Code.gs 一致');
+  assert.strictEqual(bm[3], pbkdf2HexNode('BatchPass#82', bm[2], KDF_ITERATIONS));
   assert.strictEqual(gas.sandbox.verifyPassword('BatchPass#82', bh), true);
-  ok('assets/batch-onboard/Code.gs 寫入主表同樣使用 PBKDF2-HMAC-SHA256（120,000 iter）');
+  ok(`assets/batch-onboard/Code.gs 寫入主表同樣使用 PBKDF2-HMAC-SHA256（${KDF_ITERATIONS} iter，與主 Code.gs 一致）`);
 
   // Default admin seeded by initializeSheets uses PBKDF2
   const adminRow = getUserRow(gas, '1111111111');
-  assert.match(adminRow.password_hash, /^pbkdf2\$120000\$[0-9a-f]{32}\$[0-9a-f]{64}$/);
+  assert.match(adminRow.password_hash, new RegExp(`^pbkdf2\\$${KDF_ITERATIONS}\\$[0-9a-f]{32}\\$[0-9a-f]{64}$`));
 
   // Create leader & get token to test all password-setting paths
   assert.strictEqual(gas.post({
     action: 'addUser', apikey: API_KEY,
     ymis: '1234560010', name: '團長甲', email: 'gsl@troop.org', role: 'group_leader', password: 'GslInit!1'
   }).success, true);
-  assert.match(getUserRow(gas, '1234560010').password_hash, /^pbkdf2\$120000\$/);
+  assert.strictEqual(Number(gas.sandbox.storedHashIterations_(getUserRow(gas, '1234560010').password_hash)), KDF_ITERATIONS);
 
   const gslLogin = gas.post({ action: 'login', apikey: API_KEY, login_id: 'gsl@troop.org', password: 'GslInit!1' });
   assert.strictEqual(gslLogin.success, true);
@@ -113,7 +121,7 @@ console.log('1. A3 PBKDF2-HMAC-SHA256 密碼雜湊、全寫入入口與舊版 64
     action: 'bulkAddUsers', apikey: API_KEY, token: gslLogin.token,
     users: [{ ymis: '1234560011', name: '批量成員', role: 'member', password: 'Bulk!123' }]
   }).created, 1);
-  assert.match(getUserRow(gas, '1234560011').password_hash, /^pbkdf2\$120000\$/);
+  assert.strictEqual(Number(gas.sandbox.storedHashIterations_(getUserRow(gas, '1234560011').password_hash)), KDF_ITERATIONS);
 
   // Application + approval writes PBKDF2
   assert.strictEqual(gas.post({
@@ -126,7 +134,7 @@ console.log('1. A3 PBKDF2-HMAC-SHA256 密碼雜湊、全寫入入口與舊版 64
     action: 'reviewApplication', apikey: API_KEY, token: gslLogin.token,
     app_id: appId, decision: 'approved', final_role: 'member', temp_password: 'Approve!9'
   }).success, true);
-  assert.match(getUserRow(gas, '1234560012').password_hash, /^pbkdf2\$120000\$/);
+  assert.strictEqual(Number(gas.sandbox.storedHashIterations_(getUserRow(gas, '1234560012').password_hash)), KDF_ITERATIONS);
 
   // setPw plaintext writes PBKDF2; setPw with legacy 64-hex preserves hash for migration; Login auto-upgrades legacy 64-hex!
   const legacyPw = 'LegacyScout2024';
@@ -145,7 +153,8 @@ console.log('1. A3 PBKDF2-HMAC-SHA256 密碼雜湊、全寫入入口與舊版 64
   const okLegacy = gas.post({ action: 'login', apikey: API_KEY, login_id: '1234560011', password: legacyPw });
   assert.strictEqual(okLegacy.success, true);
   const upgradedHash = getUserRow(gas, '1234560011').password_hash;
-  assert.match(upgradedHash, /^pbkdf2\$120000\$[0-9a-f]{32}\$[0-9a-f]{64}$/, '舊 64-hex 帳號成功登入後須自動升級為 PBKDF2');
+  assert.strictEqual(Number(gas.sandbox.storedHashIterations_(upgradedHash)), KDF_ITERATIONS, '舊 64-hex 帳號成功登入後須自動升級為本版 PBKDF2');
+  assert.match(upgradedHash, /^pbkdf2\$\d+\$[0-9a-f]{32}\$[0-9a-f]{64}$/);
   // Second login with same password still works against upgraded PBKDF2 hash
   assert.strictEqual(gas.post({ action: 'login', apikey: API_KEY, login_id: '1234560011', password: legacyPw }).success, true);
   ok('所有設密入口均寫 PBKDF2；舊版 64-hex 登入成功自動平滑升級為 PBKDF2 且原密碼不變');
@@ -271,11 +280,12 @@ console.log('\n3. A17 公開登入反枚舉（統一訊息＋dummy KDF）與領�
   assert.deepStrictEqual(rMissingEmail, { success: false, error: '帳號或密碼錯誤' });
   assert.deepStrictEqual(rWrongPw, { success: false, error: '帳號或密碼錯誤' });
   assert.deepStrictEqual(rCentralId, { success: false, error: '帳號或密碼錯誤' });
-  assert.strictEqual(missingYmisHmacs, 120000, '帳號不存在亦必須執行完整 120,000 次 PBKDF2 dummy KDF');
-  assert.strictEqual(missingEmailHmacs, 120000);
-  assert.strictEqual(wrongPwHmacs, 120000);
-  assert.strictEqual(centralIdHmacs, 120000);
-  ok('公開 login 對不存在 YMIS／不存在電郵／保留帳號／錯密碼回傳完全一致訊息並均執行 120,000 次 KDF');
+  // 每次登入最多一個 PBKDF2（dummy 雜湊已快取）：等於 KDF_ITERATIONS 次 HMAC。
+  assert.strictEqual(missingYmisHmacs, KDF_ITERATIONS, '帳號不存在亦必須執行完整一次 dummy KDF');
+  assert.strictEqual(missingEmailHmacs, KDF_ITERATIONS);
+  assert.strictEqual(wrongPwHmacs, KDF_ITERATIONS);
+  assert.strictEqual(centralIdHmacs, KDF_ITERATIONS);
+  ok(`公開 login 對不存在 YMIS／不存在電郵／保留帳號／錯密碼回傳完全一致訊息並均執行一次（${KDF_ITERATIONS} 次）KDF`);
 
   // Leader backend queries MUST still accurately show whether members/emails exist
   const leaderSession = gas.post({ action: 'login', apikey: API_KEY, login_id: 'exist31@troop.org', password: 'RealPass#31' });
@@ -432,7 +442,7 @@ console.log('\n4 & 5. 重設密碼職級矩陣（含上游 sig 防冒充）與�
   );
   const memRowAfter = getUserRow(gas, '1234560106');
   assert.strictEqual(memRowAfter.force_change_password, true, '(3) 必須設 force_change_password = true');
-  assert.match(memRowAfter.password_hash, /^pbkdf2\$120000\$/);
+  assert.strictEqual(Number(gas.sandbox.storedHashIterations_(memRowAfter.password_hash)), KDF_ITERATIONS);
   const memRelogin = gas.post({ action: 'login', apikey: API_KEY, login_id: '1234560106', password: 'TempMem#88' });
   assert.strictEqual(memRelogin.success, true);
   assert.strictEqual(memRelogin.force_change_password, true);
