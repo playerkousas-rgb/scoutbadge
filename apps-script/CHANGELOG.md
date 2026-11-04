@@ -35,6 +35,10 @@
   `setPw`／`verifyPw`／`confirmPasswordReset`／`addUser`／`bulkAddUsers`／`importUsers`／`importAll`／
   `upsertUser`）上游逾時 25 → 45 秒，一般 action 維持 25 秒；`index.html` 登入請求等 50 秒。
   只為「舊雜湊第一次登入」留一次機會，新雜湊登入仍舊 1–3 秒。
+- **前線可見性（唔使用戶先投訴）**：前端「最新更新公告」在後端仍回報 GS `6.2.x`／`6.3.x` 時
+  直接標紅「🔴 此版本登入會逾時 …請更新到 GS 6.4.0」（中英同步，登入頁／首頁／主畫面三處）；
+  `api/proxy.js` 對超過 8 秒的 `login`／`changePassword`／`resetPassword` 額外輸出
+  `[proxy] slow_password_kdf troop=…`，方便在 Vercel log 一次列出未更新的旅團。
 - **版本與資料保全**：`GS_VERSION` = `6.4.0`、`GS_RELEASE_DATE` = `2026-11-04`、
   `GS_INIT_REQUIRED` = `true`（與前端 `GS_LATEST` 同步）。回退方法：切回 6.3.0 `Code.gs`
   只會令所有密碼登入重新變慢／逾時，資料不受影響（已改寫成 `pbkdf2$10000$` 的帳號在 6.3.0 讀不到，

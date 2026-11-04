@@ -109,10 +109,13 @@ GS `6.2.0`／`6.3.0` 把密碼雜湊改成 `PBKDF2-HMAC-SHA256` **120,000 次迭
 
 1. **本團**：部署 6.4.0 後在 Apps Script 執行 `benchmarkPasswordKdf()`（或選單「⏱️ 密碼雜湊效能測試」）。
    輸出會直接列出「舊 64-hex 帳號＝1× 幾秒」「新種帳號＝2× 幾秒」，同 25 秒上限對照。
-2. **其他旅團**：Vercel → Logs 篩 `action=login`，睇 `duration`：
-   - `duration` 幾百 ms ＝ 該團仍係舊 GS（未受害）；
-   - `duration` 8–24 秒 ＝ 已貼 6.2.0／6.3.0，**隨時會爆**（尤其新開帳號、停用帳號）；
-   - `duration` 25000ms ＋ `upstream_timeout` ＝ 已經中招。
+2. **其他旅團（最快）**：Vercel → Logs 直接用 keyword `slow_password_kdf` 搜。GS 6.4.0 起
+   proxy 對超過 8 秒的 `login`／`changePassword`／`resetPassword` 會額外輸出
+   `[proxy] slow_password_kdf troop=<編號> action=login duration=…ms`，一行就認出邊個團仲未更新。
+   亦可篩 `action=login` 睇 `duration`：幾百 ms ＝ 仍係舊 GS（未受害）；8–24 秒 ＝ 已貼
+   6.2.0／6.3.0，隨時會爆（尤其新開／停用帳號）；25000ms ＋ `upstream_timeout` ＝ 已中招。
+   另外，只要該團仍然回報 GS 6.2.x／6.3.x，登入頁、首頁及主畫面的「最新更新公告」會直接標紅
+   「🔴 此版本登入會逾時」，唔需要逐個問。
 3. 個別旅團版本：開 `https://script.google.com/macros/s/<部署ID>/exec?action=ecStatus`，
    回 `gsVersion` / `initializedGsVersion`。低於 `6.2.0` 就未受影響。
 

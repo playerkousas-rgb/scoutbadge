@@ -166,10 +166,22 @@ function sanitizeForwardPayload(payload, troopConfig) {
   return forward;
 }
 
+// A login that spends more than this in the upstream is a warning sign on its
+// own: GS 6.2.0／6.3.0 hashed passwords with PBKDF2-HMAC-SHA256 ×120,000, which
+// Apps Script needs 20–40 s for (each Utilities.computeHmacSha256Signature call
+// crosses the JS↔Java boundary), so a login lands near or past the upstream
+// timeout. Logging the slow ones by troop lets support find the troops that have
+// not been updated yet without reading every deployment's version.
+const SLOW_LOGIN_MS = 8_000;
+
 function logResult({ troopId, action, status, startedAt, success, central, centralFail }) {
   // Keep diagnostics useful without logging a password, ticket, API key,
   // backend URL, browser token, or request body.
-  console.log(`[proxy] troop=${troopId} action=${action} status=${status} duration=${Date.now() - startedAt}ms success=${success} central=${central}${centralFail ? ` centralFail=${centralFail}` : ''}`);
+  const duration = Date.now() - startedAt;
+  console.log(`[proxy] troop=${troopId} action=${action} status=${status} duration=${duration}ms success=${success} central=${central}${centralFail ? ` centralFail=${centralFail}` : ''}`);
+  if ((action === 'login' || action === 'changePassword' || action === 'resetPassword') && duration > SLOW_LOGIN_MS) {
+    console.warn(`[proxy] slow_password_kdf troop=${troopId} action=${action} duration=${duration}ms — 後端密碼核對過慢：多數係未更新到 GS 6.4.0（PBKDF2 120,000 次）。見 docs/TROUBLESHOOT_82.md`);
+  }
 }
 
 

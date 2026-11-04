@@ -245,4 +245,41 @@ console.log('\n6. Proxy 對密碼類 action 的逾時預算');
   ok(`proxy：一般 ${upstream / 1000}s／密碼類 ${password / 1000}s；前端登入等 50s；maxDuration ${maxDuration}s`);
 }
 
+// ---------------------------------------------------------------------------
+// 7. 前線可見性：未更新的旅團要自己見到「登入會逾時」，唔使等投訴
+// ---------------------------------------------------------------------------
+console.log('\n7. 前端按後端版本標示「此版本登入會逾時」；proxy 記錄慢登入');
+{
+  const compareSrc = (INDEX_SRC.match(/function compareVersions\([\s\S]*?\n\}/) || [''])[0];
+  const warnSrc = (INDEX_SRC.match(/function gsSlowLoginWarning\([\s\S]*?\n\}/) || [''])[0];
+  assert.ok(compareSrc && warnSrc, 'index.html 必須提供 compareVersions 及 gsSlowLoginWarning');
+  assert.match(INDEX_SRC, /const GS_SLOW_LOGIN_FROM = '6\.2\.0';/, '受影響版本起點必須是 6.2.0（PBKDF2 120,000 首次引入）');
+  assert.match(INDEX_SRC, /const GS_SLOW_LOGIN_FIXED = '6\.4\.0';/, '修好版本必須是 6.4.0');
+  assert.strictEqual(
+    (INDEX_SRC.match(/const slowWarn = gsSlowLoginWarning\(st, inEn\);/g) || []).length,
+    2,
+    '首頁／登入頁及主畫面兩處 notice 都要顯示'
+  );
+
+  // 直接執行抽出的前端函式，確認只有 6.2.x／6.3.x 會標紅
+  const constSrc = (INDEX_SRC.match(/const GS_SLOW_LOGIN_FROM = '[^']+';\nconst GS_SLOW_LOGIN_FIXED = '[^']+';/) || [''])[0];
+  assert.ok(constSrc, '必須抽出兩個版本界線常數');
+  const build = new Function('GS_LATEST', constSrc + '\n' + compareSrc + '\n' + warnSrc + '\nreturn gsSlowLoginWarning;');
+  const warn = build({ gsVersion: '6.4.0' });
+  const zh = () => false;
+  const en = () => true;
+  assert.match(warn({ gsVersion: '6.2.0' }, zh), /後端服務連線逾時/, '6.2.0 必須標示登入逾時');
+  assert.match(warn({ gsVersion: '6.3.0' }, zh), /後端服務連線逾時/, '6.3.0 必須標示登入逾時');
+  assert.match(warn({ gsVersion: '6.3.0' }, en), /timed out/i, '英文版亦要有同樣提示');
+  assert.strictEqual(warn({ gsVersion: '6.1.0' }, zh), '', '6.1.0（單次 SHA-256）不應被標示');
+  assert.strictEqual(warn({ gsVersion: '6.4.0' }, zh), '', '已修正版本不應被標示');
+  assert.strictEqual(warn({}, zh), '', '未回報版本時不應亂標示');
+  ok('登入頁／首頁／主畫面只對 GS 6.2.x／6.3.x 顯示「此版本登入會逾時」');
+
+  assert.match(PROXY_SRC, /const SLOW_LOGIN_MS = 8_000;/, 'proxy 必須有慢登入門檻');
+  assert.match(PROXY_SRC, /\[proxy\] slow_password_kdf troop=/, 'proxy 必須輸出可供 grep 的 slow_password_kdf 記錄');
+  assert.match(PROXY_SRC, /duration=\$\{duration\}ms/, '一般 logResult 亦要記錄 duration（分鐘級排查靠它）');
+  ok('proxy 對超過 8 秒的登入／改密／重設輸出 slow_password_kdf（可按 troop grep 出未更新的旅團）');
+}
+
 console.log(`\n=== Password KDF 回歸測試全部通過（共 ${passed} 項） ===`);

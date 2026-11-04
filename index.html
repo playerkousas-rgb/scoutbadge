@@ -2224,6 +2224,20 @@ function gsReleaseStatusOf(info, latest) {
   if (needInit && initialized !== gsVersion) return Object.assign({ code: 'needs_init' }, base);
   return Object.assign({ code: 'ok' }, base);
 }
+// 2026-11-04（旅團 1187）：GS 6.2.0／6.3.0 的 PBKDF2 120,000 次迭代在 Apps Script 要 20–40 秒，
+// 超過後端 proxy 的 25 秒上游上限 → 密碼登入回「後端服務連線逾時，請稍後再試」。
+// 只有這兩個版本受影響（中央 sheep 免密碼核對，所以超管仍入得），所以在登入頁／首頁／主畫面
+// 逐個旅團直接標紅提醒，唔使等前線逐個查 Vercel log。
+const GS_SLOW_LOGIN_FROM = '6.2.0';
+const GS_SLOW_LOGIN_FIXED = '6.4.0';
+function gsSlowLoginWarning(info, inEn) {
+  const v = String((info && info.gsVersion) || '');
+  if (!v) return '';
+  if (compareVersions(v, GS_SLOW_LOGIN_FROM) < 0 || compareVersions(v, GS_SLOW_LOGIN_FIXED) >= 0) return '';
+  return inEn()
+    ? '🔴 <b>This version signs in very slowly</b> — password verification needs 20–40 s on Apps Script, beyond the 25 s backend limit, so sign-in ends as “backend timed out”. New accounts and the default admin fail outright. Update to GS ' + GS_LATEST.gsVersion + ' (old hashes are rewritten after one successful sign-in).'
+    : '🔴 <b>此版本登入會逾時</b> — 密碼核對在 Apps Script 要 20–40 秒，超過後端 25 秒上限，登入會回「後端服務連線逾時，請稍後再試」；新開帳號及預設管理員必定中招。請更新到 GS ' + GS_LATEST.gsVersion + '（舊雜湊登入成功一次後會自動改寫）。';
+}
 function gsReleaseInitNotice(info, latest) {
   const L = latest || GS_LATEST;
   const st = gsReleaseStatusOf(info, L);
@@ -2286,6 +2300,8 @@ function renderHomeReleaseNotice(st, inEn) {
   } else if (st.code === 'ok') {
     statusHTML = '<div class="release-status" style="color:var(--green)">✅ ' + (inEn() ? 'Verified — GS version and initialization match.' : '已核對 — GS 版本與初始化版本一致。') + '</div>';
   }
+  const slowWarn = gsSlowLoginWarning(st, inEn);
+  if (slowWarn) statusHTML += '<div class="release-status" style="color:var(--red)">' + slowWarn + '</div>';
   return '<div class="release-notice release-' + st.code + '">' +
     '<div class="release-head"><span>' + head + '</span><span class="release-chip">' + updated + ': ' + latest.updated + '</span><span class="release-chip">' + gsLabel + ': ' + latest.gsVersion + '</span></div>' +
     '<div class="release-summary">' + noPatch + '</div>' +
@@ -2322,6 +2338,8 @@ function renderMainReleaseNotice(st, inEn) {
   } else if (st.code === 'ok') {
     statusHTML = '<div class="release-status" style="color:var(--green)">✅ ' + (inEn() ? 'Verified — GS version and initialization match.' : '已核對 — GS 版本與初始化版本一致。') + '</div>';
   }
+  const slowWarn = gsSlowLoginWarning(st, inEn);
+  if (slowWarn) statusHTML += '<div class="release-status" style="color:var(--red)">' + slowWarn + '</div>';
   return '<div class="release-notice release-' + st.code + '">' +
     '<div class="release-head"><span>' + head + '</span><span class="release-chip">' + updated + ': ' + latest.updated + '</span><span class="release-chip">' + gsLabel + ': ' + latest.gsVersion + '</span></div>' +
     '<div class="release-summary">' + noPatch + '</div>' +
