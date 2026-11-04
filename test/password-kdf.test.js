@@ -48,11 +48,11 @@ function legacyPbkdf2Hash(pw, saltHex, iter) {
   return `pbkdf2$${iter}$${saltHex}$${dk}`;
 }
 
-function getUserRow(gas, ymis) {
+function getUserRow(gas, scoutId) {
   const rows = gas.sheets.get('Users')._rows;
   const headers = rows[0].map((h) => String(h).trim());
   for (let i = 1; i < rows.length; i++) {
-    if (String(rows[i][0]).trim() === String(ymis)) {
+    if (String(rows[i][0]).trim() === String(scoutId)) {
       const obj = { _rowNumber: i + 1 };
       headers.forEach((h, idx) => { obj[h] = rows[i][idx]; });
       return obj;
@@ -126,7 +126,7 @@ console.log('\n3. 舊雜湊帳號登入成功後自動改寫為本版雜湊');
   const oldHash = legacyPbkdf2Hash('MigratingPass#1', salt, LEGACY_KDF_ITERATIONS);
   assert.strictEqual(gas.post({
     action: 'upsertUser', apikey: API_KEY,
-    user: { ymis: '1234500001', name: '舊雜湊成員', role: 'member', password_hash: oldHash }
+    user: { scoutId: '1234500001', name: '舊雜湊成員', role: 'member', password_hash: oldHash }
   }).success, true);
   assert.strictEqual(getUserRow(gas, '1234500001').password_hash, oldHash);
 
@@ -157,7 +157,7 @@ console.log('\n4. 一次登入只做一個 KDF');
   gas.sandbox.initializeSheets();
   gas.post({
     action: 'addUser', apikey: API_KEY,
-    ymis: '1234500002', name: '正常成員', email: 'kdf2@troop.org', role: 'member', password: 'MemberPass#2'
+    scoutId: '1234500002', name: '正常成員', email: 'kdf2@troop.org', role: 'member', password: 'MemberPass#2'
   });
   // 先登入一次（建立 session 之外的狀態），並確認 dummy 快取已熱
   gas.post({ action: 'login', apikey: API_KEY, login_id: '9999999998', password: 'x' });
@@ -192,10 +192,10 @@ console.log('\n5. Sheet 選單救援重設舊雜湊帳號');
   const oldHash = legacyPbkdf2Hash('StuckPass#1187', salt, LEGACY_KDF_ITERATIONS);
   gas.post({
     action: 'addUser', apikey: API_KEY,
-    ymis: '1234500003', name: '預設帳號', email: 'first@troop1187.org', role: 'member', password: 'StuckPass#1187'
+    scoutId: '1234500003', name: '預設帳號', email: 'first@troop1187.org', role: 'member', password: 'StuckPass#1187'
   });
   // 模擬 GS 6.3.0 遺留的 120,000 次雜湊 + 錯密鎖定
-  gas.post({ action: 'setPw', apikey: API_KEY, ymis: '1234500003', password_hash: oldHash });
+  gas.post({ action: 'setPw', apikey: API_KEY, scoutId: '1234500003', password_hash: oldHash });
   for (let i = 0; i < 5; i += 1) {
     gas.post({ action: 'login', apikey: API_KEY, login_id: '1234500003', password: 'wrong' });
   }

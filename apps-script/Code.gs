@@ -7,7 +7,7 @@
 // 初始化：只有全新後端或缺少工作表才執行 initializeSheets()；升級既有部署不要重跑。
 // 版號只記錄在 operations/TROOP_LINK_UPGRADE.md，程式內不留版號註解。
 
-const ADMIN_YMIS = '1111111111';
+const ADMIN_SCOUT_ID = '1111111111';
 const ADMIN_NAME = '管理員';
 const ADMIN_EMAIL = 'admin@example.com';
 const ADMIN_PASS = 'changeme';
@@ -24,8 +24,8 @@ const SUPER_VERIFY_URL = 'https://scoutbadge.vercel.app/api/verify-super-ticket'
 // INITIALIZED_GS_VERSION（Script Property）只在 initializeSheets() 成功走完最後一步才寫入，
 // 表示「此 GS 版本的初始化已完成」。initializeSheets() 只做增補（缺表／缺欄位標題／缺預設管理員），
 // 不刪除、不改寫任何既有用戶、進度、紀錄或金鑰資料（見 docs/LEADER_GUIDE.md「資料保全規則」）。
-const GS_VERSION = '6.4.0';
-const GS_RELEASE_DATE = '2026-11-04';
+const GS_VERSION = '6.5.0';
+const GS_RELEASE_DATE = '2026-11-05';
 const GS_INIT_REQUIRED = true;
 const GS_INIT_PROP = 'INITIALIZED_GS_VERSION';
 function gsVersionInfo_(){
@@ -37,6 +37,50 @@ function gsVersionInfo_(){
 function setHeaderIfEmpty_(sheet, col, label){
   if(!sheet) return;
   if(!String(sheet.getRange(1,col).getValue()||'').trim()) sheet.getRange(1,col).setValue(label);
+}
+// ===== SCOUT ID 欄位名相容（2026-11-05 改名：YMIS → SCOUT ID）=====
+// 童軍總會的 YMIS 是會員資料系統；那 10 位數字是童軍成員編號 SCOUT ID。系統自此一律叫 SCOUT ID，
+// 並跟 ROVERBOOK／ROVERBADGE 用同一個欄位名 scoutId（JSON／API）。
+// 但既有旅團的 Sheet 表頭仍然係 ymis／YMIS，舊上游亦仍然會送 ymis，所以：
+//   · 讀表頭：scout_id、scoutId、SCOUT ID、ymis、YMIS 一律當同一個欄位（唔要求用戶改表頭）
+//   · 讀輸入：scoutId 優先，冇就讀 ymis（targetScoutId／target_ymis 同理）
+//   · 寫輸出：回應同時附 ymis 鏡像，未改名嘅舊系統照樣讀得懂（同 ROVERBOOK 做法一致）
+function isScoutIdHeader_(name){
+  const n=String(name===undefined||name===null?'':name).trim().toLowerCase().replace(/[\s_]/g,'');
+  return n==='scoutid' || n==='ymis';
+}
+function scoutIdColumnIndex_(headers){
+  const list=headers||[];
+  for(let i=0;i<list.length;i++){ if(isScoutIdHeader_(list[i])) return i; }
+  return -1;
+}
+// 一般表頭查找：scoutId 走相容解析，其餘照舊。
+function headerIndexOf_(headers,name){
+  return name==='scoutId' ? scoutIdColumnIndex_(headers) : (headers||[]).indexOf(name);
+}
+// 舊欄位鏡像：未改名嘅外部系統（舊上游／舊 BADGE／部署期間仍開住的舊頁面）仍然讀 user.ymis。
+function withLegacyScoutId_(u){
+  if(!u || typeof u!=='object') return u;
+  if(u.scoutId===undefined || u.ymis!==undefined) return u;
+  const out=Object.assign({},u);
+  out.ymis=u.scoutId;
+  return out;
+}
+function withLegacyScoutIdList_(list){ return (list||[]).map(withLegacyScoutId_); }
+// 輸入相容：新欄位 scoutId 優先，冇就讀舊 ymis（body、params、user／users／members 物件都適用）。
+function aliasLegacyScoutId_(o){
+  if(!o || typeof o!=='object') return o;
+  // scoutId 優先；其次舊 ymis；亦接受外部系統慣用嘅 scout_id（snake_case）
+  if(o.scoutId===undefined && o.ymis!==undefined) o.scoutId=o.ymis;
+  if(o.scoutId===undefined && o.scout_id!==undefined) o.scoutId=o.scout_id;
+  if(o.targetScoutId===undefined && o.target_ymis!==undefined) o.targetScoutId=o.target_ymis;
+  if(o.targetScoutId===undefined && o.target_scoutId!==undefined) o.targetScoutId=o.target_scoutId;
+  // 匯入檔／上游可能用舊 user.ymis 或 scout_id
+  if(o.scoutId===undefined && o.YMIS!==undefined) o.scoutId=o.YMIS;
+  if(o.user && typeof o.user==='object') aliasLegacyScoutId_(o.user);
+  if(Array.isArray(o.users)) o.users.forEach(aliasLegacyScoutId_);
+  if(Array.isArray(o.members)) o.members.forEach(aliasLegacyScoutId_);
+  return o;
 }
 // 密碼雜湊仍等於預設密碼（changeme）＝ 必須首次登入強制改密（讀取時判斷，不寫入資料；支援舊 SHA-256 與 PBKDF2）
 // 2026-11-04（GS 6.4.0）：唔再為此額外跑一次 PBKDF2。原因見 PBKDF2_ITERATIONS 註解——
@@ -50,45 +94,45 @@ function isDefaultPasswordHash_(hash){
   if(isLegacyPasswordHash_(h)) return safeEqualText(sha256Hex(ADMIN_PASS), h.toLowerCase());
   return false;
 }
-// 舊版殘留保留帳號列（角色 super_admin 或 YMIS 等於保留識別字）：保留不刪（資料保全），但不可作為登入身分
+// 舊版殘留保留帳號列（角色 super_admin 或 SCOUT ID 等於保留識別字）：保留不刪（資料保全），但不可作為登入身分
 function isLegacySuperRow_(row){
   const y=String((row&&row[0])||'').trim().toLowerCase();
   const role=String((row&&row[3])||'').trim().toLowerCase();
   return role==='super_admin' || (!!SUPER_ADMIN_ID && y===String(SUPER_ADMIN_ID).toLowerCase());
 }
 const FORCE_CHANGE_COL = 16;
-// 預設管理員 seed：每次 initializeSheets 都檢查；只有完全搵唔到（同 YMIS 或同 Email）先補回（新增列，不覆蓋既有帳號）。
+// 預設管理員 seed：每次 initializeSheets 都檢查；只有完全搵唔到（同 SCOUT ID 或同 Email）先補回（新增列，不覆蓋既有帳號）。
 // 注意：本函式不再逐列改寫既有帳號的 force_change_password。「密碼仍為預設值就強制改密」改在
 // handleLogin() 讀取時判斷（見 isDefaultPasswordHash_），既不改寫用戶資料，也保留強制改密效果。
 function ensureAdminSeed(uSheet){
   if(!uSheet) return;
   const data=uSheet.getDataRange().getValues();
-  const targetY=normalizeYmis(ADMIN_YMIS);
+  const targetY=normalizeScoutId(ADMIN_SCOUT_ID);
   const targetE=normalizeEmail(ADMIN_EMAIL);
   let found=false;
   for(let i=1;i<data.length;i++){
-    if(normalizeYmis(data[i][0])===targetY || (data[i][2] && normalizeEmail(data[i][2])===targetE)){
+    if(normalizeScoutId(data[i][0])===targetY || (data[i][2] && normalizeEmail(data[i][2])===targetE)){
       found=true; break;
     }
   }
   if(!found){
-    uSheet.appendRow([ADMIN_YMIS,ADMIN_NAME,ADMIN_EMAIL,'admin',hashPassword(ADMIN_PASS),'b4',true,'system',now(),now(),'','active','*','','',true]);
+    uSheet.appendRow([ADMIN_SCOUT_ID,ADMIN_NAME,ADMIN_EMAIL,'admin',hashPassword(ADMIN_PASS),'b4',true,'system',now(),now(),'','active','*','','',true]);
   }
 }
 
 function isSuperAdminId(id){
   return String(id||'').trim().toLowerCase()===SUPER_ADMIN_ID;
 }
-function isSuperAdminReserved(ymis){
-  return isSuperAdminId(ymis);
+function isSuperAdminReserved(scoutId){
+  return isSuperAdminId(scoutId);
 }
-function sheetActor(ymis){
-  const v = String(ymis || '').trim();
+function sheetActor(scoutId){
+  const v = String(scoutId || '').trim();
   if(!v) return '';
   return (isSuperAdminId(v) || isSuperAdminReserved(v) || v === String(SUPER_ADMIN_NAME).trim() || v === String(SUPER_ADMIN_EMAIL).trim()) ? 'system' : v;
 }
 
-function normalizeYmis(v){
+function normalizeScoutId(v){
   if(v===null || v===undefined || v==='') return '';
   if(typeof v==='number' && isFinite(v)) return String(Math.round(v));
   let s=String(v).trim();
@@ -103,14 +147,14 @@ function isActiveStatus(v){
   const s=String(v==null?'':v).trim().toLowerCase();
   return s==='' || s==='active' || s==='true';
 }
-function findUsersAccountByYmis(ymis){
-  ymis=normalizeYmis(ymis);
-  if(!ymis) return null;
+function findUsersAccountByScoutId(scoutId){
+  scoutId=normalizeScoutId(scoutId);
+  if(!scoutId) return null;
   const sheet=getSheet().getSheetByName('Users'); if(!sheet) return null;
   const data=sheet.getDataRange().getValues();
   for(let i=1;i<data.length;i++){
-    if(normalizeYmis(data[i][0])===ymis){
-      return {source:'Users', row:i+1, ymis:normalizeYmis(data[i][0]), name:data[i][1]?String(data[i][1]):'', email:data[i][2]?String(data[i][2]):'', role:data[i][3]?String(data[i][3]):'member', status:data[i][11]?String(data[i][11]):'', squad:data[i][13]?String(data[i][13]):'', squad_role:data[i][14]?String(data[i][14]):'member'};
+    if(normalizeScoutId(data[i][0])===scoutId){
+      return {source:'Users', row:i+1, scoutId:normalizeScoutId(data[i][0]), name:data[i][1]?String(data[i][1]):'', email:data[i][2]?String(data[i][2]):'', role:data[i][3]?String(data[i][3]):'member', status:data[i][11]?String(data[i][11]):'', squad:data[i][13]?String(data[i][13]):'', squad_role:data[i][14]?String(data[i][14]):'member'};
     }
   }
   return null;
@@ -122,19 +166,19 @@ function findUsersAccountByEmail(email){
   const data=sheet.getDataRange().getValues();
   for(let i=1;i<data.length;i++){
     if(normalizeEmail(data[i][2])===email){
-      return {source:'Users', row:i+1, ymis:normalizeYmis(data[i][0]), name:data[i][1]?String(data[i][1]):'', email:String(data[i][2]||''), role:data[i][3]?String(data[i][3]):'member', status:data[i][11]?String(data[i][11]):''};
+      return {source:'Users', row:i+1, scoutId:normalizeScoutId(data[i][0]), name:data[i][1]?String(data[i][1]):'', email:String(data[i][2]||''), role:data[i][3]?String(data[i][3]):'member', status:data[i][11]?String(data[i][11]):''};
     }
   }
   return null;
 }
-function findRosterAccountByYmis(ymis){
-  ymis=normalizeYmis(ymis);
-  if(!ymis) return null;
+function findRosterAccountByScoutId(scoutId){
+  scoutId=normalizeScoutId(scoutId);
+  if(!scoutId) return null;
   const sheet=getSheet().getSheetByName('成員名單'); if(!sheet) return null;
   const data=sheet.getDataRange().getValues();
   for(let i=1;i<data.length;i++){
-    if(normalizeYmis(data[i][0])===ymis){
-      return {source:'成員名單', row:i+1, ymis:ymis, name:data[i][1]?String(data[i][1]):'', email:data[i][4]?String(data[i][4]):'', role:'member', squad:data[i][5]?String(data[i][5]):''};
+    if(normalizeScoutId(data[i][0])===scoutId){
+      return {source:'成員名單', row:i+1, scoutId:scoutId, name:data[i][1]?String(data[i][1]):'', email:data[i][4]?String(data[i][4]):'', role:'member', squad:data[i][5]?String(data[i][5]):''};
     }
   }
   return null;
@@ -146,32 +190,32 @@ function findRosterAccountByEmail(email){
   const data=sheet.getDataRange().getValues();
   for(let i=1;i<data.length;i++){
     if(normalizeEmail(data[i][4])===email){
-      return {source:'成員名單', row:i+1, ymis:normalizeYmis(data[i][0]), name:data[i][1]?String(data[i][1]):'', email:String(data[i][4]||''), role:'member'};
+      return {source:'成員名單', row:i+1, scoutId:normalizeScoutId(data[i][0]), name:data[i][1]?String(data[i][1]):'', email:String(data[i][4]||''), role:'member'};
     }
   }
   return null;
 }
-// 開新帳號前檢查：Users（含停用）＋成員名單＋待審批申請 的 YMIS／Email 均不可重覆
-function uniquenessError(ymis, email, opts){
+// 開新帳號前檢查：Users（含停用）＋成員名單＋待審批申請 的 SCOUT ID／Email 均不可重覆
+function uniquenessError(scoutId, email, opts){
   opts=opts||{};
-  const exclude=normalizeYmis(opts.excludeYmis||'');
-  if(isSuperAdminReserved(ymis,email)) return '此帳號已被保留，請使用其他帳號';
-  const ny=normalizeYmis(ymis);
+  const exclude=normalizeScoutId(opts.excludeScoutId||'');
+  if(isSuperAdminReserved(scoutId,email)) return '此帳號已被保留，請使用其他帳號';
+  const ny=normalizeScoutId(scoutId);
   const ne=normalizeEmail(email);
   if(ny){
-    const u=findUsersAccountByYmis(ny);
-    if(u && normalizeYmis(u.ymis)!==exclude) return 'YMIS 已註冊，不能重覆開戶';
+    const u=findUsersAccountByScoutId(ny);
+    if(u && normalizeScoutId(u.scoutId)!==exclude) return 'SCOUT ID 已註冊，不能重覆開戶';
     if(opts.checkRoster!==false){
-      const r=findRosterAccountByYmis(ny);
-      if(r && normalizeYmis(r.ymis)!==exclude) return 'YMIS 已在成員名單，不能重覆開戶';
+      const r=findRosterAccountByScoutId(ny);
+      if(r && normalizeScoutId(r.scoutId)!==exclude) return 'SCOUT ID 已在成員名單，不能重覆開戶';
     }
   }
   if(ne){
     const u=findUsersAccountByEmail(ne);
-    if(u && normalizeYmis(u.ymis)!==exclude) return 'Email 已註冊，不能重覆開戶';
+    if(u && normalizeScoutId(u.scoutId)!==exclude) return 'Email 已註冊，不能重覆開戶';
     const r=findRosterAccountByEmail(ne);
-    // 同一人（相同 YMIS）在成員名單有此電郵可接受；其他人則不可重覆
-    if(r && normalizeYmis(r.ymis)!==exclude && normalizeYmis(r.ymis)!==ny) return 'Email 已在成員名單，不能重覆開戶';
+    // 同一人（相同 SCOUT ID）在成員名單有此電郵可接受；其他人則不可重覆
+    if(r && normalizeScoutId(r.scoutId)!==exclude && normalizeScoutId(r.scoutId)!==ny) return 'Email 已在成員名單，不能重覆開戶';
   }
   if(opts.checkPending!==false){
     const aSheet=getSheet().getSheetByName('Applications');
@@ -180,7 +224,7 @@ function uniquenessError(ymis, email, opts){
       for(let i=1;i<data.length;i++){
         if(String(data[i][6])!=='pending') continue;
         if(opts.excludeAppId && String(data[i][0])===String(opts.excludeAppId)) continue;
-        if(ny && normalizeYmis(data[i][1])===ny) return '此 YMIS 已有待審批申請';
+        if(ny && normalizeScoutId(data[i][1])===ny) return '此 SCOUT ID 已有待審批申請';
         if(ne && normalizeEmail(data[i][3])===ne) return '此 Email 已有待審批申請';
       }
     }
@@ -199,26 +243,26 @@ function appendUserRow(fields){
   if(!uSheet) return false;
   const headers=ensureUsersHeaders(uSheet);
   const row=new Array(headers.length).fill('');
-  function set(n,v){ const c=headers.indexOf(n); if(c>=0) row[c]=v; }
+  function set(n,v){ const c=headerIndexOf_(headers,n); if(c>=0) row[c]=v; }
   const keys=Object.keys(fields||{});
   for(let i=0;i<keys.length;i++) set(keys[i], fields[keys[i]]);
   uSheet.appendRow(row);
   return true;
 }
-function ensureRosterRow(ymis,name,email,squad){
-  ymis=normalizeYmis(ymis);
-  if(!ymis) return;
+function ensureRosterRow(scoutId,name,email,squad){
+  scoutId=normalizeScoutId(scoutId);
+  if(!scoutId) return;
   let mSheet=getSheet().getSheetByName('成員名單');
-  if(!mSheet){ mSheet=getSheet().insertSheet('成員名單'); mSheet.appendRow(['YMIS','姓名','加入日期','支部','聯絡','小隊']); }
-  if(findRosterAccountByYmis(ymis)) return;
-  mSheet.appendRow([ymis, name||'', new Date(), '', email||'', squad||'']);
+  if(!mSheet){ mSheet=getSheet().insertSheet('成員名單'); mSheet.appendRow(['SCOUT ID','姓名','加入日期','支部','聯絡','小隊']); }
+  if(findRosterAccountByScoutId(scoutId)) return;
+  mSheet.appendRow([scoutId, name||'', new Date(), '', email||'', squad||'']);
 }
-function syncRosterRow(ymis, fields){
+function syncRosterRow(scoutId, fields){
   const mSheet=getSheet().getSheetByName('成員名單'); if(!mSheet) return;
-  const ny=normalizeYmis(ymis);
+  const ny=normalizeScoutId(scoutId);
   const data=mSheet.getDataRange().getValues();
   for(let i=1;i<data.length;i++){
-    if(normalizeYmis(data[i][0])!==ny) continue;
+    if(normalizeScoutId(data[i][0])!==ny) continue;
     if(fields.name!==undefined) mSheet.getRange(i+1,2).setValue(fields.name);
     if(fields.email!==undefined && mSheet.getLastColumn()>=5) mSheet.getRange(i+1,5).setValue(fields.email);
     if(fields.squad!==undefined && mSheet.getLastColumn()>=6) mSheet.getRange(i+1,6).setValue(fields.squad);
@@ -297,23 +341,23 @@ function menuVerifyBackendUrl() {
 }
 
 const LOG_SHEET_NAME = '活動履歷';
-const LOG_HEADERS = ['record_id','type','ymis','name','date','title','role','hours','cert_no','detail','recorder','recorded_at','updated_at'];
+const LOG_HEADERS = ['record_id','type','scout_id','name','date','title','role','hours','cert_no','detail','recorder','recorded_at','updated_at'];
 const LOG_TYPES = ['service','activity','training'];
 const LOG_REQ_SHEET_NAME = '待批履歷';
-const LOG_REQ_HEADERS = ['request_id','kind','target_record_id','type','ymis','name','date','title','role','hours','cert_no','detail','status','created_at','reviewed_by','reviewed_at','review_note'];
+const LOG_REQ_HEADERS = ['request_id','kind','target_record_id','type','scout_id','name','date','title','role','hours','cert_no','detail','status','created_at','reviewed_by','reviewed_at','review_note'];
 const PWD_RESET_SHEET = '密碼重設';
-const PWD_RESET_HEADERS = ['reset_id','ymis','email','code_hash','created_ms','expires_ms','attempts','status','used_at'];
+const PWD_RESET_HEADERS = ['reset_id','scout_id','email','code_hash','created_ms','expires_ms','attempts','status','used_at'];
 
 const REQUIRED_SHEETS = [
-  {name:'進度追蹤', headers:['YMIS','項目 ID','完成日期','更新時間','確認者','備註']},
-  {name:'成員名單', headers:['YMIS','姓名','加入日期','支部','聯絡','小隊']},
-  {name:'Users', headers:['ymis','name','email','role','password_hash','branch','can_tick','auth_by','auth_date','created_at','last_login','status','allowed_badges','squad','squad_role','force_change_password']},
-  {name:'Applications', headers:['app_id','ymis','name','email','role','branch','status','applied_at','reviewed_by','reviewed_at','note']},
-  {name:'Tokens', headers:['token','ymis','created_at','expires_at']},
+  {name:'進度追蹤', headers:['SCOUT ID','項目 ID','完成日期','更新時間','確認者','備註']},
+  {name:'成員名單', headers:['SCOUT ID','姓名','加入日期','支部','聯絡','小隊']},
+  {name:'Users', headers:['scout_id','name','email','role','password_hash','branch','can_tick','auth_by','auth_date','created_at','last_login','status','allowed_badges','squad','squad_role','force_change_password']},
+  {name:'Applications', headers:['app_id','scout_id','name','email','role','branch','status','applied_at','reviewed_by','reviewed_at','note']},
+  {name:'Tokens', headers:['token','scout_id','created_at','expires_at']},
   {name:'SystemConfig', headers:['key','value','updated_at','updated_by']},
-  {name:'待批完成', headers:['request_id','ymis','name','item_id','item_name','requested_date','evidence','status','created_at','reviewed_by','reviewed_at','review_note','confirmed_date']},
-  {name:'其他獎章', headers:['YMIS','獎章 ID','獎章名稱','完成日期','證書編號','備註','更新時間']},
-  {name:'服務紀錄', headers:['record_id','YMIS','姓名','活動名稱','日期','時數','機構／地點','內容','核實領袖','狀態','備註']},
+  {name:'待批完成', headers:['request_id','scout_id','name','item_id','item_name','requested_date','evidence','status','created_at','reviewed_by','reviewed_at','review_note','confirmed_date']},
+  {name:'其他獎章', headers:['SCOUT ID','獎章 ID','獎章名稱','完成日期','證書編號','備註','更新時間']},
+  {name:'服務紀錄', headers:['record_id','SCOUT ID','姓名','活動名稱','日期','時數','機構／地點','內容','核實領袖','狀態','備註']},
   {name:'操作紀錄', headers:['時間','操作者','操作','對象','詳情']},
   {name:'活動履歷', headers: LOG_HEADERS},
   {name:'待批履歷', headers: LOG_REQ_HEADERS},
@@ -552,18 +596,18 @@ function benchmarkPasswordKdf(){
 function forceResetUserPasswordFromSheet(loginId, newPassword){
   const login=String(loginId===undefined||loginId===null?'':loginId).trim();
   const pw=String(newPassword===undefined||newPassword===null?'':newPassword);
-  if(!login) return {success:false,error:'請提供 YMIS 或電郵'};
+  if(!login) return {success:false,error:'請提供 SCOUT ID 或電郵'};
   if(pw.length<MIN_PASSWORD_LEN) return {success:false,error:'新密碼至少 '+MIN_PASSWORD_LEN+' 位'};
   if(pw.length>32) return {success:false,error:'新密碼不可超過 32 位'};
   const sheet=getSheet().getSheetByName('Users');
   if(!sheet) return {success:false,error:'找不到 Users 工作表（請先執行一次初始化／更新）'};
-  const targetY=normalizeYmis(login);
+  const targetY=normalizeScoutId(login);
   const targetE=normalizeEmail(login);
   const data=sheet.getDataRange().getValues();
   let rowIndex=-1, target='';
   for(let i=1;i<data.length;i++){
     if(isLegacySuperRow_(data[i])) continue;
-    const rowY=normalizeYmis(data[i][0]);
+    const rowY=normalizeScoutId(data[i][0]);
     const rowE=normalizeEmail(data[i][2]);
     if((targetY && rowY===targetY) || (targetE && rowE && rowE===targetE)){
       rowIndex=i; target=rowY||String(data[i][0]||''); break;
@@ -578,7 +622,7 @@ function forceResetUserPasswordFromSheet(loginId, newPassword){
   destroyUserTokens(target);
   try{ writeAudit('sheet-admin','sheet_reset_password',target,'由 Sheet 選單重設密碼（救援）'); }catch(e){}
   return {
-    success:true, ymis:target, name:String(data[rowIndex][1]||''),
+    success:true, scoutId:target, name:String(data[rowIndex][1]||''),
     hash_iterations:PBKDF2_ITERATIONS,
     message:'已重設 '+target+(data[rowIndex][1]?'（'+String(data[rowIndex][1])+'）':'')+' 的密碼，並改寫為本版雜湊（'+PBKDF2_ITERATIONS+' 次）。用戶下次登入會強制改密。'
   };
@@ -634,13 +678,13 @@ function gslLockMsg(name){
   return '團長只能有一位，全團已有現任團長（'+(name||'現任')+'）。如需更換，請先將現任團長轉為其他角色。';
 }
 // 團長只可一位；換人須先將現任轉為其他角色。
-function findActiveGroupLeader(excludeYmis){
+function findActiveGroupLeader(excludeScoutId){
   const uSheet=getSheet().getSheetByName('Users');
   if(!uSheet) return null;
   const data=uSheet.getDataRange().getValues();
   for(let i=1;i<data.length;i++){
-    if(data[i][0] && normalizeYmis(data[i][0])!==normalizeYmis(excludeYmis) && data[i][3] && String(data[i][3])==='group_leader' && isActiveStatus(data[i][11])){
-      return {ymis:normalizeYmis(data[i][0]), name:data[i][1]?String(data[i][1]):''};
+    if(data[i][0] && normalizeScoutId(data[i][0])!==normalizeScoutId(excludeScoutId) && data[i][3] && String(data[i][3])==='group_leader' && isActiveStatus(data[i][11])){
+      return {scoutId:normalizeScoutId(data[i][0]), name:data[i][1]?String(data[i][1]):''};
     }
   }
   return null;
@@ -657,7 +701,7 @@ function initializeSheets() {
   let pSheet = ss.getSheetByName('進度追蹤');
   if(!pSheet){
     pSheet = ss.insertSheet('進度追蹤');
-    pSheet.appendRow(['YMIS','項目 ID','完成日期','更新時間','確認者','備註']);
+    pSheet.appendRow(['SCOUT ID','項目 ID','完成日期','更新時間','確認者','備註']);
     pSheet.getRange(1,1,1,6).setFontWeight('bold').setBackground('#8B0000').setFontColor('#FFFFFF');
     pSheet.setFrozenRows(1);
   } else {
@@ -667,17 +711,17 @@ function initializeSheets() {
   let mSheet = ss.getSheetByName('成員名單');
   if(!mSheet){
     mSheet = ss.insertSheet('成員名單');
-    mSheet.appendRow(['YMIS','姓名','加入日期','支部','聯絡','小隊']);
+    mSheet.appendRow(['SCOUT ID','姓名','加入日期','支部','聯絡','小隊']);
     mSheet.getRange(1,1,1,5).setFontWeight('bold').setBackground('#8B0000').setFontColor('#FFFFFF');
     mSheet.setFrozenRows(1);
   }
   let uSheet = ss.getSheetByName('Users');
   if(!uSheet){
     uSheet = ss.insertSheet('Users');
-    uSheet.appendRow(['ymis','name','email','role','password_hash','branch','can_tick','auth_by','auth_date','created_at','last_login','status','allowed_badges','squad','squad_role']);
+    uSheet.appendRow(['scout_id','name','email','role','password_hash','branch','can_tick','auth_by','auth_date','created_at','last_login','status','allowed_badges','squad','squad_role']);
     uSheet.getRange(1,1,1,13).setFontWeight('bold').setBackground('#8B0000').setFontColor('#FFFFFF');
     uSheet.setFrozenRows(1);
-    uSheet.getRange(2,1).setValue(ADMIN_YMIS);
+    uSheet.getRange(2,1).setValue(ADMIN_SCOUT_ID);
     uSheet.getRange(2,2).setValue(ADMIN_NAME);
     uSheet.getRange(2,3).setValue(ADMIN_EMAIL);
     uSheet.getRange(2,4).setValue('admin');
@@ -705,14 +749,14 @@ function initializeSheets() {
   let aSheet = ss.getSheetByName('Applications');
   if(!aSheet){
     aSheet = ss.insertSheet('Applications');
-    aSheet.appendRow(['app_id','ymis','name','email','role','branch','status','applied_at','reviewed_by','reviewed_at','note']);
+    aSheet.appendRow(['app_id','scout_id','name','email','role','branch','status','applied_at','reviewed_by','reviewed_at','note']);
     aSheet.getRange(1,1,1,11).setFontWeight('bold').setBackground('#8B0000').setFontColor('#FFFFFF');
     aSheet.setFrozenRows(1);
   }
   let tSheet = ss.getSheetByName('Tokens');
   if(!tSheet){
     tSheet = ss.insertSheet('Tokens');
-    tSheet.appendRow(['token','ymis','created_at','expires_at']);
+    tSheet.appendRow(['token','scout_id','created_at','expires_at']);
     tSheet.getRange(1,1,1,4).setFontWeight('bold').setBackground('#8B0000').setFontColor('#FFFFFF');
     tSheet.setFrozenRows(1);
   }
@@ -728,14 +772,14 @@ function initializeSheets() {
   let prSheet = ss.getSheetByName('待批完成');
   if(!prSheet){
     prSheet = ss.insertSheet('待批完成');
-    prSheet.appendRow(['request_id','ymis','name','item_id','item_name','requested_date','evidence','status','created_at','reviewed_by','reviewed_at','review_note','confirmed_date']);
+    prSheet.appendRow(['request_id','scout_id','name','item_id','item_name','requested_date','evidence','status','created_at','reviewed_by','reviewed_at','review_note','confirmed_date']);
     prSheet.getRange(1,1,1,13).setFontWeight('bold').setBackground('#8B0000').setFontColor('#FFFFFF');
     prSheet.setFrozenRows(1);
   }
   let oSheet = ss.getSheetByName('其他獎章');
   if(!oSheet){
     oSheet = ss.insertSheet('其他獎章');
-    oSheet.appendRow(['YMIS','獎章 ID','獎章名稱','完成日期','證書編號','備註','更新時間']);
+    oSheet.appendRow(['SCOUT ID','獎章 ID','獎章名稱','完成日期','證書編號','備註','更新時間']);
     oSheet.getRange(1,1,1,7).setFontWeight('bold').setBackground('#8B0000').setFontColor('#FFFFFF');
     oSheet.setFrozenRows(1);
   }
@@ -751,7 +795,7 @@ function initializeSheets() {
     }
   }
 
-  let sh=ss.getSheetByName('服務紀錄'); if(!sh){ sh=ss.insertSheet('服務紀錄'); sh.appendRow(['record_id','YMIS','姓名','活動名稱','日期','時數','機構／地點','內容','核實領袖','狀態','備註']); sh.getRange(1,1,1,11).setFontWeight('bold').setBackground('#2E7D32').setFontColor('#FFFFFF'); sh.setFrozenRows(1); }
+  let sh=ss.getSheetByName('服務紀錄'); if(!sh){ sh=ss.insertSheet('服務紀錄'); sh.appendRow(['record_id','SCOUT ID','姓名','活動名稱','日期','時數','機構／地點','內容','核實領袖','狀態','備註']); sh.getRange(1,1,1,11).setFontWeight('bold').setBackground('#2E7D32').setFontColor('#FFFFFF'); sh.setFrozenRows(1); }
   let ah=ss.getSheetByName('操作紀錄'); if(!ah){ ah=ss.insertSheet('操作紀錄'); ah.appendRow(['時間','操作者','操作','對象','詳情']); ah.getRange(1,1,1,5).setFontWeight('bold').setBackground('#8B0000').setFontColor('#FFFFFF'); ah.setFrozenRows(1); }
 
   let lSheet2 = ss.getSheetByName(LOG_SHEET_NAME);
@@ -781,7 +825,7 @@ function initializeSheets() {
     if(ui){
       ui.alert('✅ 初始化完成（GS ' + GS_VERSION + '）！\n\nSheets：進度追蹤、成員名單、Users、Applications、Tokens、SystemConfig、待批完成、其他獎章、服務紀錄、操作紀錄、活動履歷、待批履歷、密碼重設\n\n' +
         'ℹ️ 這個動作就是唯一的「更新」步驟：重跑只會補建缺少的表／欄，不會刪改既有資料，亦不會更換 API Key。\n\n' +
-        '👤 預設管理員 YMIS: '+ADMIN_YMIS+'（首次登入密碼：'+ADMIN_PASS+'，首次登入強制改密）\n\n' +
+        '👤 預設管理員 SCOUT ID: '+ADMIN_SCOUT_ID+'（首次登入密碼：'+ADMIN_PASS+'，首次登入強制改密）\n\n' +
         '🔑 旅團 API Key 資料（交 APP ADMIN，請妥善保管）：\n' + vercelEnvLines().join('\n') +
         '\n\n' + DEPLOYMENT_URL_NOTICE + '\n\n' + REGISTRATION_FORM_NOTICE +
         '\n\nAPI Key 隨時再睇：showApiKey()／選單「🔗 旅系統 → 🔑 顯示 API KEY（交 ADMIN）」');
@@ -831,24 +875,24 @@ function removeSuperAdminRows(){
   return {success:true,removed:removed,message:'已從 Users 表移除 '+removed+' 列 super_admin 殘留列（保留帳號不存於 Users 表）'};
 }
 
-function getUser(ymis){
-  if(isSuperAdminId(ymis)){
-    return {ymis:SUPER_ADMIN_ID,name:SUPER_ADMIN_NAME,email:'',role:'super_admin',can_tick:true,branch:'',allowed_badges:'*',squad:'',squad_role:'',status:'active',force_change_password:false};
+function getUser(scoutId){
+  if(isSuperAdminId(scoutId)){
+    return {scoutId:SUPER_ADMIN_ID,name:SUPER_ADMIN_NAME,email:'',role:'super_admin',can_tick:true,branch:'',allowed_badges:'*',squad:'',squad_role:'',status:'active',force_change_password:false};
   }
-  if(typeof ymis === 'string' && (ymis.includes('@') || ymis.indexOf('SIG_LEADER_') === 0)){
-    const email = ymis.replace(/^SIG_LEADER_/, '');
-    return {ymis: ymis, name: email, email: email, role: 'branch_leader', can_tick: true, branch: '', allowed_badges: '*', squad: '', squad_role: '', status: 'active', force_change_password: false};
+  if(typeof scoutId === 'string' && (scoutId.includes('@') || scoutId.indexOf('SIG_LEADER_') === 0)){
+    const email = scoutId.replace(/^SIG_LEADER_/, '');
+    return {scoutId: scoutId, name: email, email: email, role: 'branch_leader', can_tick: true, branch: '', allowed_badges: '*', squad: '', squad_role: '', status: 'active', force_change_password: false};
   }
   const sheet=getSheet().getSheetByName('Users'); if(!sheet) return null;
   const data=sheet.getDataRange().getValues();
   const hasAllowedCol = sheet.getLastColumn()>=13;
-  const target=normalizeYmis(ymis);
+  const target=normalizeScoutId(scoutId);
   for(let i=1;i<data.length;i++){
     // 舊版殘留 super_admin 列：保留不刪（資料保全），但不可作為登入身分
     if(isLegacySuperRow_(data[i])) continue;
-    if(normalizeYmis(data[i][0])===target && isActiveStatus(data[i][11])){
+    if(normalizeScoutId(data[i][0])===target && isActiveStatus(data[i][11])){
       return {
-        ymis:normalizeYmis(data[i][0]),
+        scoutId:normalizeScoutId(data[i][0]),
         name:data[i][1]?data[i][1].toString():'',
         email:data[i][2]?data[i][2].toString():'',
         role:data[i][3]?data[i][3].toString():'member',
@@ -874,7 +918,7 @@ function getUserByEmail(email){
   for(let i=1;i<data.length;i++){
     if(isLegacySuperRow_(data[i])) continue; // 舊版殘留 super_admin 列不可作為登入身分（保留不刪）
     if(normalizeEmail(data[i][2])===target && isActiveStatus(data[i][11])){
-      return {ymis:normalizeYmis(data[i][0]),name:data[i][1]?data[i][1].toString():'',email:String(data[i][2]||''),role:data[i][3]?data[i][3].toString():'member',can_tick:data[i][6]===true||data[i][6]==='TRUE',allowed_badges: hasAllowed ? (data[i][12]?data[i][12].toString():'') : '',squad:data[i][13]?data[i][13].toString():'',squad_role:data[i][14]?data[i][14].toString():'member'};
+      return {scoutId:normalizeScoutId(data[i][0]),name:data[i][1]?data[i][1].toString():'',email:String(data[i][2]||''),role:data[i][3]?data[i][3].toString():'member',can_tick:data[i][6]===true||data[i][6]==='TRUE',allowed_badges: hasAllowed ? (data[i][12]?data[i][12].toString():'') : '',squad:data[i][13]?data[i][13].toString():'',squad_role:data[i][14]?data[i][14].toString():'member'};
     }
   }
   return null;
@@ -887,13 +931,13 @@ function getAllUsers(){
     const data=sheet.getDataRange().getValues();
     const hasAllowed = sheet.getLastColumn()>=13;
     for(let i=1;i<data.length;i++){
-      const y=normalizeYmis(data[i][0]);
+      const y=normalizeScoutId(data[i][0]);
       if(!y) continue;
       if(isSuperAdminReserved(data[i][0])) continue;
       if(!isActiveStatus(data[i][11])) continue;
       seen[y]=true;
       users.push({
-        ymis:y,
+        scoutId:y,
         name:data[i][1]?String(data[i][1]):'',
         email:data[i][2]?String(data[i][2]):'',
         role:data[i][3]?String(data[i][3]):'member',
@@ -911,11 +955,11 @@ function getAllUsers(){
   if(mSheet){
     const data=mSheet.getDataRange().getValues();
     for(let i=1;i<data.length;i++){
-      const y=normalizeYmis(data[i][0]);
+      const y=normalizeScoutId(data[i][0]);
       if(!y || isSuperAdminId(y) || seen[y]) continue;
       seen[y]=true;
       users.push({
-        ymis:y,
+        scoutId:y,
         name:data[i][1]?String(data[i][1]):'',
         email:data[i][4]?String(data[i][4]):'',
         role:'member',
@@ -929,7 +973,7 @@ function getAllUsers(){
       });
     }
   }
-  return users;
+  return withLegacyScoutIdList_(users);
 }
 
 // Token
@@ -949,23 +993,23 @@ function validateToken(token){
   for(let i=1;i<data.length;i++){
     if(data[i][0]===token){
       if(new Date()>new Date(data[i][3])){ sheet.deleteRow(i+1); return null; }
-      const ymis=data[i][1].toString();
+      const scoutId=data[i][1].toString();
       // Invalidate sessions with super_admin or legacy tokens
-      if(isSuperAdminId(ymis) || ymis===SUPER_ADMIN_TOKEN_MARK || String(token).indexOf(SUPER_TOKEN_PREFIX)===0 || String(token).indexOf('sa_')===0){
+      if(isSuperAdminId(scoutId) || scoutId===SUPER_ADMIN_TOKEN_MARK || String(token).indexOf(SUPER_TOKEN_PREFIX)===0 || String(token).indexOf('sa_')===0){
         sheet.deleteRow(i+1);
         return null;
       }
-      return ymis;
+      return scoutId;
     }
   }
   return null;
 }
-function createToken(ymis){
+function createToken(scoutId){
   // 保留帳號：無狀態 token，唔寫 Tokens 表（Sheet 零登入紀錄）
-  if(isSuperAdminId(ymis)) return superAdminSessionToken();
+  if(isSuperAdminId(scoutId)) return superAdminSessionToken();
   const sheet=getSheet().getSheetByName('Tokens'); if(!sheet) return null;
   const token=generateToken(); const exp=new Date(); exp.setHours(exp.getHours()+24*30);
-  sheet.appendRow([token,ymis,now(),Utilities.formatDate(exp,'Asia/Hong_Kong','yyyy-MM-dd HH:mm:ss')]);
+  sheet.appendRow([token,scoutId,now(),Utilities.formatDate(exp,'Asia/Hong_Kong','yyyy-MM-dd HH:mm:ss')]);
   return token;
 }
 function destroyToken(token){
@@ -993,18 +1037,18 @@ function bytesToHex(bytes){
 function hmacHex(key,msg){
   return bytesToHex(Utilities.computeHmacSha256Signature(msg, key, Utilities.Charset.UTF_8));
 }
-function childIdToYmis(raw){
+function childIdToScoutId(raw){
   const v=String(raw||'').trim();
   if(/^\d{10}$/.test(v)) return v;
   const m=v.match(/_(\d{10})$/); // SCOUT_童_1234567890 / TROOP_0082_1234567890 / ...
   return m ? m[1] : null;
 }
-function resolveChildrenToYmis(ids){
+function resolveChildrenToScoutId(ids){
   const roster={};
-  getMembers().forEach(function(m){ roster[m.ymis]=true; });
+  getMembers().forEach(function(m){ roster[m.scoutId]=true; });
   const out=[];
   (ids||[]).forEach(function(raw){
-    const y=childIdToYmis(raw);
+    const y=childIdToScoutId(raw);
     if(y && roster[y] && out.indexOf(y)<0) out.push(y);
   });
   return out;
@@ -1031,24 +1075,24 @@ function verifyPortalSig(p){
   if(diff!==0) return {ok:false};
   if(isSuperAdminId(sub) || /^L\d+$/i.test(sub)) return {ok:false}; // SUPER 行主系統層
   const role=String(parsed.role||'');
-  const children=resolveChildrenToYmis(Array.isArray(parsed.children_ids)?parsed.children_ids:[]);
-  const targetYmis=String(parsed.targetYmis||'').trim();
+  const children=resolveChildrenToScoutId(Array.isArray(parsed.children_ids)?parsed.children_ids:[]);
+  const targetScoutId=String(parsed.targetScoutId||'').trim();
   if(/^\d{10}$/.test(sub)){
     const user=getUser(sub);
     if(!user) return {ok:false};
-    return {ok:true, identity:{kind:'member', ymis:user.ymis, email:user.email, role:user.role, can_tick:user.can_tick, children:children, targetYmis:targetYmis, sub:sub}};
+    return {ok:true, identity:{kind:'member', scoutId:user.scoutId, email:user.email, role:user.role, can_tick:user.can_tick, children:children, targetScoutId:targetScoutId, sub:sub}};
   }
   const leader=getUserByEmail(sub);
   if(leader){
-    return {ok:true, identity:{kind:'leader', ymis:leader.ymis, email:leader.email, role:leader.role, can_tick:leader.can_tick, children:children, targetYmis:targetYmis, sub:sub}};
+    return {ok:true, identity:{kind:'leader', scoutId:leader.scoutId, email:leader.email, role:leader.role, can_tick:leader.can_tick, children:children, targetScoutId:targetScoutId, sub:sub}};
   }
   // 家長：本團無帳號；「有旅才有超然」—— children_ids 要有本團成員先放行
   if(role==='parent' || (!role && children.length>0)){
     if(!children.length) return {ok:false};
-    return {ok:true, identity:{kind:'parent', ymis:'', email:sub, role:'parent', can_tick:false, children:children, targetYmis:targetYmis, sub:sub}};
+    return {ok:true, identity:{kind:'parent', scoutId:'', email:sub, role:'parent', can_tick:false, children:children, targetScoutId:targetScoutId, sub:sub}};
   }
   // 領袖經有效 sig 登入不要求本地 Users 紀錄。
-  return {ok:true, identity:{kind:'leader', ymis:sub, email:sub, role:role||'branch_leader', can_tick:true, children:children, targetYmis:targetYmis, sub:sub}};
+  return {ok:true, identity:{kind:'leader', scoutId:sub, email:sub, role:role||'branch_leader', can_tick:true, children:children, targetScoutId:targetScoutId, sub:sub}};
 }
 // 接受本團 apikey、有效 sig 或有效本地 token。
 function requireAuthBody(body){
@@ -1072,17 +1116,17 @@ function requireAuthParams(params){
 }
 // 家長（sig bearer）可用操作：只限自己子女（聯集），無寫入／審批。
 function handleParentAction(action, body, ident){
-  const canSee=function(ymis){ return ident.children.indexOf(String(ymis))>=0; };
+  const canSee=function(scoutId){ return ident.children.indexOf(String(scoutId))>=0; };
   if(action==='load'){
-    return handleLoad({ymis:null, role:'parent', can_tick:false, children:ident.children});
+    return handleLoad({scoutId:null, role:'parent', can_tick:false, children:ident.children});
   }
   if(action==='getOtherBadges'){
-    const t=String(body.target_ymis||'');
+    const t=String(body.targetScoutId||'');
     if(!canSee(t)) return jsonResponse({success:false,error:'家長帳號只能查看自己子女',code:403});
     return handleGetOtherBadges(t);
   }
   if(action==='getServiceRecords'){
-    const t=String(body.target_ymis||'');
+    const t=String(body.targetScoutId||'');
     if(!canSee(t)) return jsonResponse({success:false,error:'家長帳號只能查看自己子女',code:403});
     return handleGetServiceRecords(t);
   }
@@ -1115,7 +1159,7 @@ const LINK_SIG_WRITE_ACTIONS = ['save','saveOtherBadge','requestComplete','revie
 // 即使簽名有效都永不接受：本地憑證與設定入口只可由本節點自己開。
 const LINK_NEVER_ACTIONS = ['login','apply','logout','changePassword','updateConfig','requestLogRecord','cancelLogRequest','portalLogin','requestPasswordReset','confirmPasswordReset'];
 const USER_EXPORT_FORMAT = 'scoutbadge-users-export';
-const LINK_USERS_HEADERS = ['ymis','name','email','role','password_hash','branch','can_tick','auth_by','auth_date','created_at','last_login','status','allowed_badges','squad','squad_role','force_change_password'];
+const LINK_USERS_HEADERS = ['scout_id','name','email','role','password_hash','branch','can_tick','auth_by','auth_date','created_at','last_login','status','allowed_badges','squad','squad_role','force_change_password'];
 
 function linkProps(){ return PropertiesService.getScriptProperties(); }
 function toHex(bytes){ let out=''; for(let i=0;i<bytes.length;i++) out+=('0'+(bytes[i]&0xFF).toString(16)).slice(-2); return out; }
@@ -1328,15 +1372,15 @@ function linkManager(body){
   const onBehalf=linkActorLabel(body&&body.on_behalf);
   const rawRole=String((body&&body.on_behalf_role)||'');
   const role=(rawRole==='super_admin'||VALID_ROLES.indexOf(rawRole)>=0)?rawRole:'admin';
-  return {ymis:onBehalf,name:'上游同步（'+onBehalf+'）',email:'',role:role,can_tick:true};
+  return {scoutId:onBehalf,name:'上游同步（'+onBehalf+'）',email:'',role:role,can_tick:true};
 }
-// 少數管理 handler（改角色／改權限）會用 getUser(managerYmis) 再核對本地權限；
+// 少數管理 handler（改角色／改權限）會用 getUser(managerScoutId) 再核對本地權限；
 // 上游操作者不一定有本地帳戶，所以只在真的找不到時才退回本機管理員，
 // 而審計紀錄照樣記 'upstream' 及 on_behalf（見 handleSignedRequest）。
 // 注意：resetPassword 直接收已驗證的 manager 物件（含 role），不可退回本機管理員。
-function linkManagerYmisFor(body){
+function linkManagerScoutIdFor(body){
   const onBehalf=linkActorLabel(body&&body.on_behalf);
-  return getUser(onBehalf)?onBehalf:ADMIN_YMIS;
+  return getUser(onBehalf)?onBehalf:ADMIN_SCOUT_ID;
 }
 function handleSignedRequest(action,body){
   if(LINK_NEVER_ACTIONS.indexOf(action)>=0){
@@ -1346,7 +1390,7 @@ function handleSignedRequest(action,body){
     return jsonResponse({success:false,error:'上游簽名請求不接受此操作：'+action});
   }
   const manager=linkManager(body);
-  const actor=manager.ymis;
+  const actor=manager.scoutId;
   if(LINK_SIG_WRITE_ACTIONS.indexOf(action)>=0){
     writeAudit('upstream','link_signed_'+action,actor,safeSheetText(body.on_behalf_name,80)+'（sig 已驗證）');
   }
@@ -1361,7 +1405,7 @@ function handleSignedRequest(action,body){
   if(action==='getMembers') return jsonResponse({success:true,members:getMembers()});
   if(action==='getConfig') return handleGetConfig();
   if(action==='getAllUsers') return jsonResponse({success:true,users:getAllUsers()});
-  if(action==='getOtherBadges') return handleGetOtherBadges(String(body.target_ymis||''));
+  if(action==='getOtherBadges') return handleGetOtherBadges(String(body.targetScoutId||''));
   if(action==='getPendingRequests') return handleGetPendingRequests();
   if(action==='getApplications') return handleGetApplications();
   if(action==='getLogRecords') return handleGetLogRecords(manager);
@@ -1376,16 +1420,16 @@ function handleSignedRequest(action,body){
     return handleRequestComplete(req,actor);
   }
   if(action==='reviewRequest') return handleReviewRequest(body.request_id,body.decision,body.review_note,actor,body.confirmed_date);
-  if(action==='addMember') return handleAddMember(body.ymis,safeSheetText(body.name,60),body.squad||body.branch||'',body.squad_role||'member');
+  if(action==='addMember') return handleAddMember(body.scoutId,safeSheetText(body.name,60),body.squad||body.branch||'',body.squad_role||'member');
   if(action==='addUser') return handleAddUser(body,manager);
   if(action==='bulkAddUsers') return handleBulkAddUsers(body.users||[],manager);
   if(action==='upsertUser') return jsonResponse(linkUpsertUser(body.user||body,actor));
   if(action==='importUsers') return handleSignedImport(body,actor);
   if(action==='importAll') return handleImportAll(body);
-  if(action==='resetPassword') return handleResetPassword(body.target_ymis,manager,body.new_password);
-  if(action==='setPw') return handleSetPw(body.ymis||body.target_ymis||body.sub,body.password_hash||body.new_password);
-  if(action==='setStatus') return handleSetStatus(body.ymis||body.target_ymis||body.sub,body.status);
-  if(action==='updateUserRole'||action==='updatePermissions') return handleUpdateUserRole(body.target_ymis,body.new_role,body.can_tick,linkManagerYmisFor(body),body.allowed_badges,body.squad,body.squad_role);
+  if(action==='resetPassword') return handleResetPassword(body.targetScoutId,manager,body.new_password);
+  if(action==='setPw') return handleSetPw(body.scoutId||body.targetScoutId||body.sub,body.password_hash||body.new_password);
+  if(action==='setStatus') return handleSetStatus(body.scoutId||body.targetScoutId||body.sub,body.status);
+  if(action==='updateUserRole'||action==='updatePermissions') return handleUpdateUserRole(body.targetScoutId,body.new_role,body.can_tick,linkManagerScoutIdFor(body),body.allowed_badges,body.squad,body.squad_role);
   if(action==='saveLogRecord') return handleSaveLogRecord(body.records||(body.record?[body.record]:[]),actor,safeSheetText(body.recorder_name,60));
   if(action==='deleteLogRecord') return handleDeleteLogRecord(body.record_id,actor);
   if(action==='reviewLogRequest') return handleReviewLogRequest(body.request_id,body.decision,body.review_note,manager);
@@ -1397,21 +1441,26 @@ function linkHeaderIndex(sheet){
   const map={};
   if(!sheet||sheet.getLastColumn()<1) return map;
   sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0].forEach(function(h,i){ map[String(h).trim()]=i; });
+  // 下游／本地 Sheet 可能仍然用舊表頭 ymis／YMIS；令 map.scoutId 永遠指到同一個欄
+  if(map.scoutId===undefined){
+    const key=Object.keys(map).find(function(k){ return isScoutIdHeader_(k); });
+    if(key!==undefined) map.scoutId=map[key];
+  }
   return map;
 }
-function linkReadUserRow(ymis){
+function linkReadUserRow(scoutId){
   const sheet=getSheet().getSheetByName('Users');
   if(!sheet) return null;
   const map=linkHeaderIndex(sheet);
   const data=sheet.getDataRange().getValues();
-  const target=normalizeYmis(ymis);
+  const target=normalizeScoutId(scoutId);
   for(let i=1;i<data.length;i++){
-    if(normalizeYmis(map.ymis===undefined?'':data[i][map.ymis])===target) return {row:i+1,map:map,data:data[i]};
+    if(normalizeScoutId(map.scoutId===undefined?'':data[i][map.scoutId])===target) return {row:i+1,map:map,data:data[i]};
   }
   return null;
 }
 function linkCell(row,map,name){ return map[name]===undefined?'':row[map[name]]; }
-// ① 上游本地開戶（角色權限、YMIS／Email 唯一性照舊）→ ② 讀回 password_hash → ③ sig 打下游 upsertUser。
+// ① 上游本地開戶（角色權限、SCOUT ID／Email 唯一性照舊）→ ② 讀回 password_hash → ③ sig 打下游 upsertUser。
 // 兩邊同一個 hash，所以同一個臨時密碼兩邊都啱用；首登仍然強制改密碼。
 function createAccountForDownstream(downstreamId,rawUser,manager){
   const d=getDownstream(downstreamId);
@@ -1420,11 +1469,11 @@ function createAccountForDownstream(downstreamId,rawUser,manager){
   try{ local=JSON.parse(handleAddUser(rawUser||{},manager||{role:'admin',can_tick:true}).getContent()); }
   catch(e){ return {success:false,error:'上游開戶失敗：'+((e&&e.message)||e)}; }
   if(!local||local.success!==true) return {success:false,error:(local&&local.error)||'上游開戶失敗'};
-  const ymis=normalizeYmis(local.ymis||(rawUser&&rawUser.ymis));
-  const rec=linkReadUserRow(ymis);
+  const scoutId=normalizeScoutId(local.scoutId||(rawUser&&rawUser.scoutId));
+  const rec=linkReadUserRow(scoutId);
   if(!rec) return {success:false,error:'上游已開戶但讀不回帳戶，未能同步下游'};
   const mirror={
-    ymis:normalizeYmis(linkCell(rec.data,rec.map,'ymis')),
+    scoutId:normalizeScoutId(linkCell(rec.data,rec.map,'scoutId')),
     name:String(linkCell(rec.data,rec.map,'name')||''),
     email:String(linkCell(rec.data,rec.map,'email')||''),
     role:String(linkCell(rec.data,rec.map,'role')||'member'),
@@ -1435,12 +1484,12 @@ function createAccountForDownstream(downstreamId,rawUser,manager){
     force_change_password:true,
     password_hash:String(linkCell(rec.data,rec.map,'password_hash')||'')
   };
-  const pushed=callDownstream(downstreamId,'upsertUser',{user:mirror,on_behalf:linkActorLabel(manager&&manager.ymis)});
+  const pushed=callDownstream(downstreamId,'upsertUser',{user:mirror,on_behalf:linkActorLabel(manager&&manager.scoutId)});
   if(!pushed||pushed.success!==true){
-    return {success:false,error:'上游已開戶，但下游寫入失敗：'+((pushed&&pushed.error)||'下游無回應'),ymis:mirror.ymis,downstream:normalizeLinkId(downstreamId)};
+    return {success:false,error:'上游已開戶，但下游寫入失敗：'+((pushed&&pushed.error)||'下游無回應'),scoutId:mirror.scoutId,downstream:normalizeLinkId(downstreamId)};
   }
-  writeAudit(linkActorLabel(manager&&manager.ymis),'link_push_user',safeSheetText(mirror.ymis,40),'帳戶已同步至下游 '+normalizeLinkId(downstreamId));
-  return {success:true,ymis:mirror.ymis,name:mirror.name,downstream:normalizeLinkId(downstreamId),message:'上游已開戶並經 sig 同步下游'};
+  writeAudit(linkActorLabel(manager&&manager.scoutId),'link_push_user',safeSheetText(mirror.scoutId,40),'帳戶已同步至下游 '+normalizeLinkId(downstreamId));
+  return {success:true,scoutId:mirror.scoutId,name:mirror.name,downstream:normalizeLinkId(downstreamId),message:'上游已開戶並經 sig 同步下游'};
 }
 
 // ---- 吐 JSON（搬舊數）：匯出含 hash，只寫去私人 Drive 檔，绝不寫入工作表 ----
@@ -1451,10 +1500,10 @@ function collectUsersForExport(){
   const map=linkHeaderIndex(sheet);
   const data=sheet.getDataRange().getValues();
   for(let i=1;i<data.length;i++){
-    const ymis=normalizeYmis(linkCell(data[i],map,'ymis'));
-    if(!ymis||isSuperAdminReserved(ymis)) continue;
+    const scoutId=normalizeScoutId(linkCell(data[i],map,'scoutId'));
+    if(!scoutId||isSuperAdminReserved(scoutId)) continue;
     out.push({
-      ymis:ymis,
+      scoutId:scoutId,
       name:String(linkCell(data[i],map,'name')||''),
       email:String(linkCell(data[i],map,'email')||''),
       role:String(linkCell(data[i],map,'role')||'member'),
@@ -1474,7 +1523,8 @@ function collectUsersForExport(){
 }
 function buildUsersExport(){
   const users=collectUsersForExport();
-  return {format:USER_EXPORT_FORMAT,schema:1,exported_at:now(),node:getLinkNodeId(),count:users.length,users:users};
+  // 匯出檔同時附舊欄位 ymis：未改名嘅舊系統／舊 BADGE 照樣讀得懂（新系統讀 scoutId）
+  return {format:USER_EXPORT_FORMAT,schema:1,exported_at:now(),node:getLinkNodeId(),count:users.length,users:withLegacyScoutIdList_(users)};
 }
 function exportUsersJsonText(){ return JSON.stringify(buildUsersExport(),null,2); }
 function exportUsersJson(){
@@ -1496,22 +1546,22 @@ function exportUsersJson(){
 
 // ---- 匯入：逐個 upsertUser 直插 hash（保留舊密碼）----
 // 鏡像／匯入專用寫入。同時接受 PBKDF2（pbkdf2$...）及舊版 64 位 SHA-256 password_hash，不接受明文密碼；
-// 既有帳戶（同 YMIS，或同 Email 認回同一身份）→ 更新；冇提供 hash 就保留原密碼；冪等。
+// 既有帳戶（同 SCOUT ID，或同 Email 認回同一身份）→ 更新；冇提供 hash 就保留原密碼；冪等。
 function linkUpsertUser(raw,actor){
   raw=raw||{};
   actor=linkActorLabel(actor);
-  const ymis=normalizeYmis(raw.ymis||raw.scout_id);
+  const scoutId=normalizeScoutId(raw.scoutId||raw.scout_id||raw.ymis||raw.YMIS); // 舊匯出檔用 ymis
   const email=String(raw.email||'').trim().substring(0,160);
   const hash=String(raw.password_hash||'').trim().toLowerCase();
-  if(!ymis) return {success:false,ymis:'',error:'缺少 YMIS'};
-  if(isSuperAdminReserved(ymis)) return {success:false,ymis:ymis,error:'此帳號已被保留，不可操作'};
-  if(raw.password!==undefined&&raw.password!==null&&String(raw.password)!=='') return {success:false,ymis:ymis,error:'匯入不可帶明文 password；請只用 password_hash'};
-  if(hash&&!LINK_HASH_RE.test(hash)) return {success:false,ymis:ymis,error:'password_hash 必須是 64 位 SHA-256 hex 或 pbkdf2$ 雜湊格式'};
-  if(!/^\d{10}$/.test(ymis)&&!/^L\d+$/i.test(ymis)) return {success:false,ymis:ymis,error:'YMIS 須為 10 位數字或 L 編號'};
-  if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return {success:false,ymis:ymis,error:'Email 格式不正確'};
+  if(!scoutId) return {success:false,scoutId:'',error:'缺少 SCOUT ID'};
+  if(isSuperAdminReserved(scoutId)) return {success:false,scoutId:scoutId,error:'此帳號已被保留，不可操作'};
+  if(raw.password!==undefined&&raw.password!==null&&String(raw.password)!=='') return {success:false,scoutId:scoutId,error:'匯入不可帶明文 password；請只用 password_hash'};
+  if(hash&&!LINK_HASH_RE.test(hash)) return {success:false,scoutId:scoutId,error:'password_hash 必須是 64 位 SHA-256 hex 或 pbkdf2$ 雜湊格式'};
+  if(!/^\d{10}$/.test(scoutId)&&!/^L\d+$/i.test(scoutId)) return {success:false,scoutId:scoutId,error:'SCOUT ID 須為 10 位數字或 L 編號'};
+  if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return {success:false,scoutId:scoutId,error:'Email 格式不正確'};
   const role=VALID_ROLES.indexOf(String(raw.role||''))>=0?String(raw.role):'member';
   const lock=LockService.getScriptLock();
-  if(!lock.tryLock(20000)) return {success:false,ymis:ymis,error:'系統正處理另一項寫入，請稍後重試'};
+  if(!lock.tryLock(20000)) return {success:false,scoutId:scoutId,error:'系統正處理另一項寫入，請稍後重試'};
   try{
     let sheet=getSheet().getSheetByName('Users');
     if(!sheet){ sheet=getSheet().insertSheet('Users'); sheet.appendRow(LINK_USERS_HEADERS); }
@@ -1519,14 +1569,14 @@ function linkUpsertUser(raw,actor){
     const map=linkHeaderIndex(sheet);
     const data=sheet.getDataRange().getValues();
     let row=-1;
-    for(let i=1;i<data.length;i++){ if(normalizeYmis(linkCell(data[i],map,'ymis'))===ymis){ row=i+1; break; } }
+    for(let i=1;i<data.length;i++){ if(normalizeScoutId(linkCell(data[i],map,'scoutId'))===scoutId){ row=i+1; break; } }
     if(row<0&&email){
       for(let i=1;i<data.length;i++){ if(normalizeEmail(linkCell(data[i],map,'email'))===normalizeEmail(email)){ row=i+1; break; } }
     }
-    if(row<0&&!hash) return {success:false,ymis:ymis,error:'新增帳戶必須帶 password_hash（匯入只接受 hash）'};
-    // YMIS／Email 唯一性：同 YMIS 認回同一身份係更新，撞到其他帳戶就拒。
-    const conflict=uniquenessError(ymis,email,{excludeYmis:ymis,checkRoster:false,checkPending:false});
-    if(conflict) return {success:false,ymis:ymis,error:conflict};
+    if(row<0&&!hash) return {success:false,scoutId:scoutId,error:'新增帳戶必須帶 password_hash（匯入只接受 hash）'};
+    // SCOUT ID／Email 唯一性：同 SCOUT ID 認回同一身份係更新，撞到其他帳戶就拒。
+    const conflict=uniquenessError(scoutId,email,{excludeScoutId:scoutId,checkRoster:false,checkPending:false});
+    if(conflict) return {success:false,scoutId:scoutId,error:conflict};
     const name=safeSheetText(raw.name,100)||(row>0?String(linkCell(data[row-1],map,'name')||''):'');
     const branch=safeSheetText(raw.branch,100);
     const squad=safeSheetText(raw.squad,100);
@@ -1534,9 +1584,9 @@ function linkUpsertUser(raw,actor){
     const canTick=canUserTick(role)&&(raw.can_tick===undefined?role!=='member':linkIsTrue(raw.can_tick));
     const allowed=String(raw.allowed_badges===undefined||raw.allowed_badges===null?'':raw.allowed_badges);
     const force=raw.force_change_password===undefined?(row>0?linkIsTrue(linkCell(data[row-1],map,'force_change_password')):false):linkIsTrue(raw.force_change_password);
-    if(!name) return {success:false,ymis:ymis,error:'姓名不可留空'};
+    if(!name) return {success:false,scoutId:scoutId,error:'姓名不可留空'};
     if(row>0){
-      const setCol=function(colName,val){ if(map[colName]!==undefined) sheet.getRange(row,map[colName]+1).setValue(val); };
+      const setCol=function(colName,val){ const c=headerIndexOf_(Object.keys(map),colName); if(c>=0){ const key=Object.keys(map)[c]; if(map[key]!==undefined) sheet.getRange(row,map[key]+1).setValue(val); } };
       setCol('name',name);
       if(email) setCol('email',email);
       setCol('role',role);
@@ -1547,20 +1597,20 @@ function linkUpsertUser(raw,actor){
       setCol('force_change_password',force);
       if(hash){
         setCol('password_hash',hash);
-        try{ PropertiesService.getScriptProperties().deleteProperty('LOGIN_FAIL:'+ymis); }catch(e){}
+        try{ PropertiesService.getScriptProperties().deleteProperty('LOGIN_FAIL:'+scoutId); }catch(e){}
       }
       if(allowed!=='') setCol('allowed_badges',allowed);
       else if(!String(linkCell(data[row-1],map,'allowed_badges')||'')) setCol('allowed_badges',role==='member'?'':'*');
       setCol('auth_by',actor);
       setCol('auth_date',now());
-      syncRosterRow(ymis,{name:name,email:email,squad:squad});
-      writeAudit(actor,'link_upsert_update',ymis,'上游／匯入更新帳戶'+(hash?'（直插 hash）':'（保留原密碼）'));
-      return {success:true,ymis:ymis,action:'updated',password_kept:!hash};
+      syncRosterRow(scoutId,{name:name,email:email,squad:squad});
+      writeAudit(actor,'link_upsert_update',scoutId,'上游／匯入更新帳戶'+(hash?'（直插 hash）':'（保留原密碼）'));
+      return {success:true,scoutId:scoutId,action:'updated',password_kept:!hash};
     }
     const width=Math.max(sheet.getLastColumn(),1);
     const newRow=new Array(width).fill('');
-    const setNew=function(colName,val){ if(map[colName]!==undefined) newRow[map[colName]]=val; };
-    setNew('ymis',ymis); setNew('name',name); setNew('email',email); setNew('role',role);
+    const setNew=function(colName,val){ const key=headerIndexOf_(Object.keys(map),colName); const idx=key>=0?Object.keys(map)[key]:undefined; if(idx!==undefined) newRow[map[idx]]=val; };
+    setNew('scoutId',scoutId); setNew('name',name); setNew('email',email); setNew('role',role);
     setNew('password_hash',hash); setNew('branch',branch); setNew('squad',squad);
     setNew('can_tick',canTick); setNew('auth_by',actor); setNew('auth_date',now());
     setNew('created_at',String(raw.created_at||'')||now());
@@ -1569,9 +1619,9 @@ function linkUpsertUser(raw,actor){
     setNew('allowed_badges',allowed!==''?allowed:(role==='member'?'':'*'));
     setNew('force_change_password',force);
     sheet.appendRow(newRow);
-    ensureRosterRow(ymis,name,email,squad);
-    writeAudit(actor,'link_upsert_create',ymis,'上游／匯入新增帳戶（直插 hash，保留舊密碼）');
-    return {success:true,ymis:ymis,action:'created',password_kept:false};
+    ensureRosterRow(scoutId,name,email,squad);
+    writeAudit(actor,'link_upsert_create',scoutId,'上游／匯入新增帳戶（直插 hash，保留舊密碼）');
+    return {success:true,scoutId:scoutId,action:'created',password_kept:false};
   } finally { lock.releaseLock(); }
 }
 function handleUpsertUserLink(raw,actor){ return jsonResponse(linkUpsertUser(raw,actor)); }
@@ -1589,10 +1639,10 @@ function importUsersFromText(text,actor){
     const r=linkUpsertUser(list[i],actor);
     if(r&&r.success){ if(r.action==='created') created++; else updated++; }
     else failed++;
-    results.push({ymis:String((list[i]&&list[i].ymis)||''),success:!!(r&&r.success),action:(r&&r.action)||'',error:(r&&r.error)||''});
+    results.push({scoutId:String((list[i]&&(list[i].scoutId||list[i].ymis||list[i].scout_id))||''),success:!!(r&&r.success),action:(r&&r.action)||'',error:(r&&r.error)||''});
   }
   writeAudit(actor,'link_import_users','新增 '+created+'／更新 '+updated,'失敗 '+failed+'（共 '+list.length+' 筆）');
-  return {success:failed===0,count:list.length,created:created,updated:updated,failed:failed,results:results,message:'匯入完成：新增 '+created+'、更新 '+updated+'、失敗 '+failed};
+  return {success:failed===0,count:list.length,created:created,updated:updated,failed:failed,results:withLegacyScoutIdList_(results),message:'匯入完成：新增 '+created+'、更新 '+updated+'、失敗 '+failed};
 }
 function importUsersFromDrive(fileIdOrUrl,actor){
   const input=String(fileIdOrUrl||'').trim();
@@ -1628,7 +1678,7 @@ function handleSignedImport(body,actor){
 
 // ===== API =====
 function doGet(e){
-  const params=(e&&e.parameter)||{};
+  const params=aliasLegacyScoutId_((e&&e.parameter)||{});
   const action=String(params.action||'');
   // GS 版本核對：唯讀、只回版本與初始化標記，不含用戶資料；放在閂口之前，旅系統關閉時仍可核對
   if(action==='ecStatus') return jsonResponse(Object.assign({success:true}, gsVersionInfo_()));
@@ -1645,7 +1695,7 @@ function doGet(e){
     let loadUser=null;
     if(reqToken){ const ly=validateToken(reqToken); if(ly) loadUser=getUser(ly); }
     if(!loadUser && auth.identity && auth.identity.kind==='parent'){
-      loadUser={ymis:null, role:'parent', can_tick:false, children:auth.identity.children};
+      loadUser={scoutId:null, role:'parent', can_tick:false, children:auth.identity.children};
     }
     return handleLoad(loadUser);
   }
@@ -1658,7 +1708,7 @@ function doGet(e){
 function doPost(e){
   try{
     const rawBody=String((e&&e.postData&&e.postData.contents)||'{}');
-    const body=JSON.parse(rawBody||'{}');
+    const body=aliasLegacyScoutId_(JSON.parse(rawBody||'{}'));
     const action=body.action;
 
     // 旅系統：上游簽名（sig）請求優先路由（簽名綁定 action 及原始 body，一律 POST）。
@@ -1679,7 +1729,7 @@ function doPost(e){
     if(action==='setAllowLocalLogin'){
       const manager=getUser(validateToken(body.token));
       if(!manager || (manager.role!=='super_admin' && !canManageRole(manager.role,'group_leader'))) return jsonResponse({success:false,error:'未授權'});
-      setLocalLoginAllowed(body.allow===true||body.allow==='true',manager.ymis);
+      setLocalLoginAllowed(body.allow===true||body.allow==='true',manager.scoutId);
       return jsonResponse({success:true,message:body.allow?'直接入口已開啟':'直接入口已閂（只收 sig）',allow:body.allow});
     }
     if(action==='getAllowLocalLogin'){
@@ -1691,7 +1741,7 @@ function doPost(e){
       return handleLogin(body.login_id,body.password);
     }
     if(action==='logout'){ destroyToken(body.token); return jsonResponse({success:true}); }
-    if(action==='apply') return handleApply(body.ymis,body.name,body.email,body.requested_role||'member',body.branch);
+    if(action==='apply') return handleApply(body.scoutId,body.name,body.email,body.requested_role||'member',body.branch);
     if(action==='requestPasswordReset') return handleRequestPasswordReset(body);
     if(action==='confirmPasswordReset') return handleConfirmPasswordReset(body);
 
@@ -1700,12 +1750,12 @@ function doPost(e){
       if(!s.ok) return jsonResponse({success:false,error:'簽名驗證失敗',code:403});
       const id=s.identity;
       if(id.kind==='parent'){
-        return jsonResponse({success:true,auth_mode:'sig',user:{ymis:'',name:id.email,role:'parent',email:id.email},visible_children:id.children});
+        return jsonResponse({success:true,auth_mode:'sig',user:{scoutId:'',name:id.email,role:'parent',email:id.email},visible_children:id.children});
       }
-      let u=id.kind==='member'?getUser(id.ymis):getUserByEmail(id.email);
+      let u=id.kind==='member'?getUser(id.scoutId):getUserByEmail(id.email);
       if(!u && id.kind==='leader'){
         u = {
-          ymis: id.ymis || id.email,
+          scoutId: id.scoutId || id.email,
           name: id.email,
           email: id.email,
           role: id.role || 'branch_leader',
@@ -1714,9 +1764,9 @@ function doPost(e){
         };
       }
       if(!u) return jsonResponse({success:false,error:'找不到此帳號',code:404});
-      const token=createToken(u.ymis);
+      const token=createToken(u.scoutId);
       if(!token) return jsonResponse({success:false,error:'登入服務暫時無法使用'});
-      return jsonResponse({success:true,auth_mode:'token',token:token,user:u});
+      return jsonResponse({success:true,auth_mode:'token',token:token,user:withLegacyScoutId_(u)});
     }
     if(action==='getRegistrySafe'){
       if(!body.apikey || String(body.apikey)!==getApiKey()) return jsonResponse({success:false,error:'未授權：getRegistrySafe 只接受 API Key',code:403});
@@ -1728,8 +1778,8 @@ function doPost(e){
       if(body.apikey && String(body.apikey) === getApiKey()) allowed = true;
       if(!allowed && auth.identity && auth.identity.kind === 'leader') allowed = true;
       if(!allowed && body.token){
-        const tkYmis = validateToken(body.token);
-        const tkUser = tkYmis ? getUser(tkYmis) : null;
+        const tkScoutId = validateToken(body.token);
+        const tkUser = tkScoutId ? getUser(tkScoutId) : null;
         if(tkUser && getRoleLevel(tkUser.role) >= 40) allowed = true;
       }
       if(!allowed) return jsonResponse({success:false, error:'未授權：需要領袖權限或 API Key', code:403});
@@ -1741,8 +1791,8 @@ function doPost(e){
       if(body.apikey && String(body.apikey) === getApiKey()) allowed = true;
       if(!allowed && auth.identity && auth.identity.kind === 'leader') allowed = true;
       if(!allowed && body.token){
-        const tkYmis = validateToken(body.token);
-        const tkUser = tkYmis ? getUser(tkYmis) : null;
+        const tkScoutId = validateToken(body.token);
+        const tkUser = tkScoutId ? getUser(tkScoutId) : null;
         if(tkUser && getRoleLevel(tkUser.role) >= 40) allowed = true;
       }
       if(!allowed) return jsonResponse({success:false, error:'未授權：需要領袖權限或 API Key', code:403});
@@ -1754,8 +1804,8 @@ function doPost(e){
       if(body.apikey && String(body.apikey) === getApiKey()) allowed = true;
       if(!allowed && auth.identity && auth.identity.kind === 'leader') allowed = true;
       if(!allowed && body.token){
-        const tkYmis = validateToken(body.token);
-        const tkUser = tkYmis ? getUser(tkYmis) : null;
+        const tkScoutId = validateToken(body.token);
+        const tkUser = tkScoutId ? getUser(tkScoutId) : null;
         if(tkUser && getRoleLevel(tkUser.role) >= 40) allowed = true;
       }
       if(!allowed) return jsonResponse({success:false, error:'未授權：需要領袖權限或 API Key', code:403});
@@ -1767,7 +1817,7 @@ function doPost(e){
       if(body.apikey && String(body.apikey) === getApiKey()) allowed = true;
       if(!allowed && auth.identity && auth.identity.kind === 'leader') allowed = true;
       if(!allowed) return jsonResponse({success:false, error:'未授權：需要領袖權限或 API Key', code:403});
-      return handleSetPw(body.ymis || body.sub, body.password_hash || body.new_password);
+      return handleSetPw(body.scoutId || body.targetScoutId || body.sub, body.password_hash || body.new_password);
     }
 
     if(action==='setStatus'){
@@ -1775,7 +1825,7 @@ function doPost(e){
       if(body.apikey && String(body.apikey) === getApiKey()) allowed = true;
       if(!allowed && auth.identity && auth.identity.kind === 'leader') allowed = true;
       if(!allowed) return jsonResponse({success:false, error:'未授權：需要領袖權限或 API Key', code:403});
-      return handleSetStatus(body.ymis || body.sub, body.status);
+      return handleSetStatus(body.scoutId || body.targetScoutId || body.sub, body.status);
     }
 
     if(action==='verifyPw'){
@@ -1783,7 +1833,7 @@ function doPost(e){
       if(body.apikey && String(body.apikey) === getApiKey()) allowed = true;
       if(!allowed && auth.identity && auth.identity.kind === 'leader') allowed = true;
       if(!allowed) return jsonResponse({success:false, error:'未授權：需要領袖權限或 API Key', code:403});
-      return handleVerifyPw(body.ymis || body.sub, body.password_hash || body.password);
+      return handleVerifyPw(body.scoutId || body.targetScoutId || body.sub, body.password_hash || body.password);
     }
 
     if(action==='importAll'){
@@ -1791,8 +1841,8 @@ function doPost(e){
       if(body.apikey && String(body.apikey) === getApiKey()) allowed = true;
       if(!allowed && auth.identity && auth.identity.kind === 'leader') allowed = true;
       if(!allowed && body.token){
-        const tkYmis = validateToken(body.token);
-        const tkUser = tkYmis ? getUser(tkYmis) : null;
+        const tkScoutId = validateToken(body.token);
+        const tkUser = tkScoutId ? getUser(tkScoutId) : null;
         if(tkUser && getRoleLevel(tkUser.role) >= 40) allowed = true;
       }
       if(!allowed) return jsonResponse({success:false, error:'未授權：需要領袖權限或 API Key', code:403});
@@ -1834,28 +1884,28 @@ function doPost(e){
         if(!tk && action!=='addMember') return jsonResponse({success:false,error:'未授權 - 需 API Key 或有效 Token'});
       }
       if(action==='save') return handleSave(body.changes, body.confirmer||'');
-      if(action==='addMember'){ let my=body.token?validateToken(body.token):null; let mgr=my?getUser(my):null; if(!mgr && body.apikey && body.apikey===getApiKey()) mgr={role:'admin'}; if(!mgr || getRoleLevel(mgr.role)<40) return jsonResponse({success:false,error:'只有領袖可以新增成員'}); return handleAddMember(body.ymis,body.name,body.squad||'',body.squad_role||'member'); }
+      if(action==='addMember'){ let my=body.token?validateToken(body.token):null; let mgr=my?getUser(my):null; if(!mgr && body.apikey && body.apikey===getApiKey()) mgr={role:'admin'}; if(!mgr || getRoleLevel(mgr.role)<40) return jsonResponse({success:false,error:'只有領袖可以新增成員'}); return handleAddMember(body.scoutId,body.name,body.squad||'',body.squad_role||'member'); }
       if(action==='addUser'){ let my=body.token?validateToken(body.token):null; let mgr=my?getUser(my):null; if(!mgr && body.apikey && body.apikey===getApiKey()) mgr={role:'admin'}; if(!mgr || getRoleLevel(mgr.role)<40) return jsonResponse({success:false,error:'只有領袖可以新增帳號'}); return handleAddUser(body,mgr); }
       if(action==='bulkAddUsers'){ let my=body.token?validateToken(body.token):null; let mgr=my?getUser(my):null; if(!mgr && body.apikey && body.apikey===getApiKey()) mgr={role:'admin'}; if(!mgr || getRoleLevel(mgr.role)<40) return jsonResponse({success:false,error:'只有領袖可以批量開戶'}); return handleBulkAddUsers(body.users||[],mgr); }
       if(action==='saveOtherBadge') return handleSaveOtherBadge(body.records, body.apikey);
     }
     if(action==='requestComplete'){
-      let ymis=null; if(body.token){ ymis=validateToken(body.token); }
-      if(!ymis && auth.identity && auth.identity.kind!=='parent'){
-        if(auth.identity.kind==='member') ymis=auth.identity.ymis;
+      let scoutId=null; if(body.token){ scoutId=validateToken(body.token); }
+      if(!scoutId && auth.identity && auth.identity.kind!=='parent'){
+        if(auth.identity.kind==='member') scoutId=auth.identity.scoutId;
       }
-      if(!ymis && body.apikey && body.apikey===getApiKey()){ ymis=body.ymis; } // standalone mode
-      if(!ymis) return jsonResponse({success:false,error:'未授權',code:401});
-      return handleRequestComplete(body, ymis);
+      if(!scoutId && body.apikey && body.apikey===getApiKey()){ scoutId=body.scoutId; } // standalone mode
+      if(!scoutId) return jsonResponse({success:false,error:'未授權',code:401});
+      return handleRequestComplete(body, scoutId);
     }
 
-    let ymis=body.token?validateToken(body.token):null;
-    let user=ymis?getUser(ymis):null;
+    let scoutId=body.token?validateToken(body.token):null;
+    let user=scoutId?getUser(scoutId):null;
     if(!user && auth.identity && auth.identity.kind!=='parent'){
-      user=(auth.identity.kind==='member')?getUser(auth.identity.ymis):getUserByEmail(auth.identity.email);
+      user=(auth.identity.kind==='member')?getUser(auth.identity.scoutId):getUserByEmail(auth.identity.email);
       if(!user && auth.identity.kind==='leader'){
         user = {
-          ymis: auth.identity.ymis || auth.identity.email,
+          scoutId: auth.identity.scoutId || auth.identity.email,
           name: auth.identity.email,
           email: auth.identity.email,
           role: auth.identity.role || 'branch_leader',
@@ -1863,7 +1913,7 @@ function doPost(e){
           status: 'active'
         };
       }
-      if(user) ymis=user.ymis;
+      if(user) scoutId=user.scoutId;
     }
     if(!user) return jsonResponse({success:false,error:'Token 無效或過期',code:401});
 
@@ -1873,30 +1923,30 @@ function doPost(e){
     }
     if(action==='getMembers'){ return jsonResponse({success:true,members:getMembers()}); }
     if(action==='getPendingRequests'){ if(getRoleLevel(user.role)<0) return jsonResponse({success:false,error:'權限不足'}); return handleGetPendingRequests(); }
-    if(action==='reviewRequest'){ if(!canUserTick(user.role)) return jsonResponse({success:false,error:'權限不足，需領袖權限'}); return handleReviewRequest(body.request_id, body.decision, body.review_note, ymis, body.confirmed_date); }
-    if(action==='getOtherBadges'){ return handleGetOtherBadges(body.target_ymis||ymis); }
+    if(action==='reviewRequest'){ if(!canUserTick(user.role)) return jsonResponse({success:false,error:'權限不足，需領袖權限'}); return handleReviewRequest(body.request_id, body.decision, body.review_note, scoutId, body.confirmed_date); }
+    if(action==='getOtherBadges'){ return handleGetOtherBadges(body.targetScoutId||scoutId); }
     if(action==='getApplications'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足，需團長/支部領袖'}); return handleGetApplications(); }
     if(action==='reviewApplication'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'}); return handleReviewApplication(body.app_id,body.decision,body.review_note,user,body.temp_password); }
     if(action==='getConfig'){
       return handleGetConfig();
     }
 
-    if(action==='changePassword') return handleChangePassword(ymis,body.old_password,body.new_password,body.token);
-    if(action==='resetPassword'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'}); return handleResetPassword(body.target_ymis,user,body.new_password); }
+    if(action==='changePassword') return handleChangePassword(scoutId,body.old_password,body.new_password,body.token);
+    if(action==='resetPassword'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'}); return handleResetPassword(body.targetScoutId,user,body.new_password); }
     if(action==='addServiceRecord'){
   if(!canUserTick(user.role)) return jsonResponse({success:false,error:'權限不足'});
-  return handleAddServiceRecord(body.record,ymis);
+  return handleAddServiceRecord(body.record,scoutId);
 }
-    if(action==='getServiceRecords'){ return handleGetServiceRecords(body.target_ymis||ymis); }
+    if(action==='getServiceRecords'){ return handleGetServiceRecords(body.targetScoutId||scoutId); }
     if(action==='getAuditLog'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'}); return handleGetAuditLog(); }
     if(action==='getApprovalHistory'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'}); return handleGetApprovalHistory(); }
     if(action==='updateUserRole'){
       if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'});
-      return handleUpdateUserRole(body.target_ymis,body.new_role,body.can_tick,ymis, body.allowed_badges, body.squad, body.squad_role);
+      return handleUpdateUserRole(body.targetScoutId,body.new_role,body.can_tick,scoutId, body.allowed_badges, body.squad, body.squad_role);
     }
     if(action==='updatePermissions'){
       if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'});
-      return handleUpdateUserRole(body.target_ymis,body.new_role||null,body.can_tick,ymis, body.allowed_badges);
+      return handleUpdateUserRole(body.targetScoutId,body.new_role||null,body.can_tick,scoutId, body.allowed_badges);
     }
     if(action==='updateConfig'){
       // allow_member_view_others 可由團長以上設定，其他設定需管理員
@@ -1906,17 +1956,17 @@ function doPost(e){
       }else{
         if(getRoleLevel(user.role)<80) return jsonResponse({success:false,error:'需管理員權限'});
       }
-      return handleUpdateConfig(body.key,body.value,ymis);
+      return handleUpdateConfig(body.key,body.value,scoutId);
     }
     if(action==='deactivateUser'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'}); return handleDeactivateUser(body); }
     if(action==='getLogRecords') return handleGetLogRecords(user);
     if(action==='saveLogRecord'){
       if(!canUserTick(user.role)) return jsonResponse({success:false,error:'權限不足，需領袖權限'});
-      return handleSaveLogRecord(body.records||(body.record?[body.record]:[]), ymis, body.recorder_name||'');
+      return handleSaveLogRecord(body.records||(body.record?[body.record]:[]), scoutId, body.recorder_name||'');
     }
     if(action==='deleteLogRecord'){
       if(!canUserTick(user.role)) return jsonResponse({success:false,error:'權限不足，需領袖權限'});
-      return handleDeleteLogRecord(body.record_id, ymis);
+      return handleDeleteLogRecord(body.record_id, scoutId);
     }
     if(action==='requestLogRecord') return handleRequestLogRecord(body, user);
     if(action==='getLogRequests') return handleGetLogRequests(user);
@@ -1963,7 +2013,7 @@ function handleExportAll(includeHash){
   if(sheet && sheet.getLastRow() > 1){
     const data = sheet.getDataRange().getValues();
     const headers = data[0].map(function(h){ return String(h).trim(); });
-    const ymisCol = headers.indexOf('ymis');
+    const scoutIdCol = scoutIdColumnIndex_(headers);
     const nameCol = headers.indexOf('name');
     const emailCol = headers.indexOf('email');
     const roleCol = headers.indexOf('role');
@@ -1978,10 +2028,10 @@ function handleExportAll(includeHash){
 
     for(let i=1; i<data.length; i++){
       const row = data[i];
-      const ymis = ymisCol >= 0 ? normalizeYmis(row[ymisCol]) : '';
-      if(!ymis || isSuperAdminId(ymis)) continue;
+      const scoutId = scoutIdCol >= 0 ? normalizeScoutId(row[scoutIdCol]) : '';
+      if(!scoutId || isSuperAdminId(scoutId)) continue;
       const u = {
-        ymis: ymis,
+        scoutId: scoutId,
         name: nameCol >= 0 && row[nameCol] !== undefined ? String(row[nameCol]).trim() : '',
         email: emailCol >= 0 && row[emailCol] !== undefined ? String(row[emailCol]).trim() : '',
         role: roleCol >= 0 && row[roleCol] ? String(row[roleCol]).trim() : 'member',
@@ -2038,7 +2088,7 @@ function recordTransferId(transferId){
 function handleUpsertUser(body){
   body = body || {};
   const user = body.user || body;
-  let ymis = normalizeYmis(user.ymis || user.scout_id);
+  let scoutId = normalizeScoutId(user.scoutId || user.scout_id);
   const name = String(user.name || '').trim();
   const email = String(user.email || '').trim();
   const role = String(user.role || 'member').trim();
@@ -2058,21 +2108,21 @@ function handleUpsertUser(body){
     const props = PropertiesService.getScriptProperties();
     const seenTransfers = String(props.getProperty('SEEN_TRANSFER_IDS') || '');
     if(seenTransfers.split(',').indexOf(transferId) >= 0){
-      return jsonResponse({success: true, action: 'skipped', idempotent: true, ymis: ymis});
+      return jsonResponse({success: true, action: 'skipped', idempotent: true, scoutId: scoutId});
     }
   }
 
-  if(!ymis && role !== 'member' && email){
-    ymis = generateLeaderId();
+  if(!scoutId && role !== 'member' && email){
+    scoutId = generateLeaderId();
   }
-  if(!ymis) return jsonResponse({success: false, error: '缺少 YMIS 編號', code: 400});
+  if(!scoutId) return jsonResponse({success: false, error: '缺少 SCOUT ID 編號', code: 400});
 
   const uSheet = getSheet().getSheetByName('Users');
   if(!uSheet) return jsonResponse({success: false, error: '找不到 Users 工作表'});
 
   const data = uSheet.getDataRange().getValues();
   const headers = data[0].map(function(h){ return String(h).trim(); });
-  const ymisCol = headers.indexOf('ymis');
+  const scoutIdCol = scoutIdColumnIndex_(headers);
   const nameCol = headers.indexOf('name');
   const emailCol = headers.indexOf('email');
   const roleCol = headers.indexOf('role');
@@ -2086,11 +2136,11 @@ function handleUpsertUser(body){
   const forcePwCol = headers.indexOf('force_change_password');
 
   let rowIndex = -1;
-  const targetY = normalizeYmis(ymis);
+  const targetY = normalizeScoutId(scoutId);
   const targetE = normalizeEmail(email);
 
   for(let i=1; i<data.length; i++){
-    const rowY = ymisCol >= 0 ? normalizeYmis(data[i][ymisCol]) : '';
+    const rowY = scoutIdCol >= 0 ? normalizeScoutId(data[i][scoutIdCol]) : '';
     const rowE = emailCol >= 0 ? normalizeEmail(data[i][emailCol]) : '';
     if(rowY === targetY){
       rowIndex = i + 1;
@@ -2118,23 +2168,23 @@ function handleUpsertUser(body){
         const force = user.force_change_password === true;
         uSheet.getRange(rowIndex, forcePwCol + 1).setValue(force);
       }
-      try{ PropertiesService.getScriptProperties().deleteProperty('LOGIN_FAIL:'+ymis); }catch(e){}
+      try{ PropertiesService.getScriptProperties().deleteProperty('LOGIN_FAIL:'+scoutId); }catch(e){}
     } else if(password && pwHashCol >= 0){
       uSheet.getRange(rowIndex, pwHashCol + 1).setValue(hashPassword(password));
-      try{ PropertiesService.getScriptProperties().deleteProperty('LOGIN_FAIL:'+ymis); }catch(e){}
+      try{ PropertiesService.getScriptProperties().deleteProperty('LOGIN_FAIL:'+scoutId); }catch(e){}
     }
-    ensureRosterRow(ymis, name, email, squad);
-    syncRosterRow(ymis, {name: name, email: email, squad: squad});
+    ensureRosterRow(scoutId, name, email, squad);
+    syncRosterRow(scoutId, {name: name, email: email, squad: squad});
 
     if(transferId){
       recordTransferId(transferId);
     }
-    return jsonResponse({success: true, action: 'updated', ymis: ymis});
+    return jsonResponse({success: true, action: 'updated', scoutId: scoutId});
   } else {
     const newRow = new Array(headers.length).fill('');
-    function setCell(n, v){ const c = headers.indexOf(n); if(c >= 0) newRow[c] = v; }
-    setCell('ymis', ymis);
-    setCell('name', name || ymis);
+    function setCell(n, v){ const c = headerIndexOf_(headers, n); if(c >= 0) newRow[c] = v; }
+    setCell('scoutId', scoutId);
+    setCell('name', name || scoutId);
     setCell('email', email);
     setCell('role', role);
     setCell('branch', branch || squad);
@@ -2158,32 +2208,32 @@ function handleUpsertUser(body){
     setCell('auth_date', nowStr);
     setCell('created_at', nowStr);
     uSheet.appendRow(newRow);
-    ensureRosterRow(ymis, name, email, squad);
+    ensureRosterRow(scoutId, name, email, squad);
 
     if(transferId){
       recordTransferId(transferId);
     }
-    return jsonResponse({success: true, action: 'created', ymis: ymis});
+    return jsonResponse({success: true, action: 'created', scoutId: scoutId});
   }
 }
 
-function handleSetPw(targetYmis, newPwOrHash){
-  if(!targetYmis || !newPwOrHash) return jsonResponse({success: false, error: '缺少帳號或密碼資料'});
-  const targetY = normalizeYmis(targetYmis);
-  const targetE = normalizeEmail(targetYmis);
+function handleSetPw(targetScoutId, newPwOrHash){
+  if(!targetScoutId || !newPwOrHash) return jsonResponse({success: false, error: '缺少帳號或密碼資料'});
+  const targetY = normalizeScoutId(targetScoutId);
+  const targetE = normalizeEmail(targetScoutId);
 
   const uSheet = getSheet().getSheetByName('Users');
   if(!uSheet) return jsonResponse({success: false, error: '找不到 Users 工作表'});
 
   const data = uSheet.getDataRange().getValues();
   const headers = data[0].map(function(h){ return String(h).trim(); });
-  const ymisCol = headers.indexOf('ymis');
+  const scoutIdCol = scoutIdColumnIndex_(headers);
   const emailCol = headers.indexOf('email');
   const pwHashCol = headers.indexOf('password_hash');
   const forcePwCol = headers.indexOf('force_change_password');
 
   for(let i=1; i<data.length; i++){
-    const rowY = ymisCol >= 0 ? normalizeYmis(data[i][ymisCol]) : '';
+    const rowY = scoutIdCol >= 0 ? normalizeScoutId(data[i][scoutIdCol]) : '';
     const rowE = emailCol >= 0 ? normalizeEmail(data[i][emailCol]) : '';
     if(rowY === targetY || (targetE && rowE === targetE)){
       const s = String(newPwOrHash);
@@ -2197,22 +2247,22 @@ function handleSetPw(targetYmis, newPwOrHash){
   return jsonResponse({success: false, error: '找不到此帳號', code: 404});
 }
 
-function handleSetStatus(targetYmis, newStatus){
-  if(!targetYmis || !newStatus) return jsonResponse({success: false, error: '缺少帳號或狀態資料'});
-  const targetY = normalizeYmis(targetYmis);
-  const targetE = normalizeEmail(targetYmis);
+function handleSetStatus(targetScoutId, newStatus){
+  if(!targetScoutId || !newStatus) return jsonResponse({success: false, error: '缺少帳號或狀態資料'});
+  const targetY = normalizeScoutId(targetScoutId);
+  const targetE = normalizeEmail(targetScoutId);
 
   const uSheet = getSheet().getSheetByName('Users');
   if(!uSheet) return jsonResponse({success: false, error: '找不到 Users 工作表'});
 
   const data = uSheet.getDataRange().getValues();
   const headers = data[0].map(function(h){ return String(h).trim(); });
-  const ymisCol = headers.indexOf('ymis');
+  const scoutIdCol = scoutIdColumnIndex_(headers);
   const emailCol = headers.indexOf('email');
   const statusCol = headers.indexOf('status');
 
   for(let i=1; i<data.length; i++){
-    const rowY = ymisCol >= 0 ? normalizeYmis(data[i][ymisCol]) : '';
+    const rowY = scoutIdCol >= 0 ? normalizeScoutId(data[i][scoutIdCol]) : '';
     const rowE = emailCol >= 0 ? normalizeEmail(data[i][emailCol]) : '';
     if(rowY === targetY || (targetE && rowE === targetE)){
       if(statusCol >= 0) uSheet.getRange(i+1, statusCol+1).setValue(String(newStatus).trim());
@@ -2222,22 +2272,22 @@ function handleSetStatus(targetYmis, newStatus){
   return jsonResponse({success: false, error: '找不到此帳號', code: 404});
 }
 
-function handleVerifyPw(targetYmis, pwOrHash){
-  if(!targetYmis || !pwOrHash) return jsonResponse({success: false, error: '缺少帳號或密碼資料'});
-  const targetY = normalizeYmis(targetYmis);
-  const targetE = normalizeEmail(targetYmis);
+function handleVerifyPw(targetScoutId, pwOrHash){
+  if(!targetScoutId || !pwOrHash) return jsonResponse({success: false, error: '缺少帳號或密碼資料'});
+  const targetY = normalizeScoutId(targetScoutId);
+  const targetE = normalizeEmail(targetScoutId);
 
   const uSheet = getSheet().getSheetByName('Users');
   if(!uSheet) return jsonResponse({success: false, error: '找不到 Users 工作表'});
 
   const data = uSheet.getDataRange().getValues();
   const headers = data[0].map(function(h){ return String(h).trim(); });
-  const ymisCol = headers.indexOf('ymis');
+  const scoutIdCol = scoutIdColumnIndex_(headers);
   const emailCol = headers.indexOf('email');
   const pwHashCol = headers.indexOf('password_hash');
 
   for(let i=1; i<data.length; i++){
-    const rowY = ymisCol >= 0 ? normalizeYmis(data[i][ymisCol]) : '';
+    const rowY = scoutIdCol >= 0 ? normalizeScoutId(data[i][scoutIdCol]) : '';
     const rowE = emailCol >= 0 ? normalizeEmail(data[i][emailCol]) : '';
     if(rowY === targetY || (targetE && rowE === targetE)){
       const currentHash = pwHashCol >= 0 ? String(data[i][pwHashCol] || '').trim() : '';
@@ -2427,37 +2477,37 @@ function handleSuperLogin(loginId,superTicket){
   }
   const token=createToken(SUPER_ADMIN_ID);
   if(!token) return jsonResponse({success:false,error:'登入服務暫時無法使用',central:'callback'});
-  return jsonResponse({success:true,token:token,user:getUser(SUPER_ADMIN_ID),central:'callback'});
+  return jsonResponse({success:true,token:token,user:withLegacyScoutId_(getUser(SUPER_ADMIN_ID)),central:'callback'});
 }
 const LOGIN_LOCK_FAILS = 5;
 const LOGIN_LOCK_MS = 15 * 60 * 1000;
 
-function clearLoginLock_(ymis){
-  const norm = normalizeYmis(ymis);
+function clearLoginLock_(scoutId){
+  const norm = normalizeScoutId(scoutId);
   if(!norm) return;
   try{ PropertiesService.getScriptProperties().deleteProperty('LOGIN_FAIL:' + norm); }catch(e){}
 }
 // 踢走指定用戶所有既有 session（用於領袖重設密碼／電郵重設密碼，不觸碰操作者自己的 session）。
-function destroyUserTokens(ymis){
-  const norm = normalizeYmis(ymis);
+function destroyUserTokens(scoutId){
+  const norm = normalizeScoutId(scoutId);
   if(!norm || isSuperAdminId(norm)) return;
   const sheet = getSheet().getSheetByName('Tokens');
   if(!sheet) return;
   const data = sheet.getDataRange().getValues();
   for(let i = data.length - 1; i >= 1; i--){
-    if(data[i][1] && normalizeYmis(data[i][1]) === norm) sheet.deleteRow(i + 1);
+    if(data[i][1] && normalizeScoutId(data[i][1]) === norm) sheet.deleteRow(i + 1);
   }
 }
 // 用戶自己改密碼後，保留當前 token，踢走所有其他裝置／瀏覽器 session。
-function destroyUserTokensExcept(ymis, keepToken){
-  const norm = normalizeYmis(ymis);
+function destroyUserTokensExcept(scoutId, keepToken){
+  const norm = normalizeScoutId(scoutId);
   if(!norm || isSuperAdminId(norm)) return;
   const keep = String(keepToken || '');
   const sheet = getSheet().getSheetByName('Tokens');
   if(!sheet) return;
   const data = sheet.getDataRange().getValues();
   for(let i = data.length - 1; i >= 1; i--){
-    if(data[i][1] && normalizeYmis(data[i][1]) === norm && String(data[i][0] || '') !== keep){
+    if(data[i][1] && normalizeScoutId(data[i][1]) === norm && String(data[i][0] || '') !== keep){
       sheet.deleteRow(i + 1);
     }
   }
@@ -2465,13 +2515,13 @@ function destroyUserTokensExcept(ymis, keepToken){
 function ensureForceChangeCol(uSheet){
   if(uSheet) setHeaderIfEmpty_(uSheet, FORCE_CHANGE_COL, 'force_change_password');
 }
-function afterPasswordReset_(uSheet, rowNumber, targetYmis){
+function afterPasswordReset_(uSheet, rowNumber, targetScoutId){
   if(uSheet){
     ensureForceChangeCol(uSheet);
     uSheet.getRange(rowNumber, FORCE_CHANGE_COL).setValue(true);
   }
-  clearLoginLock_(targetYmis);
-  destroyUserTokens(targetYmis);
+  clearLoginLock_(targetScoutId);
+  destroyUserTokens(targetScoutId);
 }
 
 function handleLogin(loginId,password){
@@ -2491,9 +2541,9 @@ function handleLogin(loginId,password){
     verifyPassword(password, dummyPasswordHash_());
     return jsonResponse({success:false,error:GENERIC_ERR});
   }
-  const normYmis = normalizeYmis(user.ymis);
+  const normScoutId = normalizeScoutId(user.scoutId);
   const props = PropertiesService.getScriptProperties();
-  const failKey = 'LOGIN_FAIL:' + normYmis;
+  const failKey = 'LOGIN_FAIL:' + normScoutId;
   let failState = {count: 0, lockedUntil: 0};
   try{
     const raw = props.getProperty(failKey);
@@ -2513,8 +2563,8 @@ function handleLogin(loginId,password){
   for(let i=1;i<data.length;i++){
     if(isLegacySuperRow_(data[i])) continue; // 舊版殘留 super_admin 列不可作為登入身分（保留不刪）
     if(!isActiveStatus(data[i][11])) continue;
-    const rowY=normalizeYmis(data[i][0]); const rowE=normalizeEmail(data[i][2]);
-    if(rowY===normYmis || (rowE && rowE===normalizeEmail(user.email)) || rowY===normalizeYmis(loginId)){
+    const rowY=normalizeScoutId(data[i][0]); const rowE=normalizeEmail(data[i][2]);
+    if(rowY===normScoutId || (rowE && rowE===normalizeEmail(user.email)) || rowY===normalizeScoutId(loginId)){
       matchedRow = i;
       storedHash = String(data[i][4]||'').trim();
       break;
@@ -2534,41 +2584,41 @@ function handleLogin(loginId,password){
       currentHash = hashPasswordV2(password);
       try{ sheet.getRange(matchedRow+1, 5).setValue(currentHash); }catch(e){}
     }
-    const token=createToken(user.ymis);
+    const token=createToken(user.scoutId);
     sheet.getRange(matchedRow+1,11).setValue(now());
     // 強制改密：旗標為 TRUE，或密碼仍是預設值（讀取時判斷；不寫入用戶資料）。
     // 預設密碼判斷改為直接比較輸入密碼（上面已驗證成功，兩者等價），唔再額外跑一次 KDF。
     const force=(sheet.getLastColumn()>=FORCE_CHANGE_COL && (data[matchedRow][FORCE_CHANGE_COL-1]===true || String(data[matchedRow][FORCE_CHANGE_COL-1]).toUpperCase()==='TRUE'))
       || isDefaultPasswordHash_(currentHash)
       || String(password)===String(ADMIN_PASS);
-    return jsonResponse({success:true,token:token,user:user,force_change_password:force});
+    return jsonResponse({success:true,token:token,user:withLegacyScoutId_(user),force_change_password:force});
   }
   const nextCount = Number(failState.count || 0) + 1;
   if(nextCount >= LOGIN_LOCK_FAILS){
     const until = nowMs + LOGIN_LOCK_MS;
     try{ props.setProperty(failKey, JSON.stringify({count: nextCount, lockedUntil: until})); }catch(e){}
-    writeAudit(user.ymis, 'login_locked', user.ymis, '連續 ' + nextCount + ' 次密碼錯誤，鎖定 15 分鐘');
+    writeAudit(user.scoutId, 'login_locked', user.scoutId, '連續 ' + nextCount + ' 次密碼錯誤，鎖定 15 分鐘');
     return jsonResponse({success:false,error:'登入失敗次數過多，請於 15 分鐘後再試，或使用「忘記密碼」重設'});
   }
   try{ props.setProperty(failKey, JSON.stringify({count: nextCount, lockedUntil: 0})); }catch(e){}
   return jsonResponse({success:false,error:GENERIC_ERR});
 }
-function handleResetPassword(targetYmis,managerRef,newPassword){
-  if(isSuperAdminId(targetYmis)) return jsonResponse({success:false,error:'此為系統保留帳號，不能重設密碼'});
-  targetYmis=normalizeYmis(targetYmis);
-  if(!targetYmis) return jsonResponse({success:false,error:'請提供 YMIS'});
+function handleResetPassword(targetScoutId,managerRef,newPassword){
+  if(isSuperAdminId(targetScoutId)) return jsonResponse({success:false,error:'此為系統保留帳號，不能重設密碼'});
+  targetScoutId=normalizeScoutId(targetScoutId);
+  if(!targetScoutId) return jsonResponse({success:false,error:'請提供 SCOUT ID'});
   // 只接受由已驗證 session（doPost）或已驗簽上游請求（handleSignedRequest）傳入的 manager 物件（含 role）；
-  // 絕不可單憑自報 ymis 字串反查本地帳號冒充更高權限。
+  // 絕不可單憑自報 scoutId 字串反查本地帳號冒充更高權限。
   const manager=(managerRef && typeof managerRef==='object' && managerRef.role) ? managerRef : null;
   if(!manager || getRoleLevel(manager.role)<40) return jsonResponse({success:false,error:'未授權'});
-  const actorYmis = String(manager.ymis || '');
-  if(actorYmis && normalizeYmis(actorYmis)===targetYmis){
+  const actorScoutId = String(manager.scoutId || '');
+  if(actorScoutId && normalizeScoutId(actorScoutId)===targetScoutId){
     return jsonResponse({success:false,error:'請使用「更改密碼」修改自己的密碼'});
   }
-  const target=getUser(targetYmis) || findUsersAccountByYmis(targetYmis) || findRosterAccountByYmis(targetYmis);
+  const target=getUser(targetScoutId) || findUsersAccountByScoutId(targetScoutId) || findRosterAccountByScoutId(targetScoutId);
   if(!target) return jsonResponse({success:false,error:'找不到成員'});
   const targetRole=target.role||'member';
-  if(targetRole==='super_admin' || isSuperAdminId(target.ymis)){
+  if(targetRole==='super_admin' || isSuperAdminId(target.scoutId)){
     return jsonResponse({success:false,error:'此為系統保留帳號，不能重設密碼'});
   }
   if(!canManageUser(manager, targetRole)){
@@ -2582,47 +2632,47 @@ function handleResetPassword(targetYmis,managerRef,newPassword){
     const data=sh.getDataRange().getValues();
     for(let i=1;i<data.length;i++){
       if(isLegacySuperRow_(data[i])) continue;
-      if(normalizeYmis(data[i][0])===targetYmis){
+      if(normalizeScoutId(data[i][0])===targetScoutId){
         sh.getRange(i+1,5).setValue(hashPasswordV2(temp));
         if(sh.getLastColumn()>=12) sh.getRange(i+1,12).setValue('active');
-        afterPasswordReset_(sh, i+1, targetYmis);
-        writeAudit(actorYmis,'reset_password',targetYmis,'領袖設定新密碼');
+        afterPasswordReset_(sh, i+1, targetScoutId);
+        writeAudit(actorScoutId,'reset_password',targetScoutId,'領袖設定新密碼');
         return jsonResponse({success:true,temp_password:temp,message:'密碼已更新，請親自告知該成員'});
       }
     }
   }
-  const roster=findRosterAccountByYmis(targetYmis);
+  const roster=findRosterAccountByScoutId(targetScoutId);
   if(!roster) return jsonResponse({success:false,error:'找不到成員'});
   const nowStr=now();
   appendUserRow({
-    ymis:targetYmis, name:roster.name, email:roster.email||'', role:'member',
+    scoutId:targetScoutId, name:roster.name, email:roster.email||'', role:'member',
     password_hash:hashPasswordV2(temp), branch:roster.squad||'', can_tick:false,
-    auth_by:sheetActor(actorYmis), auth_date:nowStr, created_at:nowStr, last_login:'',
+    auth_by:sheetActor(actorScoutId), auth_date:nowStr, created_at:nowStr, last_login:'',
     status:'active', allowed_badges:'', squad:roster.squad||'', squad_role:'member',
     force_change_password:true
   });
-  clearLoginLock_(targetYmis);
-  destroyUserTokens(targetYmis);
-  writeAudit(actorYmis,'reset_password',targetYmis,'為成員名單補開登入並設定密碼');
+  clearLoginLock_(targetScoutId);
+  destroyUserTokens(targetScoutId);
+  writeAudit(actorScoutId,'reset_password',targetScoutId,'為成員名單補開登入並設定密碼');
   return jsonResponse({success:true,temp_password:temp,message:'已開登入並設定密碼，請親自告知該成員'});
 }
 function writeAudit(actor,action,target,detail){ const sh=getSheet().getSheetByName('操作紀錄'); if(sh) sh.appendRow([now(),sheetActor(actor),action,target,detail||'']); }
-function handleAddServiceRecord(r,actor){ const sh=getSheet().getSheetByName('服務紀錄'); if(!sh)return jsonResponse({success:false,error:'Sheet not found'}); const id='SRV_'+Date.now(); sh.appendRow([id,r.ymis,r.name||'',r.activity||'',r.date||'',Number(r.hours||0),r.place||'',r.detail||'',sheetActor(actor),'approved',r.note||'']); writeAudit(actor,'add_service',r.ymis,r.activity||''); return jsonResponse({success:true,record_id:id}); }
-function handleGetServiceRecords(ymis){ const sh=getSheet().getSheetByName('服務紀錄'); const out=[]; if(sh){const d=sh.getDataRange().getValues();for(let i=1;i<d.length;i++)if(String(d[i][1])===String(ymis))out.push({id:d[i][0],activity:d[i][3],date:formatDate(d[i][4]),hours:d[i][5],place:d[i][6],detail:d[i][7],status:d[i][9],note:d[i][10]});} return jsonResponse({success:true,records:out,totalHours:out.reduce((a,x)=>a+Number(x.hours||0),0)}); }
-function handleGetApprovalHistory(){ const out=[]; ['Applications','待批完成'].forEach(n=>{const sh=getSheet().getSheetByName(n);if(!sh)return;const d=sh.getDataRange().getValues();for(let i=1;i<d.length;i++){if(n==='Applications' && d[i][6] && d[i][6].toString()!=='pending')out.push({type:'帳戶申請',id:d[i][0],ymis:d[i][1],name:d[i][2],status:d[i][6],reviewer:d[i][8],date:d[i][9]});if(n==='待批完成' && d[i][7] && d[i][7].toString()!=='pending')out.push({type:'進度申請',id:d[i][0],ymis:d[i][1],name:d[i][2],status:d[i][7],reviewer:d[i][9],date:d[i][10],item:d[i][4]});}});return jsonResponse({success:true,records:out}); }
+function handleAddServiceRecord(r,actor){ const sh=getSheet().getSheetByName('服務紀錄'); if(!sh)return jsonResponse({success:false,error:'Sheet not found'}); const id='SRV_'+Date.now(); sh.appendRow([id,r.scoutId,r.name||'',r.activity||'',r.date||'',Number(r.hours||0),r.place||'',r.detail||'',sheetActor(actor),'approved',r.note||'']); writeAudit(actor,'add_service',r.scoutId,r.activity||''); return jsonResponse({success:true,record_id:id}); }
+function handleGetServiceRecords(scoutId){ const sh=getSheet().getSheetByName('服務紀錄'); const out=[]; if(sh){const d=sh.getDataRange().getValues();for(let i=1;i<d.length;i++)if(String(d[i][1])===String(scoutId))out.push({id:d[i][0],activity:d[i][3],date:formatDate(d[i][4]),hours:d[i][5],place:d[i][6],detail:d[i][7],status:d[i][9],note:d[i][10]});} return jsonResponse({success:true,records:out,totalHours:out.reduce((a,x)=>a+Number(x.hours||0),0)}); }
+function handleGetApprovalHistory(){ const out=[]; ['Applications','待批完成'].forEach(n=>{const sh=getSheet().getSheetByName(n);if(!sh)return;const d=sh.getDataRange().getValues();for(let i=1;i<d.length;i++){if(n==='Applications' && d[i][6] && d[i][6].toString()!=='pending')out.push({type:'帳戶申請',id:d[i][0],scoutId:d[i][1],name:d[i][2],status:d[i][6],reviewer:d[i][8],date:d[i][9]});if(n==='待批完成' && d[i][7] && d[i][7].toString()!=='pending')out.push({type:'進度申請',id:d[i][0],scoutId:d[i][1],name:d[i][2],status:d[i][7],reviewer:d[i][9],date:d[i][10],item:d[i][4]});}});return jsonResponse({success:true,records:out}); }
 function handleGetAuditLog(){ const sh=getSheet().getSheetByName('操作紀錄'); const out=[]; if(sh){const d=sh.getDataRange().getValues();for(let i=Math.max(1,d.length-200);i<d.length;i++)out.push(d[i]);} return jsonResponse({success:true,records:out}); }
-function handleChangePassword(ymis,oldP,newP,currentToken){
+function handleChangePassword(scoutId,oldP,newP,currentToken){
   newP = String(newP === undefined || newP === null ? '' : newP);
   oldP = String(oldP === undefined || oldP === null ? '' : oldP);
   if(newP.length<MIN_PASSWORD_LEN) return jsonResponse({success:false,error:'新密碼至少 '+MIN_PASSWORD_LEN+' 位'});
   if(newP.length>32) return jsonResponse({success:false,error:'新密碼不可超過32位'});
   if(newP===oldP) return jsonResponse({success:false,error:'新密碼不可與原密碼相同'});
-  if(isSuperAdminId(ymis)) return jsonResponse({success:false,error:'此帳號不可在此更改密碼'});
-  const targetY = normalizeYmis(ymis);
+  if(isSuperAdminId(scoutId)) return jsonResponse({success:false,error:'此帳號不可在此更改密碼'});
+  const targetY = normalizeScoutId(scoutId);
   const sheet=getSheet().getSheetByName('Users'); const data=sheet.getDataRange().getValues();
   for(let i=1;i<data.length;i++){
     if(isLegacySuperRow_(data[i])) continue;
-    if(normalizeYmis(data[i][0])===targetY && isActiveStatus(data[i][11])){
+    if(normalizeScoutId(data[i][0])===targetY && isActiveStatus(data[i][11])){
       if(verifyPassword(oldP, String(data[i][4]||''))){
         sheet.getRange(i+1,5).setValue(hashPasswordV2(newP));
         ensureForceChangeCol(sheet);
@@ -2640,7 +2690,7 @@ function handleChangePassword(ymis,oldP,newP,currentToken){
 // ======================================================
 // 領袖以登記電郵自助重設密碼（第 2 條路徑；公開入口，嚴格反枚舉與限速）
 // ======================================================
-const PWD_RESET_COLS = {reset_id:0,ymis:1,email:2,code_hash:3,created_ms:4,expires_ms:5,attempts:6,status:7,used_at:8};
+const PWD_RESET_COLS = {reset_id:0,scoutId:1,email:2,code_hash:3,created_ms:4,expires_ms:5,attempts:6,status:7,used_at:8};
 const PWD_RESET_TTL_MS = 15 * 60 * 1000;
 const PWD_RESET_MAX_ATTEMPTS = 5;
 const PWD_RESET_MAX_PER_EMAIL = 3;
@@ -2657,7 +2707,7 @@ function normalizeResetCode_(v){ return String(v===undefined||v===null?'':v).toU
 function validResetEmail_(email){
   return !!email && email.length<=120 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && !/^[=+\-@]/.test(email);
 }
-// 以 YMIS 或登記電郵查找啟用中帳戶（跳過舊版殘留 super_admin 列與系統保留帳號）
+// 以 SCOUT ID 或登記電郵查找啟用中帳戶（跳過舊版殘留 super_admin 列與系統保留帳號）
 function findResetUser_(loginId){
   const v = String(loginId || '').trim();
   if(!v || isSuperAdminId(v)) return null;
@@ -2665,12 +2715,12 @@ function findResetUser_(loginId){
   if(!sh) return null;
   const data = sh.getDataRange().getValues();
   const isEmailInput = v.indexOf('@') >= 0;
-  const normY = isEmailInput ? '' : normalizeYmis(v);
+  const normY = isEmailInput ? '' : normalizeScoutId(v);
   const normE = normalizeResetEmail_(v);
   for(let i = 1; i < data.length; i++){
     if(isLegacySuperRow_(data[i])) continue;
     if(!isActiveStatus(data[i][11])) continue;
-    const y = normalizeYmis(data[i][0]);
+    const y = normalizeScoutId(data[i][0]);
     const em = String(data[i][2] || '').trim();
     const match = isEmailInput
       ? (em.toLowerCase() === normE)
@@ -2678,7 +2728,7 @@ function findResetUser_(loginId){
     if(match){
       return {
         rowIndex: i + 1,
-        ymis: y,
+        scoutId: y,
         email: em,
         role: String(data[i][3] || ''),
         status: String(data[i][11] || ''),
@@ -2688,21 +2738,21 @@ function findResetUser_(loginId){
   }
   return null;
 }
-function findResetUserByYmis_(ymis){
-  return findResetUser_(String(ymis || ''));
+function findResetUserByScoutId_(scoutId){
+  return findResetUser_(String(scoutId || ''));
 }
 function isDeliverableResetEmail_(email){
   const norm = normalizeResetEmail_(email);
   return validResetEmail_(norm) && norm !== normalizeResetEmail_(ADMIN_EMAIL);
 }
-// 限速／查表 key：有可寄信登記電郵就用電郵，否則用輸入本身（加 ymis: 前綴避免撞到電郵格式）
+// 限速／查表 key：有可寄信登記電郵就用電郵，否則用輸入本身（加 scoutId: 前綴避免撞到電郵格式）
 function resolveResetKey_(loginId){
   const u = findResetUser_(loginId);
   if(u && isDeliverableResetEmail_(u.email)) return normalizeResetEmail_(u.email);
   const v = normalizeResetEmail_(loginId);
   if(v.indexOf('@') >= 0) return v;
-  const ny = normalizeYmis(loginId);
-  return 'ymis:' + (ny || v);
+  const ny = normalizeScoutId(loginId);
+  return 'scoutId:' + (ny || v);
 }
 function getPasswordResetSheet(){
   const ss = getSheet();
@@ -2726,6 +2776,8 @@ function getPasswordResetSheet(){
   const lastCol = Math.max(sh.getLastColumn(), 1);
   const existing = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h){ return String(h || '').trim().toLowerCase(); });
   for(let i = 0; i < PWD_RESET_HEADERS.length; i++){
+    // 舊表可能仍然用 ymis／YMIS 做同一欄：唔可以再加一個 scout_id 空欄
+    if(isScoutIdHeader_(PWD_RESET_HEADERS[i]) && existing.some(isScoutIdHeader_)) continue;
     if(existing.indexOf(PWD_RESET_HEADERS[i]) < 0){
       const nextCol = sh.getLastColumn() + 1;
       sh.getRange(1, nextCol).setValue(PWD_RESET_HEADERS[i]);
@@ -2749,7 +2801,7 @@ function passwordResetTable_(){
     rows.push({
       rowIndex: r + 1,
       reset_id: String(d[col.reset_id] || ''),
-      ymis: String(d[col.ymis] || ''),
+      scoutId: String(d[col.scoutId] || ''),
       email: String(d[col.email] || '').toLowerCase(),
       code_hash: String(d[col.code_hash] || ''),
       created_ms: Number(d[col.created_ms] || 0),
@@ -2824,8 +2876,8 @@ function sendPasswordResetEmail_(email, code){
 // 公開重設入口：嚴格忽略任何傳入的 token、role、on_behalf、sig 等自報身分欄位。
 function handleRequestPasswordReset(body){
   body = body || {};
-  const loginId = String(body.login_id || body.identifier || body.email || body.ymis || '').trim().substring(0, 120);
-  if(!loginId) return jsonResponse({success: false, error: '請填寫童軍編號（YMIS）或登記電郵'});
+  const loginId = String(body.login_id || body.identifier || body.email || body.scoutId || '').trim().substring(0, 120);
+  if(!loginId) return jsonResponse({success: false, error: '請填寫童軍編號（SCOUT ID）或登記電郵'});
   if(loginId.indexOf('@') >= 0 && !validResetEmail_(normalizeResetEmail_(loginId))){
     return jsonResponse({success: false, error: '請輸入有效的登記電郵 / Please enter a valid email'});
   }
@@ -2846,7 +2898,7 @@ function handleRequestPasswordReset(body){
     }
     const user = findResetUser_(loginId);
     const email = user ? normalizeResetEmail_(user.email) : '';
-    const eligible = !!user && isDeliverableResetEmail_(email) && user.hasPassword && user.role !== 'super_admin' && !isSuperAdminId(user.ymis);
+    const eligible = !!user && isDeliverableResetEmail_(email) && user.hasPassword && user.role !== 'super_admin' && !isSuperAdminId(user.scoutId);
     const code = eligible ? generateResetCode_() : '';
     const resetId = 'PWR_' + nowMs + '_' + Utilities.getUuid().replace(/-/g, '').substring(0, 8);
     if(!eligible){
@@ -2863,14 +2915,14 @@ function handleRequestPasswordReset(body){
     }catch(e){
       Logger.log('password reset email failed: ' + e);
       try{ linkProps().setProperty(PWD_RESET_MAIL_FLAG, String(nowMs)); }catch(e2){}
-      writeAudit('system', 'password_reset_mail_failed', user.ymis, '重設碼寄信失敗（請在 Apps Script 執行 testPasswordResetMail 授權 MailApp）');
+      writeAudit('system', 'password_reset_mail_failed', user.scoutId, '重設碼寄信失敗（請在 Apps Script 執行 testPasswordResetMail 授權 MailApp）');
     }
     if(sentOk){
       // 工作表只存重設碼的 SHA-256 雜湊，絕不儲存或回傳明文重設碼
-      t.sheet.appendRow([resetId, String(user.ymis), key, sha256Hex(code), nowMs, nowMs + PWD_RESET_TTL_MS, 0, 'pending', '']);
-      writeAudit(user.ymis, 'password_reset_requested', user.ymis, '已發送電郵重設碼（15 分鐘有效）');
+      t.sheet.appendRow([resetId, String(user.scoutId), key, sha256Hex(code), nowMs, nowMs + PWD_RESET_TTL_MS, 0, 'pending', '']);
+      writeAudit(user.scoutId, 'password_reset_requested', user.scoutId, '已發送電郵重設碼（15 分鐘有效）');
     } else {
-      t.sheet.appendRow([resetId, String(user.ymis), key, '', nowMs, nowMs + PWD_RESET_TTL_MS, 0, 'mail_failed', '']);
+      t.sheet.appendRow([resetId, String(user.scoutId), key, '', nowMs, nowMs + PWD_RESET_TTL_MS, 0, 'mail_failed', '']);
     }
     // 無論帳號是否存在或 MailApp 寄信是否成功，一律回傳完全相同的中性訊息
     return jsonResponse({success: true, message: PWD_RESET_NEUTRAL_MSG});
@@ -2881,7 +2933,7 @@ function handleRequestPasswordReset(body){
 // 公開確認重設入口：嚴格忽略任何傳入的 token、role、on_behalf、sig 等自報身分欄位。
 function handleConfirmPasswordReset(body){
   body = body || {};
-  const loginId = String(body.login_id || body.identifier || body.email || body.ymis || '').trim().substring(0, 120);
+  const loginId = String(body.login_id || body.identifier || body.email || body.scoutId || '').trim().substring(0, 120);
   const code = normalizeResetCode_(body.code);
   const newPw = String(body.new_password === undefined || body.new_password === null ? '' : body.new_password);
   const generic = '重設碼不正確或已過期，請重新索取重設碼';
@@ -2919,14 +2971,14 @@ function handleConfirmPasswordReset(body){
       passwordResetSetCell_(t, target, 'attempts', nextAttempts);
       if(nextAttempts >= PWD_RESET_MAX_ATTEMPTS){
         passwordResetSetCell_(t, target, 'status', 'locked');
-        writeAudit('system', 'password_reset_code_locked', target.ymis, '重設碼連續輸錯 ' + nextAttempts + ' 次已作廢');
+        writeAudit('system', 'password_reset_code_locked', target.scoutId, '重設碼連續輸錯 ' + nextAttempts + ' 次已作廢');
       }
       verifyPassword(newPw, dummyPasswordHash_());
       return jsonResponse({success: false, error: generic});
     }
     // 重設碼正確後再次核對帳戶最新狀態（防止期間被停用、改電郵或保留帳號）
-    const u = findResetUserByYmis_(target.ymis);
-    if(!u || !u.hasPassword || u.role === 'super_admin' || isSuperAdminId(u.ymis) || !isDeliverableResetEmail_(u.email) || normalizeResetEmail_(u.email) !== key){
+    const u = findResetUserByScoutId_(target.scoutId);
+    if(!u || !u.hasPassword || u.role === 'super_admin' || isSuperAdminId(u.scoutId) || !isDeliverableResetEmail_(u.email) || normalizeResetEmail_(u.email) !== key){
       passwordResetSetCell_(t, target, 'status', 'void');
       return jsonResponse({success: false, error: generic});
     }
@@ -2938,13 +2990,13 @@ function handleConfirmPasswordReset(body){
     passwordResetSetCell_(t, target, 'used_at', now());
     for(let i = 0; i < t.rows.length; i++){
       const r = t.rows[i];
-      if(r !== target && (r.email === key || r.ymis === target.ymis) && r.status === 'pending'){
+      if(r !== target && (r.email === key || r.scoutId === target.scoutId) && r.status === 'pending'){
         passwordResetSetCell_(t, r, 'status', 'superseded');
       }
     }
-    clearLoginLock_(target.ymis);
-    destroyUserTokens(target.ymis);
-    writeAudit('system', 'password_reset_by_email', target.ymis, '以登記電郵重設碼自助重設密碼（不記錄重設碼／密碼）');
+    clearLoginLock_(target.scoutId);
+    destroyUserTokens(target.scoutId);
+    writeAudit('system', 'password_reset_by_email', target.scoutId, '以登記電郵重設碼自助重設密碼（不記錄重設碼／密碼）');
     return jsonResponse({success: true, message: '密碼已重設，請用新密碼登入'});
   }finally{
     try{ lock.releaseLock(); }catch(e){}
@@ -2960,32 +3012,32 @@ function testPasswordResetMail(){
   try{ linkProps().deleteProperty(PWD_RESET_MAIL_FLAG); }catch(e){}
   return '測試電郵已寄出至 ' + me;
 }
-function handleApply(ymis,name,email,role,branch){
-  ymis=normalizeYmis(ymis); name=safeSheetText(name,100);
+function handleApply(scoutId,name,email,role,branch){
+  scoutId=normalizeScoutId(scoutId); name=safeSheetText(name,100);
   email=String(email||'').trim().substring(0,160); branch=safeSheetText(branch,100);
   role=String(role||'member').trim()||'member';
   if(APPLY_ROLES.indexOf(role)<0) return jsonResponse({success:false,error:'無效的申請角色'});
   if(!name) return jsonResponse({success:false,error:'請填寫姓名'});
   if(role==='member'){
-    if(!/^\d{10}$/.test(ymis)) return jsonResponse({success:false,error:'成員需 10位 YMIS'});
+    if(!/^\d{10}$/.test(scoutId)) return jsonResponse({success:false,error:'成員需 10位 SCOUT ID'});
   }else{
-    // 領袖申請忽略傳入 YMIS，批准時編配內部 L 編號。
-    ymis='';
+    // 領袖申請忽略傳入 SCOUT ID，批准時編配內部 L 編號。
+    scoutId='';
     if(!email) return jsonResponse({success:false,error:'領袖申請必須填寫聯絡電郵'});
   }
   if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return jsonResponse({success:false,error:'Email 格式不正確'});
-  const uniqApply=uniquenessError(ymis,email,{});
+  const uniqApply=uniquenessError(scoutId,email,{});
   if(uniqApply) return jsonResponse({success:false,error:uniqApply});
   const sheet=getSheet().getSheetByName('Applications');
   if(!sheet) return jsonResponse({success:false,error:'Applications 工作表不存在，請先執行 initializeSheets()'});
-  sheet.appendRow(['APP_'+Date.now(),ymis,name,email,role,branch||'','pending',now(),'','','']);
+  sheet.appendRow(['APP_'+Date.now(),scoutId,name,email,role,branch||'','pending',now(),'','','']);
   return jsonResponse({success:true,message:'申請已提交，請等待領袖在前端審批'});
 }
 function handleGetApplications(){
   const sheet=getSheet().getSheetByName('Applications'); const apps=[];
   if(!sheet) return jsonResponse({success:true,applications:apps});
   const data=sheet.getDataRange().getValues();
-  for(let i=1;i<data.length;i++){ if(data[i][6].toString()==='pending'){ apps.push({app_id:data[i][0].toString(),ymis:data[i][1]?data[i][1].toString():'',name:data[i][2].toString(),email:data[i][3]?data[i][3].toString():'',requested_role:(data[i][4]||'member').toString()||'member',branch:data[i][5]?data[i][5].toString():'',applied_at:data[i][7]?formatDate(data[i][7]):''}); } }
+  for(let i=1;i<data.length;i++){ if(data[i][6].toString()==='pending'){ apps.push({app_id:data[i][0].toString(),scoutId:data[i][1]?data[i][1].toString():'',name:data[i][2].toString(),email:data[i][3]?data[i][3].toString():'',requested_role:(data[i][4]||'member').toString()||'member',branch:data[i][5]?data[i][5].toString():'',applied_at:data[i][7]?formatDate(data[i][7]):''}); } }
   return jsonResponse({success:true,applications:apps});
 }
 function handleReviewApplication(appId,decision,note,manager,tempPassword){
@@ -2997,25 +3049,25 @@ function handleReviewApplication(appId,decision,note,manager,tempPassword){
   let rowIndex=-1, appData=null;
   for(let i=1;i<data.length;i++){ if(String(data[i][0])===String(appId)){ rowIndex=i+1; appData=data[i]; break; } }
   if(!appData || String(appData[6])!=='pending') return jsonResponse({success:false,error:'找不到待審批申請'});
-  const reviewerYmis=(manager && manager.ymis)?String(manager.ymis):String(manager||'');
+  const reviewerScoutId=(manager && manager.scoutId)?String(manager.scoutId):String(manager||'');
   if(decision==='rejected'){
     sheet.getRange(rowIndex,7).setValue('rejected');
-    sheet.getRange(rowIndex,9).setValue(sheetActor(reviewerYmis));
+    sheet.getRange(rowIndex,9).setValue(sheetActor(reviewerScoutId));
     sheet.getRange(rowIndex,10).setValue(now());
     sheet.getRange(rowIndex,11).setValue(note||'');
-    writeAudit(reviewerYmis,'reject_application',String(appData[1]),String(appId));
+    writeAudit(reviewerScoutId,'reject_application',String(appData[1]),String(appId));
     return jsonResponse({success:true,message:'已拒絕申請'});
   }
   const requestedRole=String(appData[4]||'member');
   const finalRole=(APPLY_ROLES.indexOf(requestedRole)>=0 && canManageUser(manager,requestedRole))?requestedRole:'member';
-  let ymis=String(appData[1]||'').trim();
+  let scoutId=String(appData[1]||'').trim();
   const appName=String(appData[2]||'');
   const appEmail=String(appData[3]||'').trim();
   const branchVal=safeSheetText(appData[5],100);
-  // 領袖申請即使退回 member 仍須編配 L 編號，避免空 YMIS 卡住批准。
-  if(!ymis){ ymis=generateLeaderId(); }
+  // 領袖申請即使退回 member 仍須編配 L 編號，避免空 SCOUT ID 卡住批准。
+  if(!scoutId){ scoutId=generateLeaderId(); }
   // 批准時：Users 表（含停用）不可重覆；若只在成員名單則掛上登入帳號，不重開另一戶
-  const uniq=uniquenessError(ymis,appEmail,{checkRoster:false, checkPending:true, excludeAppId:appId});
+  const uniq=uniquenessError(scoutId,appEmail,{checkRoster:false, checkPending:true, excludeAppId:appId});
   if(uniq) return jsonResponse({success:false,error:uniq});
   const password=String(tempPassword||generateTemporaryPassword());
   const isLeaderFinal=(finalRole!=='member');
@@ -3030,40 +3082,40 @@ function handleReviewApplication(appId,decision,note,manager,tempPassword){
     if(headers.indexOf(h)<0){ uSheet.getRange(1,headers.length+1).setValue(h); headers.push(h); }
   });
   const row=new Array(headers.length).fill('');
-  function set(n,v){ const c=headers.indexOf(n); if(c>=0) row[c]=v; }
+  function set(n,v){ const c=headerIndexOf_(headers,n); if(c>=0) row[c]=v; }
   const nowStr=now();
-  set('ymis',ymis); set('name',appName); set('email',appEmail); set('role',finalRole);
+  set('scoutId',scoutId); set('name',appName); set('email',appEmail); set('role',finalRole);
   set('password_hash',hashPassword(password)); set('branch',userBranch);
-  set('can_tick',isLeaderFinal); set('auth_by',sheetActor(reviewerYmis)); set('auth_date',nowStr);
+  set('can_tick',isLeaderFinal); set('auth_by',sheetActor(reviewerScoutId)); set('auth_date',nowStr);
   set('created_at',nowStr); set('last_login',''); set('status','active');
   set('allowed_badges',isLeaderFinal?'*':''); set('squad',userSquad); set('squad_role','member');
   set('force_change_password',true);
   uSheet.appendRow(row);
-  ensureRosterRow(ymis,appName,appEmail,userSquad);
+  ensureRosterRow(scoutId,appName,appEmail,userSquad);
   sheet.getRange(rowIndex,7).setValue('approved');
-  sheet.getRange(rowIndex,9).setValue(sheetActor(reviewerYmis));
+  sheet.getRange(rowIndex,9).setValue(sheetActor(reviewerScoutId));
   sheet.getRange(rowIndex,10).setValue(nowStr);
   sheet.getRange(rowIndex,11).setValue(note||'');
-  writeAudit(reviewerYmis,'approve_application',ymis,String(appId)+' → '+finalRole);
-  return jsonResponse({success:true,message:'已批准並建立帳戶',temp_password:password,final_role:finalRole,ymis:ymis});
+  writeAudit(reviewerScoutId,'approve_application',scoutId,String(appId)+' → '+finalRole);
+  return jsonResponse({success:true,message:'已批准並建立帳戶',temp_password:password,final_role:finalRole,scoutId:scoutId});
 }
-function handleUpdateUserRole(targetYmis,newRole,canTick,managerYmis, allowedBadges, squad, squadRole){
-  const manager=getUser(managerYmis);
+function handleUpdateUserRole(targetScoutId,newRole,canTick,managerScoutId, allowedBadges, squad, squadRole){
+  const manager=getUser(managerScoutId);
   if(!manager) return jsonResponse({success:false,error:'找不到管理員'});
   if(manager.role!=='super_admin' && !canManageRole(manager.role,newRole) && manager.role!=='admin') return jsonResponse({success:false,error:'權限不足，你的等級不可設定此角色'});
   if(newRole==='group_leader'){
-    const cur=findActiveGroupLeader(targetYmis);
+    const cur=findActiveGroupLeader(targetScoutId);
     if(cur) return jsonResponse({success:false,error:gslLockMsg(cur.name)});
   }
-  targetYmis=normalizeYmis(targetYmis);
+  targetScoutId=normalizeScoutId(targetScoutId);
   const sheet=getSheet().getSheetByName('Users');
   if(sheet){
     const data=sheet.getDataRange().getValues();
     for(let i=1;i<data.length;i++){
-      if(normalizeYmis(data[i][0])===targetYmis && isActiveStatus(data[i][11])){
+      if(normalizeScoutId(data[i][0])===targetScoutId && isActiveStatus(data[i][11])){
         if(newRole) sheet.getRange(i+1,4).setValue(newRole);
         if(canTick!==undefined && canTick!==null) sheet.getRange(i+1,7).setValue(canTick);
-        sheet.getRange(i+1,8).setValue(sheetActor(managerYmis));
+        sheet.getRange(i+1,8).setValue(sheetActor(managerScoutId));
         sheet.getRange(i+1,9).setValue(now());
         if(sheet.getLastColumn()>=14 && squad!==undefined) sheet.getRange(i+1,14).setValue(squad||'');
         if(sheet.getLastColumn()>=15 && squadRole!==undefined) sheet.getRange(i+1,15).setValue(squadRole||'member');
@@ -3074,31 +3126,31 @@ function handleUpdateUserRole(targetYmis,newRole,canTick,managerYmis, allowedBad
             sheet.getRange(i+1,13).setValue(newRole==='member'?'':'*');
           }
         }
-        if(squad!==undefined) syncRosterRow(targetYmis,{squad:squad||''});
+        if(squad!==undefined) syncRosterRow(targetScoutId,{squad:squad||''});
         return jsonResponse({success:true});
       }
     }
   }
-  const roster=findRosterAccountByYmis(targetYmis);
+  const roster=findRosterAccountByScoutId(targetScoutId);
   if(!roster) return jsonResponse({success:false,error:'找不到用戶'});
   const nowStr=now();
   const finalRole=newRole||'member';
   appendUserRow({
-    ymis:targetYmis, name:roster.name, email:roster.email||'', role:finalRole,
+    scoutId:targetScoutId, name:roster.name, email:roster.email||'', role:finalRole,
     password_hash:'', branch:squad!==undefined?squad:(roster.squad||''),
     can_tick:canTick===true||canTick==='TRUE'||finalRole!=='member',
-    auth_by:sheetActor(managerYmis), auth_date:nowStr, created_at:nowStr, last_login:'',
+    auth_by:sheetActor(managerScoutId), auth_date:nowStr, created_at:nowStr, last_login:'',
     status:'active', allowed_badges:allowedBadges!=null?allowedBadges:(finalRole==='member'?'':'*'),
     squad:squad!==undefined?squad:(roster.squad||''), squad_role:squadRole||'member',
     force_change_password:true
   });
-  if(squad!==undefined) syncRosterRow(targetYmis,{squad:squad||''});
+  if(squad!==undefined) syncRosterRow(targetScoutId,{squad:squad||''});
   return jsonResponse({success:true});
 }
-function handleUpdateConfig(key,value,ymis){
+function handleUpdateConfig(key,value,scoutId){
   const sheet=getSheet().getSheetByName('SystemConfig'); const data=sheet.getDataRange().getValues();
-  for(let i=1;i<data.length;i++){ if(data[i][0]===key){ sheet.getRange(i+1,2).setValue(value); sheet.getRange(i+1,3).setValue(now()); sheet.getRange(i+1,4).setValue(sheetActor(ymis)); return jsonResponse({success:true}); } }
-  sheet.appendRow([key,value,now(),sheetActor(ymis)]); return jsonResponse({success:true});
+  for(let i=1;i<data.length;i++){ if(data[i][0]===key){ sheet.getRange(i+1,2).setValue(value); sheet.getRange(i+1,3).setValue(now()); sheet.getRange(i+1,4).setValue(sheetActor(scoutId)); return jsonResponse({success:true}); } }
+  sheet.appendRow([key,value,now(),sheetActor(scoutId)]); return jsonResponse({success:true});
 }
 function handleGetConfig(){
   const sheet=getSheet().getSheetByName('SystemConfig');
@@ -3116,18 +3168,18 @@ function handleGetConfig(){
 }
 function getMembers(){
   const mSheet=getSheet().getSheetByName('成員名單'); const members=[]; const seen={};
-  if(mSheet){ const data=mSheet.getDataRange().getValues(); for(let i=1;i<data.length;i++){ if(data[i][0]){ const y=normalizeYmis(data[i][0]); if(!y || isSuperAdminId(y)) continue; seen[y]=true; members.push({ymis:y,name:data[i][1]?data[i][1].toString():'',email:data[i][4]?String(data[i][4]):'',squad:data[i][5]?data[i][5].toString():''}); } } }
-  const uSheet=getSheet().getSheetByName('Users'); if(uSheet){ const data=uSheet.getDataRange().getValues(); for(let i=1;i<data.length;i++){ const y=normalizeYmis(data[i][0]); if(isActiveStatus(data[i][11]) && y && !isSuperAdminReserved(y)){ if(!seen[y]){ seen[y]=true; members.push({ymis:y,name:data[i][1]?data[i][1].toString():'',email:data[i][2]?String(data[i][2]):'',squad:data[i][13]?data[i][13].toString():''}); } } } }
+  if(mSheet){ const data=mSheet.getDataRange().getValues(); for(let i=1;i<data.length;i++){ if(data[i][0]){ const y=normalizeScoutId(data[i][0]); if(!y || isSuperAdminId(y)) continue; seen[y]=true; members.push(withLegacyScoutId_({scoutId:y,name:data[i][1]?data[i][1].toString():'',email:data[i][4]?String(data[i][4]):'',squad:data[i][5]?data[i][5].toString():''})); } } }
+  const uSheet=getSheet().getSheetByName('Users'); if(uSheet){ const data=uSheet.getDataRange().getValues(); for(let i=1;i<data.length;i++){ const y=normalizeScoutId(data[i][0]); if(isActiveStatus(data[i][11]) && y && !isSuperAdminReserved(y)){ if(!seen[y]){ seen[y]=true; members.push(withLegacyScoutId_({scoutId:y,name:data[i][1]?data[i][1].toString():'',email:data[i][2]?String(data[i][2]):'',squad:data[i][13]?data[i][13].toString():''})); } } } }
   return members;
 }
 function handleLoad(loadUser){
   const ss=getSheet();
   const pSheet=ss.getSheetByName('進度追蹤'); const progress={};
-  if(pSheet){ const data=pSheet.getDataRange().getValues(); for(let i=1;i<data.length;i++){ const ymis=data[i][0].toString(); if(!ymis) continue; if(!progress[ymis]) progress[ymis]={}; progress[ymis][data[i][1].toString()]={date:data[i][2]?formatDate(data[i][2]):'',confirmer:data[i][4]?data[i][4].toString():''}; } }
+  if(pSheet){ const data=pSheet.getDataRange().getValues(); for(let i=1;i<data.length;i++){ const scoutId=data[i][0].toString(); if(!scoutId) continue; if(!progress[scoutId]) progress[scoutId]={}; progress[scoutId][data[i][1].toString()]={date:data[i][2]?formatDate(data[i][2]):'',confirmer:data[i][4]?data[i][4].toString():''}; } }
   const flat={}; for(const y in progress){ flat[y]={}; for(const k in progress[y]){ flat[y][k]=progress[y][k].date; } }
   let members=getMembers();
   const prSheet=ss.getSheetByName('待批完成'); const pending=[];
-  if(prSheet){ const data=prSheet.getDataRange().getValues(); for(let i=1;i<data.length;i++){ if(data[i][7].toString()==='pending'){ pending.push({request_id:data[i][0].toString(),ymis:data[i][1].toString(),name:data[i][2].toString(),item_id:data[i][3].toString(),item_name:data[i][4].toString(),requested_date:data[i][5]?formatDate(data[i][5]):'',evidence:data[i][6]?data[i][6].toString():'',status:'pending',created_at:data[i][8]?formatDate(data[i][8]):''}); } } }
+  if(prSheet){ const data=prSheet.getDataRange().getValues(); for(let i=1;i<data.length;i++){ if(data[i][7].toString()==='pending'){ pending.push({request_id:data[i][0].toString(),scoutId:data[i][1].toString(),name:data[i][2].toString(),item_id:data[i][3].toString(),item_name:data[i][4].toString(),requested_date:data[i][5]?formatDate(data[i][5]):'',evidence:data[i][6]?data[i][6].toString():'',status:'pending',created_at:data[i][8]?formatDate(data[i][8]):''}); } } }
   const oSheet=ss.getSheetByName('其他獎章'); const other={};
   if(oSheet){ const data=oSheet.getDataRange().getValues(); for(let i=1;i<data.length;i++){ const y=data[i][0].toString(); if(!y) continue; if(!other[y]) other[y]={}; other[y][data[i][1].toString()]={name:data[i][2]?data[i][2].toString():'',date:data[i][3]?formatDate(data[i][3]):'',cert:data[i][4]?data[i][4].toString():''}; } }
   const lSheet=ss.getSheetByName(LOG_SHEET_NAME);
@@ -3139,17 +3191,17 @@ function handleLoad(loadUser){
     parentSet={};
     (loadUser.children||[]).forEach(function(y){ parentSet[String(y)]=true; });
     const inSet=function(y){ return !!parentSet[String(y)]; };
-    members=members.filter(function(m){ return inSet(m.ymis); });
+    members=members.filter(function(m){ return inSet(m.scoutId); });
     for(const y in progress){ if(!inSet(y)) delete progress[y]; }
     for(const y in flat){ if(!inSet(y)) delete flat[y]; }
-    for(let i=pending.length-1;i>=0;i--){ if(!inSet(pending[i].ymis)) pending.splice(i,1); }
+    for(let i=pending.length-1;i>=0;i--){ if(!inSet(pending[i].scoutId)) pending.splice(i,1); }
     for(const y in other){ if(!inSet(y)) delete other[y]; }
   }
   // 未登入（apikey 載入）→ 不回傳待批申報；領袖 → 全部；團員 → 只見自己；家長 → 只見子女
-  const logReqList=(lrSheet && loadUser) ? getLogRequestsList(isParent?null:(isLogReviewer?null:loadUser.ymis), parentSet) : [];
-  const logsViewerYmis=loadUser?(isParent?null:(canUserTick(loadUser.role)?null:loadUser.ymis)):null;
+  const logReqList=(lrSheet && loadUser) ? getLogRequestsList(isParent?null:(isLogReviewer?null:loadUser.scoutId), parentSet) : [];
+  const logsViewerScoutId=loadUser?(isParent?null:(canUserTick(loadUser.role)?null:loadUser.scoutId)):null;
   const gsInfo=gsVersionInfo_();
-  return jsonResponse({success:true,members:members,progress:progress,flatProgress:flat,pendingRequests:pending,otherBadges:other,logs:getLogRecordsList(logsViewerYmis, !!loadUser&&canUserTick(loadUser.role), parentSet),logsSupported:!!lSheet,logRequests:logReqList,logRequestsSupported:!!lrSheet,view_as:isParent?'parent':(loadUser?loadUser.role:'anonymous'),gsVersion:gsInfo.gsVersion,gsReleaseDate:gsInfo.gsReleaseDate,initRequired:gsInfo.initRequired,initializedGsVersion:gsInfo.initializedGsVersion});
+  return jsonResponse({success:true,members:members,progress:progress,flatProgress:flat,pendingRequests:pending,otherBadges:other,logs:getLogRecordsList(logsViewerScoutId, !!loadUser&&canUserTick(loadUser.role), parentSet),logsSupported:!!lSheet,logRequests:logReqList,logRequestsSupported:!!lrSheet,view_as:isParent?'parent':(loadUser?loadUser.role:'anonymous'),gsVersion:gsInfo.gsVersion,gsReleaseDate:gsInfo.gsReleaseDate,initRequired:gsInfo.initRequired,initializedGsVersion:gsInfo.initializedGsVersion});
 }
 function handleSave(changes, confirmer){
   confirmer = sheetActor(confirmer);
@@ -3159,37 +3211,37 @@ function handleSave(changes, confirmer){
     const data=sheet.getDataRange().getValues(); let found=false;
     const cConfirmer = sheetActor(confirmer || c.confirmer || '');
     for(let i=1;i<data.length;i++){
-      if(data[i][0].toString()===c.ymis && data[i][1].toString()===c.itemId){
+      if(data[i][0].toString()===c.scoutId && data[i][1].toString()===c.itemId){
         if(c.uncomplete){ sheet.deleteRow(i+1); } else { sheet.getRange(i+1,3).setValue(c.date); sheet.getRange(i+1,4).setValue(new Date()); sheet.getRange(i+1,5).setValue(cConfirmer); sheet.getRange(i+1,6).setValue(c.note||''); }
         found=true; processed++; break;
       }
     }
     if(!found && !c.uncomplete){
-      sheet.appendRow([c.ymis,c.itemId,c.date,new Date(),cConfirmer,c.note||'']);
+      sheet.appendRow([c.scoutId,c.itemId,c.date,new Date(),cConfirmer,c.note||'']);
       processed++;
     }
   });
   return jsonResponse({success:true,processed:processed});
 }
-function handleAddMember(ymis,name,squad,squadRole){
-  ymis=normalizeYmis(ymis); name=String(name||'').trim(); squad=String(squad||'').trim();
-  if(!/^\d{10}$/.test(ymis)) return jsonResponse({success:false,error:'YMIS 須為 10 位數字'});
+function handleAddMember(scoutId,name,squad,squadRole){
+  scoutId=normalizeScoutId(scoutId); name=String(name||'').trim(); squad=String(squad||'').trim();
+  if(!/^\d{10}$/.test(scoutId)) return jsonResponse({success:false,error:'SCOUT ID 須為 10 位數字'});
   if(!name) return jsonResponse({success:false,error:'請填寫姓名'});
-  const uniqMem=uniquenessError(ymis,'',{});
+  const uniqMem=uniquenessError(scoutId,'',{});
   if(uniqMem) return jsonResponse({success:false,error:uniqMem});
-  ensureRosterRow(ymis,name,'',squad);
+  ensureRosterRow(scoutId,name,'',squad);
   const nowStr=now();
   appendUserRow({
-    ymis:ymis, name:name, email:'', role:'member', password_hash:'',
+    scoutId:scoutId, name:name, email:'', role:'member', password_hash:'',
     branch:squad, can_tick:false, auth_by:'add_member', auth_date:nowStr,
     created_at:nowStr, last_login:'', status:'active', allowed_badges:'',
     squad:squad, squad_role:squadRole||'member', force_change_password:true
   });
-  return jsonResponse({success:true,ymis:ymis});
+  return jsonResponse({success:true,scoutId:scoutId});
 }
 
 function handleAddUser(body,mgr){
-  let ymis=normalizeYmis(body.ymis);
+  let scoutId=normalizeScoutId(body.scoutId);
   const name=(body.name||'').toString().trim();
   const role=(body.role||'member').toString().trim();
   const email=(body.email||'').toString().trim();
@@ -3199,14 +3251,14 @@ function handleAddUser(body,mgr){
   const canTick=body.can_tick===true||body.can_tick==='true'||body.can_tick==='TRUE';
   if(VALID_ROLES.indexOf(role)<0) return jsonResponse({success:false,error:'無效角色：'+role});
   if(!canManageUser(mgr,role)) return jsonResponse({success:false,error:'權限不足，你的等級不可開立此角色'});
-  if(!ymis && role!=='member'){
+  if(!scoutId && role!=='member'){
     if(!email) return jsonResponse({success:false,error:'領袖開戶必須填寫 Email（用作登入帳號）'});
-    ymis=generateLeaderId();
+    scoutId=generateLeaderId();
   }
-  if(!/^(\d{10}|L\d+)$/.test(ymis)) return jsonResponse({success:false,error:'YMIS 須為 10 位數字（領袖可留空，會自動編配）'});
+  if(!/^(\d{10}|L\d+)$/.test(scoutId)) return jsonResponse({success:false,error:'SCOUT ID 須為 10 位數字（領袖可留空，會自動編配）'});
   if(!name) return jsonResponse({success:false,error:'請填寫姓名'});
   if(password && !role) return jsonResponse({success:false,error:'開立帳號需指定 role'});
-  const uniqAdd=uniquenessError(ymis,email,{checkRoster:false});
+  const uniqAdd=uniquenessError(scoutId,email,{checkRoster:false});
   if(uniqAdd) return jsonResponse({success:false,error:uniqAdd});
   if(role==='group_leader'){
     const cur=findActiveGroupLeader('');
@@ -3217,40 +3269,40 @@ function handleAddUser(body,mgr){
   if(!uSheet) return jsonResponse({success:false,error:'找不到 Users 工作表'});
   const row=new Array(uSheet.getLastColumn()).fill('');
   const headers=uSheet.getRange(1,1,1,uSheet.getLastColumn()).getValues()[0].map(h=>String(h).trim());
-  function set(n,v){ const c=headers.indexOf(n); if(c>=0) row[c]=v; }
-  set('ymis',ymis); set('name',name); set('email',(body.email||'').toString().trim());
+  function set(n,v){ const c=headerIndexOf_(headers,n); if(c>=0) row[c]=v; }
+  set('scoutId',scoutId); set('name',name); set('email',(body.email||'').toString().trim());
   set('role',role); set('branch',squad); set('squad',squad); set('squad_role',squadRole);
   set('can_tick',canTick);
-  if(password){ set('password_hash',hashPassword(password)); set('auth_by',sheetActor((mgr&&mgr.ymis)||'bulk_onboard')); set('auth_date',nowStr); set('status','active'); set('allowed_badges', role==='member'?'':'*'); set('force_change_password',true); }
+  if(password){ set('password_hash',hashPassword(password)); set('auth_by',sheetActor((mgr&&mgr.scoutId)||'bulk_onboard')); set('auth_date',nowStr); set('status','active'); set('allowed_badges', role==='member'?'':'*'); set('force_change_password',true); }
   else { set('status','active'); }
   set('created_at',nowStr);
   uSheet.appendRow(row);
-  ensureRosterRow(ymis,name,email,squad);
-  return jsonResponse({success:true,message:'帳號已建立，首次登入必須更改密碼',ymis:ymis});
+  ensureRosterRow(scoutId,name,email,squad);
+  return jsonResponse({success:true,message:'帳號已建立，首次登入必須更改密碼',scoutId:scoutId});
 }
 function handleBulkAddUsers(users,mgr){
   if(!Array.isArray(users) || !users.length) return jsonResponse({success:false,error:'沒有開戶資料',created:0,failed:0,results:[]});
   if(users.length>200) return jsonResponse({success:false,error:'每批最多 200 個帳號',created:0,failed:users.length,results:[]});
   const results=[]; let created=0;
   users.forEach(function(raw){
-    const body=Object.assign({}, raw);
+    const body=aliasLegacyScoutId_(Object.assign({}, raw)); // 每筆都接受舊 ymis
     if(!body.password) body.password=DEFAULT_TEMP_PASSWORD;
     const res=handleAddUser(body,mgr);
     let obj={};
     try{ obj=JSON.parse(res.getContent()); }catch(e){ obj={success:false,error:String(e)}; }
-    if(obj.success){ created++; results.push({success:true,ymis:obj.ymis||body.ymis,name:body.name,email:body.email,role:body.role}); }
-    else results.push({success:false,ymis:body.ymis,name:body.name,email:body.email,role:body.role,error:obj.error||'建立帳號失敗'});
+    if(obj.success){ created++; results.push({success:true,scoutId:obj.scoutId||body.scoutId,name:body.name,email:body.email,role:body.role}); }
+    else results.push({success:false,scoutId:body.scoutId,name:body.name,email:body.email,role:body.role,error:obj.error||'建立帳號失敗'});
   });
-  return jsonResponse({success:true,created:created,failed:users.length-created,results:results});
+  return jsonResponse({success:true,created:created,failed:users.length-created,results:withLegacyScoutIdList_(results)});
 }
 function handleDeactivateUser(body){
-  const ymis=normalizeYmis(body.target_ymis);
-  if(!ymis) return jsonResponse({success:false,error:'請提供 YMIS'});
-  if(isSuperAdminId(ymis)) return jsonResponse({success:false,error:'不能停用系統維護帳號'});
+  const scoutId=normalizeScoutId(body.targetScoutId);
+  if(!scoutId) return jsonResponse({success:false,error:'請提供 SCOUT ID'});
+  if(isSuperAdminId(scoutId)) return jsonResponse({success:false,error:'不能停用系統維護帳號'});
   const manager=getUser(validateToken(body.token));
   if(!manager) return jsonResponse({success:false,error:'未授權'});
-  if(normalizeYmis(manager.ymis)===ymis) return jsonResponse({success:false,error:'不能停用自己'});
-  const target=getUser(ymis) || findUsersAccountByYmis(ymis) || findRosterAccountByYmis(ymis);
+  if(normalizeScoutId(manager.scoutId)===scoutId) return jsonResponse({success:false,error:'不能停用自己'});
+  const target=getUser(scoutId) || findUsersAccountByScoutId(scoutId) || findRosterAccountByScoutId(scoutId);
   if(!target) return jsonResponse({success:false,error:'找不到用戶'});
   const targetRole=target.role||'member';
   if(manager.role!=='super_admin' && !canManageRole(manager.role, targetRole)) return jsonResponse({success:false,error:'權限不足，不能停用該角色'});
@@ -3259,7 +3311,7 @@ function handleDeactivateUser(body){
   if(sheet){
     const data=sheet.getDataRange().getValues();
     for(let i=1;i<data.length;i++){
-      if(normalizeYmis(data[i][0])===ymis && isActiveStatus(data[i][11])){
+      if(normalizeScoutId(data[i][0])===scoutId && isActiveStatus(data[i][11])){
         sheet.getRange(i+1,12).setValue('inactive');
         deactivated=true;
         break;
@@ -3270,28 +3322,28 @@ function handleDeactivateUser(body){
     const tSheet=getSheet().getSheetByName('Tokens');
     if(tSheet){
       const td=tSheet.getDataRange().getValues();
-      for(let j=td.length-1;j>=1;j--){ if(td[j][1] && normalizeYmis(td[j][1])===ymis) tSheet.deleteRow(j+1); }
+      for(let j=td.length-1;j>=1;j--){ if(td[j][1] && normalizeScoutId(td[j][1])===scoutId) tSheet.deleteRow(j+1); }
     }
   }catch(e){}
   try{
     const mSheet=getSheet().getSheetByName('成員名單');
-    if(mSheet){ const md=mSheet.getDataRange().getValues(); for(let k=md.length-1;k>=1;k--){ if(md[k][0] && normalizeYmis(md[k][0])===ymis){ mSheet.deleteRow(k+1); deactivated=true; } } }
+    if(mSheet){ const md=mSheet.getDataRange().getValues(); for(let k=md.length-1;k>=1;k--){ if(md[k][0] && normalizeScoutId(md[k][0])===scoutId){ mSheet.deleteRow(k+1); deactivated=true; } } }
   }catch(e){}
   if(!deactivated) return jsonResponse({success:false,error:'找不到活躍用戶'});
-  writeAudit(manager.ymis,'deactivate_user',ymis,'帳號停用');
+  writeAudit(manager.scoutId,'deactivate_user',scoutId,'帳號停用');
   return jsonResponse({success:true,message:'已停用'});
 }
 
-function handleRequestComplete(body, requesterYmis){
+function handleRequestComplete(body, requesterScoutId){
   const sheet=getSheet().getSheetByName('待批完成'); if(!sheet) return jsonResponse({success:false,error:'Sheet not found'});
   const reqId='REQ_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);
-  const user=getUser(requesterYmis)||{name:body.name||requesterYmis};
-  sheet.appendRow([reqId,requesterYmis,user.name||body.name,body.itemId,body.itemName||body.itemId,body.requested_date||formatDate(new Date()),body.evidence||'','pending',now(),'','','', '']);
+  const user=getUser(requesterScoutId)||{name:body.name||requesterScoutId};
+  sheet.appendRow([reqId,requesterScoutId,user.name||body.name,body.itemId,body.itemName||body.itemId,body.requested_date||formatDate(new Date()),body.evidence||'','pending',now(),'','','', '']);
   return jsonResponse({success:true,request_id:reqId});
 }
 function handleGetPendingRequests(){
   const sheet=getSheet().getSheetByName('待批完成'); const list=[];
-  if(sheet){ const data=sheet.getDataRange().getValues(); for(let i=1;i<data.length;i++){ if(data[i][7].toString()==='pending'){ list.push({request_id:data[i][0].toString(),ymis:data[i][1].toString(),name:data[i][2].toString(),item_id:data[i][3].toString(),item_name:data[i][4].toString(),requested_date:data[i][5]?formatDate(data[i][5]):'',evidence:data[i][6]?data[i][6].toString():'',status:'pending',created_at:data[i][8]?formatDate(data[i][8]):''}); } } }
+  if(sheet){ const data=sheet.getDataRange().getValues(); for(let i=1;i<data.length;i++){ if(data[i][7].toString()==='pending'){ list.push({request_id:data[i][0].toString(),scoutId:data[i][1].toString(),name:data[i][2].toString(),item_id:data[i][3].toString(),item_name:data[i][4].toString(),requested_date:data[i][5]?formatDate(data[i][5]):'',evidence:data[i][6]?data[i][6].toString():'',status:'pending',created_at:data[i][8]?formatDate(data[i][8]):''}); } } }
   return jsonResponse({success:true,requests:list});
 }
 function handleReviewRequest(reqId,decision,note,reviewer,confirmed_date){
@@ -3306,12 +3358,12 @@ function handleReviewRequest(reqId,decision,note,reviewer,confirmed_date){
   }
   return jsonResponse({success:true,message:'已拒絕'});
 }
-function handleGetOtherBadges(ymis){
+function handleGetOtherBadges(scoutId){
   const sheet=getSheet().getSheetByName('其他獎章'); const list=[];
-  if(sheet){ const data=sheet.getDataRange().getValues(); for(let i=1;i<data.length;i++){ if(data[i][0].toString()===ymis){ list.push({id:data[i][1].toString(),name:data[i][2].toString(),date:data[i][3]?formatDate(data[i][3]):'',cert:data[i][4]?data[i][4].toString():''}); } } }
+  if(sheet){ const data=sheet.getDataRange().getValues(); for(let i=1;i<data.length;i++){ if(data[i][0].toString()===scoutId){ list.push({id:data[i][1].toString(),name:data[i][2].toString(),date:data[i][3]?formatDate(data[i][3]):'',cert:data[i][4]?data[i][4].toString():''}); } } }
   return jsonResponse({success:true,other:list});
 }
-function getLogRecordsList(viewerYmis,isReviewer,allowedSet){
+function getLogRecordsList(viewerScoutId,isReviewer,allowedSet){
   const sheet=getSheet().getSheetByName(LOG_SHEET_NAME); const logs=[];
   if(sheet){
     const data=sheet.getDataRange().getValues();
@@ -3320,10 +3372,10 @@ function getLogRecordsList(viewerYmis,isReviewer,allowedSet){
       // allowedSet 將家長讀取範圍限制為本團子女聯集。
       if(allowedSet && !allowedSet[String(data[i][2])]) continue;
       // 非領袖（團員）只可讀自己的履歷；領袖／無登入（apikey 載入）讀全部
-      if(!isReviewer && viewerYmis && String(data[i][2]||'')!==String(viewerYmis)) continue;
+      if(!isReviewer && viewerScoutId && String(data[i][2]||'')!==String(viewerScoutId)) continue;
       logs.push({
         record_id:String(data[i][0]), type:String(data[i][1]||'activity'),
-        ymis:String(data[i][2]||''), name:String(data[i][3]||''),
+        scoutId:String(data[i][2]||''), name:String(data[i][3]||''),
         date:data[i][4]?formatDate(data[i][4]):'', title:String(data[i][5]||''),
         role:String(data[i][6]||''), hours:String(data[i][7]||''),
         cert_no:String(data[i][8]||''), detail:String(data[i][9]||''),
@@ -3337,13 +3389,13 @@ function getLogRecordsList(viewerYmis,isReviewer,allowedSet){
 function handleGetLogRecords(user){
   if(!getSheet().getSheetByName(LOG_SHEET_NAME)) return jsonResponse({success:false,error:'\u300c'+LOG_SHEET_NAME+'\u300d工作表不存在：請在 Apps Script 執行 initializeSheets() 補建'});
   const isReviewer=!user || canUserTick(user.role);
-  return jsonResponse({success:true,logs:getLogRecordsList(user&&!isReviewer?user.ymis:null, isReviewer)});
+  return jsonResponse({success:true,logs:getLogRecordsList(user&&!isReviewer?user.scoutId:null, isReviewer)});
 }
 function sanitizeLogRecord(r){
   r=r||{};
   return {
     type: LOG_TYPES.indexOf(r.type)>=0 ? r.type : 'activity',
-    ymis: String(r.ymis||'').trim().substring(0,20),
+    scoutId: String(r.scoutId||'').trim().substring(0,20),
     name: safeSheetText(r.name,60),
     date: String(r.date||'').substring(0,20),
     title: safeSheetText(r.title,120),
@@ -3353,7 +3405,7 @@ function sanitizeLogRecord(r){
     detail: safeSheetText(r.detail,500)
   };
 }
-function handleSaveLogRecord(records, recorderYmis, recorderName){
+function handleSaveLogRecord(records, recorderScoutId, recorderName){
   const sheet=getSheet().getSheetByName(LOG_SHEET_NAME);
   if(!sheet) return jsonResponse({success:false,error:'\u300c'+LOG_SHEET_NAME+'\u300d工作表不存在：請在 Apps Script 執行 initializeSheets() 補建'});
   if(!Array.isArray(records)||records.length===0) return jsonResponse({success:false,error:'沒有可儲存的紀錄'});
@@ -3361,30 +3413,30 @@ function handleSaveLogRecord(records, recorderYmis, recorderName){
   const results=[]; let processed=0;
   records.forEach(function(r){
     const rec=sanitizeLogRecord(r);
-    if(!rec.ymis||!rec.title||!rec.date){ results.push({success:false,ymis:rec.ymis,title:rec.title,error:'YMIS、名稱及日期必填'}); return; }
+    if(!rec.scoutId||!rec.title||!rec.date){ results.push({success:false,scoutId:rec.scoutId,title:rec.title,error:'SCOUT ID、名稱及日期必填'}); return; }
     const rid=String((r&&r.record_id)||'');
     if(rid){
       const data=sheet.getDataRange().getValues();
       for(let i=1;i<data.length;i++){
         if(String(data[i][0])===rid){
           // 更新第 2–13 欄，共 12 欄；須與 setValues 長度一致。
-          sheet.getRange(i+1,2,1,12).setValues([[rec.type,rec.ymis,rec.name,rec.date,rec.title,rec.role,rec.hours,rec.cert_no,rec.detail,sheet.getRange(i+1,11).getValue()||recorderName||recorderYmis,String(data[i][11]||''),now()]]);
+          sheet.getRange(i+1,2,1,12).setValues([[rec.type,rec.scoutId,rec.name,rec.date,rec.title,rec.role,rec.hours,rec.cert_no,rec.detail,sheet.getRange(i+1,11).getValue()||recorderName||recorderScoutId,String(data[i][11]||''),now()]]);
           results.push({success:true,record_id:rid}); processed++;
-          writeAudit(recorderYmis,'update_log',rec.ymis,rec.type+': '+rec.title+' '+rec.date);
+          writeAudit(recorderScoutId,'update_log',rec.scoutId,rec.type+': '+rec.title+' '+rec.date);
           return;
         }
       }
       results.push({success:false,record_id:rid,error:'找不到紀錄'}); return;
     }
     const newId='LOG_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);
-    sheet.appendRow([newId,rec.type,rec.ymis,rec.name,rec.date,rec.title,rec.role,rec.hours,rec.cert_no,rec.detail,recorderName||recorderYmis,now(),'']);
+    sheet.appendRow([newId,rec.type,rec.scoutId,rec.name,rec.date,rec.title,rec.role,rec.hours,rec.cert_no,rec.detail,recorderName||recorderScoutId,now(),'']);
     results.push({success:true,record_id:newId}); processed++;
-    writeAudit(recorderYmis,'add_log',rec.ymis,rec.type+': '+rec.title+' '+rec.date);
+    writeAudit(recorderScoutId,'add_log',rec.scoutId,rec.type+': '+rec.title+' '+rec.date);
   });
   const failed=results.filter(function(x){return !x.success;}).length;
   return jsonResponse({success:(results.length>0&&failed===0),processed:processed,results:results,message:processed+' 筆已儲存'+(failed?'，'+failed+' 筆失敗':'')});
 }
-function handleDeleteLogRecord(recordId, recorderYmis){
+function handleDeleteLogRecord(recordId, recorderScoutId){
   const sheet=getSheet().getSheetByName(LOG_SHEET_NAME);
   if(!sheet) return jsonResponse({success:false,error:'\u300c'+LOG_SHEET_NAME+'\u300d工作表不存在：請在 Apps Script 執行 initializeSheets() 補建'});
   recordId=String(recordId||'');
@@ -3395,7 +3447,7 @@ function handleDeleteLogRecord(recordId, recorderYmis){
       const label=String(data[i][1]||'')+': '+String(data[i][5]||'')+' '+String(data[i][4]||'');
       const target=String(data[i][2]||'');
       sheet.deleteRow(i+1);
-      writeAudit(recorderYmis,'delete_log',target,label);
+      writeAudit(recorderScoutId,'delete_log',target,label);
       return jsonResponse({success:true,message:'已刪除紀錄'});
     }
   }
@@ -3407,24 +3459,24 @@ function handleSaveOtherBadge(records){
   let c=0;
   records.forEach(function(r){
     const data=sheet.getDataRange().getValues(); let found=false;
-    for(let i=1;i<data.length;i++){ if(data[i][0].toString()===r.ymis && data[i][1].toString()===r.badgeId){ sheet.getRange(i+1,3).setValue(r.date); sheet.getRange(i+1,4).setValue(r.cert||''); sheet.getRange(i+1,5).setValue(r.note||''); sheet.getRange(i+1,6).setValue(new Date()); found=true; c++; break; } }
-    if(!found){ sheet.appendRow([r.ymis,r.badgeId,r.name||r.badgeId,r.date,r.cert||'',r.note||'',new Date()]); c++; }
+    for(let i=1;i<data.length;i++){ if(data[i][0].toString()===r.scoutId && data[i][1].toString()===r.badgeId){ sheet.getRange(i+1,3).setValue(r.date); sheet.getRange(i+1,4).setValue(r.cert||''); sheet.getRange(i+1,5).setValue(r.note||''); sheet.getRange(i+1,6).setValue(new Date()); found=true; c++; break; } }
+    if(!found){ sheet.appendRow([r.scoutId,r.badgeId,r.name||r.badgeId,r.date,r.cert||'',r.note||'',new Date()]); c++; }
   });
   return jsonResponse({success:true,processed:c});
 }
 
-function getLogRequestsList(onlyYmis,allowedSet){
+function getLogRequestsList(onlyScoutId,allowedSet){
   const sheet=getSheet().getSheetByName(LOG_REQ_SHEET_NAME); const list=[];
   if(sheet){
     const data=sheet.getDataRange().getValues();
     for(let i=1;i<data.length;i++){
       if(!data[i][0] || String(data[i][12])!=='pending') continue;
       if(allowedSet && !allowedSet[String(data[i][4])]) continue;
-      if(onlyYmis!==null && onlyYmis!==undefined && onlyYmis!=='' && String(data[i][4])!==String(onlyYmis)) continue;
+      if(onlyScoutId!==null && onlyScoutId!==undefined && onlyScoutId!=='' && String(data[i][4])!==String(onlyScoutId)) continue;
       list.push({
         request_id:String(data[i][0]), kind:String(data[i][1]||'new'),
         target_record_id:String(data[i][2]||''), type:String(data[i][3]||'activity'),
-        ymis:String(data[i][4]||''), name:String(data[i][5]||''),
+        scoutId:String(data[i][4]||''), name:String(data[i][5]||''),
         date:data[i][6]?formatDate(data[i][6]):'', title:String(data[i][7]||''),
         role:String(data[i][8]||''), hours:String(data[i][9]||''),
         cert_no:String(data[i][10]||''), detail:String(data[i][11]||''),
@@ -3438,8 +3490,8 @@ function handleRequestLogRecord(body, user){
   const sheet=getSheet().getSheetByName(LOG_REQ_SHEET_NAME);
   if(!sheet) return jsonResponse({success:false,error:'「'+LOG_REQ_SHEET_NAME+'」工作表不存在：請在 Apps Script 執行 initializeSheets() 補建'});
   const rec=sanitizeLogRecord(body.record||{});
-  // 只能為自己申報：ymis／姓名一律以登入者為準，不接受偽冒他人
-  rec.ymis=String(user.ymis); rec.name=safeSheetText(user.name||rec.name,60);
+  // 只能為自己申報：scoutId／姓名一律以登入者為準，不接受偽冒他人
+  rec.scoutId=String(user.scoutId); rec.name=safeSheetText(user.name||rec.name,60);
   if(!rec.title||!rec.date) return jsonResponse({success:false,error:'名稱及日期必填'});
   const kind=body.kind==='edit'?'edit':'new';
   let targetId='';
@@ -3451,7 +3503,7 @@ function handleRequestLogRecord(body, user){
     const ld=lSheet.getDataRange().getValues(); let found=null;
     for(let i=1;i<ld.length;i++){ if(String(ld[i][0])===targetId){ found=ld[i]; break; } }
     if(!found) return jsonResponse({success:false,error:'找不到原紀錄，可能已被刪除，請重新載入'});
-    if(String(found[2])!==String(user.ymis)) return jsonResponse({success:false,error:'只可申請修改自己的紀錄'});
+    if(String(found[2])!==String(user.scoutId)) return jsonResponse({success:false,error:'只可申請修改自己的紀錄'});
     // 修改申報不可變更原紀錄類型。
     if(LOG_TYPES.indexOf(String(found[1]))>=0) rec.type=String(found[1]);
     // 同一紀錄同時只可有一個待批修改申報。
@@ -3459,14 +3511,14 @@ function handleRequestLogRecord(body, user){
     for(let i=1;i<rd.length;i++){ if(String(rd[i][2])===targetId && String(rd[i][12])==='pending') return jsonResponse({success:false,error:'此紀錄已有待批修改申報，請等待領袖審批或先取消'}); }
   }
   const reqId='LREQ_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);
-  sheet.appendRow([reqId,kind,targetId,rec.type,rec.ymis,rec.name,rec.date,rec.title,rec.role,rec.hours,rec.cert_no,rec.detail,'pending',now(),'','','']);
-  writeAudit(user.ymis, kind==='edit'?'request_log_edit':'request_log_new', rec.ymis, rec.type+': '+rec.title+' '+rec.date+(targetId?'（原紀錄 '+targetId+'）':''));
+  sheet.appendRow([reqId,kind,targetId,rec.type,rec.scoutId,rec.name,rec.date,rec.title,rec.role,rec.hours,rec.cert_no,rec.detail,'pending',now(),'','','']);
+  writeAudit(user.scoutId, kind==='edit'?'request_log_edit':'request_log_new', rec.scoutId, rec.type+': '+rec.title+' '+rec.date+(targetId?'（原紀錄 '+targetId+'）':''));
   return jsonResponse({success:true,request_id:reqId,message:'申報已提交，待領袖審批'});
 }
 function handleGetLogRequests(user){
   if(!getSheet().getSheetByName(LOG_REQ_SHEET_NAME)) return jsonResponse({success:false,error:'「'+LOG_REQ_SHEET_NAME+'」工作表不存在：請在 Apps Script 執行 initializeSheets() 補建'});
   const isReviewer=canUserTick(user.role); // 與進度審批一致：領袖角色即可
-  return jsonResponse({success:true,requests:getLogRequestsList(isReviewer?null:user.ymis)});
+  return jsonResponse({success:true,requests:getLogRequestsList(isReviewer?null:user.scoutId)});
 }
 function handleReviewLogRequest(requestId, decision, note, reviewer){
   if(decision!=='approved' && decision!=='rejected') return jsonResponse({success:false,error:'無效決定'});
@@ -3477,13 +3529,13 @@ function handleReviewLogRequest(requestId, decision, note, reviewer){
   if(!row || String(row[12])!=='pending') return jsonResponse({success:false,error:'找不到待批申報'});
   const kind=String(row[1]||'new');
   const rec={
-    type:String(row[3]||'activity'), ymis:String(row[4]||''), name:String(row[5]||''),
+    type:String(row[3]||'activity'), scoutId:String(row[4]||''), name:String(row[5]||''),
     date:row[6]?formatDate(row[6]):'', title:String(row[7]||''), role:String(row[8]||''),
     hours:String(row[9]||''), cert_no:String(row[10]||''), detail:String(row[11]||'')
   };
   if(decision==='rejected'){
-    sheet.getRange(rowIndex,13).setValue('rejected'); sheet.getRange(rowIndex,15).setValue(sheetActor(reviewer.ymis)); sheet.getRange(rowIndex,16).setValue(now()); sheet.getRange(rowIndex,17).setValue(note||'');
-    writeAudit(reviewer.ymis, kind==='edit'?'reject_log_edit':'reject_log_new', rec.ymis, rec.type+': '+rec.title+' '+rec.date);
+    sheet.getRange(rowIndex,13).setValue('rejected'); sheet.getRange(rowIndex,15).setValue(sheetActor(reviewer.scoutId)); sheet.getRange(rowIndex,16).setValue(now()); sheet.getRange(rowIndex,17).setValue(note||'');
+    writeAudit(reviewer.scoutId, kind==='edit'?'reject_log_edit':'reject_log_new', rec.scoutId, rec.type+': '+rec.title+' '+rec.date);
     return jsonResponse({success:true,message:'已拒絕申報'});
   }
   const lSheet=getSheet().getSheetByName(LOG_SHEET_NAME);
@@ -3496,16 +3548,16 @@ function handleReviewLogRequest(requestId, decision, note, reviewer){
     for(let i=1;i<ld.length;i++){ if(String(ld[i][0])===targetId){ li=i; break; } }
     if(li<0) return jsonResponse({success:false,error:'找不到原紀錄（可能已被刪除），無法批准修改'});
     recorder=sheetActor(String(ld[li][10]||''));
-    lSheet.getRange(li+1,2,1,12).setValues([[rec.type,rec.ymis,rec.name,rec.date,rec.title,rec.role,rec.hours,rec.cert_no,rec.detail,recorder,String(ld[li][11]||''),now()]]);
+    lSheet.getRange(li+1,2,1,12).setValues([[rec.type,rec.scoutId,rec.name,rec.date,rec.title,rec.role,rec.hours,rec.cert_no,rec.detail,recorder,String(ld[li][11]||''),now()]]);
     recordId=targetId;
   }else{
     recordId='LOG_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);
     recorder=rec.name+'（自行申報 / self-reported）';
-    lSheet.appendRow([recordId,rec.type,rec.ymis,rec.name,rec.date,rec.title,rec.role,rec.hours,rec.cert_no,rec.detail,sheetActor(recorder),now(),'']);
+    lSheet.appendRow([recordId,rec.type,rec.scoutId,rec.name,rec.date,rec.title,rec.role,rec.hours,rec.cert_no,rec.detail,sheetActor(recorder),now(),'']);
   }
-  sheet.getRange(rowIndex,13).setValue('approved'); sheet.getRange(rowIndex,15).setValue(sheetActor(reviewer.ymis)); sheet.getRange(rowIndex,16).setValue(now()); sheet.getRange(rowIndex,17).setValue(note||'');
-  writeAudit(reviewer.ymis, kind==='edit'?'approve_log_edit':'approve_log_new', rec.ymis, rec.type+': '+rec.title+' '+rec.date+'（'+recordId+'）');
-  return jsonResponse({success:true,message:kind==='edit'?'已批准修改並更新紀錄':'已批准並寫入活動履歷',record_id:recordId,record:{record_id:recordId,type:rec.type,ymis:rec.ymis,name:rec.name,date:rec.date,title:rec.title,role:rec.role,hours:rec.hours,cert_no:rec.cert_no,detail:rec.detail,recorder:recorder}});
+  sheet.getRange(rowIndex,13).setValue('approved'); sheet.getRange(rowIndex,15).setValue(sheetActor(reviewer.scoutId)); sheet.getRange(rowIndex,16).setValue(now()); sheet.getRange(rowIndex,17).setValue(note||'');
+  writeAudit(reviewer.scoutId, kind==='edit'?'approve_log_edit':'approve_log_new', rec.scoutId, rec.type+': '+rec.title+' '+rec.date+'（'+recordId+'）');
+  return jsonResponse({success:true,message:kind==='edit'?'已批准修改並更新紀錄':'已批准並寫入活動履歷',record_id:recordId,record:{record_id:recordId,type:rec.type,scoutId:rec.scoutId,name:rec.name,date:rec.date,title:rec.title,role:rec.role,hours:rec.hours,cert_no:rec.cert_no,detail:rec.detail,recorder:recorder}});
 }
 function handleCancelLogRequest(requestId, user){
   const sheet=getSheet().getSheetByName(LOG_REQ_SHEET_NAME);
@@ -3517,10 +3569,10 @@ function handleCancelLogRequest(requestId, user){
     if(String(data[i][0])===requestId){
       if(String(data[i][12])!=='pending') return jsonResponse({success:false,error:'此申報已被審批，不能取消'});
       const isReviewer=canUserTick(user.role); // 與進度審批一致：領袖角色即可
-      if(!isReviewer && String(data[i][4])!==String(user.ymis)) return jsonResponse({success:false,error:'只可取消自己的申報'});
+      if(!isReviewer && String(data[i][4])!==String(user.scoutId)) return jsonResponse({success:false,error:'只可取消自己的申報'});
       const label=String(data[i][3]||'')+': '+String(data[i][7]||'')+' '+String(data[i][6]||'');
       sheet.deleteRow(i+1);
-      writeAudit(user.ymis,'cancel_log_request',String(data[i][4]||''),label);
+      writeAudit(user.scoutId,'cancel_log_request',String(data[i][4]||''),label);
       return jsonResponse({success:true,message:'已取消申報'});
     }
   }
@@ -3579,7 +3631,7 @@ function linkSummarizeResults(results,limit){
   const bad=(results||[]).filter(function(r){ return !r.success; });
   if(!bad.length) return '';
   return '\n\n首 '+Math.min(bad.length,limit||8)+' 筆失敗：\n'+bad.slice(0,limit||8).map(function(r){
-    return '・'+String(r.ymis||'?')+'：'+String(r.error||'');
+    return '・'+String(r.scoutId||'?')+'：'+String(r.error||'');
   }).join('\n');
 }
 function menuExportUsersJson(){
@@ -3627,12 +3679,12 @@ function menuInitializeSheets(){
   return r;
 }
 function menuForceResetUserPassword(){
-  const ymis=linkPrompt('重設帳號密碼（救援）1/2','要重設的 YMIS（10 位數字）或已登記電郵：\n\n（唔需要登入 App；用嚟救「後端服務連線逾時」入唔到嘅帳號——重設後該帳號即時改用本版較快嘅密碼雜湊）');
-  if(ymis===null) return '';
-  if(!ymis) return linkAlert('重設帳號密碼','已取消：未輸入帳號');
+  const scoutId=linkPrompt('重設帳號密碼（救援）1/2','要重設的 SCOUT ID（10 位數字）或已登記電郵：\n\n（唔需要登入 App；用嚟救「後端服務連線逾時」入唔到嘅帳號——重設後該帳號即時改用本版較快嘅密碼雜湊）');
+  if(scoutId===null) return '';
+  if(!scoutId) return linkAlert('重設帳號密碼','已取消：未輸入帳號');
   const pw=linkPrompt('重設帳號密碼（救援）2/2','輸入新密碼（至少 '+MIN_PASSWORD_LEN+' 位；用戶下次登入會強制改密）：');
   if(pw===null) return '';
-  const r=forceResetUserPasswordFromSheet(ymis,pw);
+  const r=forceResetUserPasswordFromSheet(scoutId,pw);
   return linkAlert('重設帳號密碼',r.success?r.message:'重設失敗：'+String(r.error||''));
 }
 function menuBenchmarkPasswordKdf(){
@@ -3677,8 +3729,8 @@ function menuCreateDownstreamUser(){
   if(!list.length) return linkAlert('為下游開戶','尚未登記任何下游；請先按「➕ 登記下游（URL + SHEET KEY）」。');
   const id=linkPrompt('為下游開戶 1/6','揀團（下游編號）：\n\n'+list.map(function(d){ return '・'+d.id+(d.name?'（'+d.name+'）':''); }).join('\n'));
   if(id===null) return '';
-  const ymis=linkPrompt('為下游開戶 2/6','YMIS（10 位數字；領袖可留空自動編 L 號）：');
-  if(ymis===null) return '';
+  const scoutId=linkPrompt('為下游開戶 2/6','SCOUT ID（10 位數字；領袖可留空自動編 L 號）：');
+  if(scoutId===null) return '';
   const name=linkPrompt('為下游開戶 3/6','姓名：');
   if(name===null) return '';
   const email=linkPrompt('為下游開戶 4/6','Email（領袖必填，團員可留空）：');
@@ -3688,11 +3740,11 @@ function menuCreateDownstreamUser(){
   const password=linkPrompt('為下游開戶 6/6','臨時密碼（最少 '+MIN_PASSWORD_LEN+' 位；預設 '+DEFAULT_TEMP_PASSWORD+'）：');
   const tempPassword=(password===null||!password)?DEFAULT_TEMP_PASSWORD:password;
   const r=createAccountForDownstream(id,{
-    ymis:ymis,name:name,email:email,role:String(role||'member').trim(),
+    scoutId:scoutId,name:name,email:email,role:String(role||'member').trim(),
     password:tempPassword,can_tick:true,squad:''
-  },{ymis:ADMIN_YMIS,name:ADMIN_NAME,role:'admin',can_tick:true});
+  },{scoutId:ADMIN_SCOUT_ID,name:ADMIN_NAME,role:'admin',can_tick:true});
   if(!r.success) return linkAlert('為下游開戶','開戶失敗：'+String(r.error||'')+linkSummarizeResults(r.results));
-  return linkAlert('為下游開戶','✅ 已在上游開戶並經 sig 寫入下游 '+r.downstream+'\n\nYMIS：'+r.ymis+'\n姓名：'+r.name+'\n臨時密碼：'+tempPassword+'\n（首次登入必須更改）');
+  return linkAlert('為下游開戶','✅ 已在上游開戶並經 sig 寫入下游 '+r.downstream+'\n\nSCOUT ID：'+r.scoutId+'\n姓名：'+r.name+'\n臨時密碼：'+tempPassword+'\n（首次登入必須更改）');
 }
 function menuCloseDownstreamGate(){
   const id=linkPrompt('閂下游直接入口','下游編號：\n\n'+listDownstreams().map(function(d){ return '・'+d.id+(d.name?'（'+d.name+'）':''); }).join('\n'));

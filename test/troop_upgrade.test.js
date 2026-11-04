@@ -30,12 +30,12 @@ function hmac(key, msg) {
   return crypto.createHmac('sha256', key).update(msg, 'utf8').digest('hex');
 }
 
-function signSig({ sub, role = 'member', children_ids = [], targetYmis = '', exp = null, key = KEY, childId = CHILD_ID }) {
+function signSig({ sub, role = 'member', children_ids = [], targetScoutId = '', exp = null, key = KEY, childId = CHILD_ID }) {
   const nowS = Math.floor(Date.now() / 1000);
   const expiry = exp !== null ? exp : (nowS + 600);
   const scopeObj = { role };
   if (children_ids && children_ids.length) scopeObj.children_ids = children_ids;
-  if (targetYmis) scopeObj.targetYmis = targetYmis;
+  if (targetScoutId) scopeObj.targetScoutId = targetScoutId;
   const scope = JSON.stringify(scopeObj);
   const msg = `${childId}|${sub}|${scope}|${expiry}`;
   const sig = hmac(key, msg);
@@ -69,7 +69,7 @@ async function run() {
   gas.post({
     action: 'addUser',
     apikey: KEY,
-    ymis: '1234560001',
+    scoutId: '1234560001',
     name: '陳大文',
     email: 'chan@example.org',
     role: 'member',
@@ -79,7 +79,7 @@ async function run() {
   gas.post({
     action: 'addUser',
     apikey: KEY,
-    ymis: '1234560002',
+    scoutId: '1234560002',
     name: '林領袖',
     email: 'leader@example.org',
     role: 'branch_leader',
@@ -144,7 +144,7 @@ async function run() {
   const blockedApply = gas.post({
     action: 'apply',
     apikey: KEY,
-    ymis: '1234560099',
+    scoutId: '1234560099',
     name: '新團員',
     email: 'new@example.org',
     requested_role: 'member'
@@ -210,7 +210,7 @@ async function run() {
   assert.strictEqual(expNoHash.success, true);
   assert.strictEqual(expNoHash.meta.include_hash, false);
   assert(expNoHash.meta.sha256 && expNoHash.meta.sha256.length === 64, '應有 sha256 校驗碼');
-  const u1NoHash = expNoHash.data.users.find((u) => u.ymis === '1234560001');
+  const u1NoHash = expNoHash.data.users.find((u) => u.scoutId === '1234560001');
   assert(u1NoHash, '應包含成員');
   assert.strictEqual(u1NoHash.password_hash, undefined, '預設 exportAll 不應包含 password_hash');
 
@@ -218,7 +218,7 @@ async function run() {
   const expWithHash = gas.post({ action: 'exportAll', apikey: KEY, include_hash: true });
   assert.strictEqual(expWithHash.success, true);
   assert.strictEqual(expWithHash.meta.include_hash, true);
-  const u1WithHash = expWithHash.data.users.find((u) => u.ymis === '1234560001');
+  const u1WithHash = expWithHash.data.users.find((u) => u.scoutId === '1234560001');
   assert(u1WithHash, '應包含成員');
   assert(typeof u1WithHash.password_hash === 'string' && /^pbkdf2\$\d+\$[0-9a-f]{32}\$[0-9a-f]{64}$/.test(u1WithHash.password_hash), '應包含完整 PBKDF2 password_hash（含迭代與隨機鹽）');
   console.log('  [PASS] exportAll 支援剝密碼備份與含 hash 吐出，meta 含 sha256 校驗碼');
@@ -236,7 +236,7 @@ async function run() {
     apikey: KEY,
     transferId: 'trans-001',
     user: {
-      ymis: '1234560088',
+      scoutId: '1234560088',
       name: '何新民',
       email: 'ho@example.org',
       role: 'member',
@@ -254,24 +254,24 @@ async function run() {
     action: 'upsertUser',
     apikey: KEY,
     transferId: 'trans-001',
-    user: { ymis: '1234560088', name: '何新民' }
+    user: { scoutId: '1234560088', name: '何新民' }
   });
   assert.strictEqual(upResDup.success, true);
   assert.strictEqual(upResDup.idempotent, true, '重複 transferId 應直接跳過 (idempotent)');
 
-  // 8c. 撞號阻擋：相同 Email 不能用於另一個不同 YMIS
+  // 8c. 撞號阻擋：相同 Email 不能用於另一個不同 SCOUT ID
   const collisionRes = gas.post({
     action: 'upsertUser',
     apikey: KEY,
     user: {
-      ymis: '1234560099',
+      scoutId: '1234560099',
       name: '撞電郵者',
       email: 'ho@example.org', // 與 1234560088 重複
       role: 'member'
     }
   });
   assert.strictEqual(collisionRes.success, false);
-  assert.strictEqual(collisionRes.code, 409, '重複電郵開新 YMIS 應回 409');
+  assert.strictEqual(collisionRes.code, 409, '重複電郵開新 SCOUT ID 應回 409');
   console.log('  [PASS] upsertUser 成功直插 hash，transferId 冪等及撞號阻擋均生效');
 
   // ========================================================
@@ -279,31 +279,31 @@ async function run() {
   // ========================================================
   console.log('\n9. setPw、verifyPw、setStatus 測試');
   // 9a. verifyPw 核對剛直插之密碼
-  const v1 = gas.post({ action: 'verifyPw', apikey: KEY, ymis: '1234560088', password_hash: customHash });
+  const v1 = gas.post({ action: 'verifyPw', apikey: KEY, scoutId: '1234560088', password_hash: customHash });
   assert.strictEqual(v1.success, true);
   assert.strictEqual(v1.match, true, 'verifyPw 雜湊一致應回 match: true');
 
-  const vWrong = gas.post({ action: 'verifyPw', apikey: KEY, ymis: '1234560088', password_hash: sha256Hex('WrongPass') });
+  const vWrong = gas.post({ action: 'verifyPw', apikey: KEY, scoutId: '1234560088', password_hash: sha256Hex('WrongPass') });
   assert.strictEqual(vWrong.success, true);
   assert.strictEqual(vWrong.match, false, 'verifyPw 雜湊不符應回 match: false');
 
   // 9b. setPw 更新密碼
   const newSecret = 'UpdatedPass!7788';
   const newHash = sha256Hex(newSecret);
-  const setPwRes = gas.post({ action: 'setPw', apikey: KEY, ymis: '1234560088', password_hash: newHash });
+  const setPwRes = gas.post({ action: 'setPw', apikey: KEY, scoutId: '1234560088', password_hash: newHash });
   assert.strictEqual(setPwRes.success, true);
 
   // 核對更新後密碼
-  const v2 = gas.post({ action: 'verifyPw', apikey: KEY, ymis: '1234560088', password_hash: newHash });
+  const v2 = gas.post({ action: 'verifyPw', apikey: KEY, scoutId: '1234560088', password_hash: newHash });
   assert.strictEqual(v2.match, true, 'setPw 之後 verifyPw 應匹配新雜湊');
 
   // 9c. setStatus
-  const setStatRes = gas.post({ action: 'setStatus', apikey: KEY, ymis: '1234560088', status: 'transferred_out' });
+  const setStatRes = gas.post({ action: 'setStatus', apikey: KEY, scoutId: '1234560088', status: 'transferred_out' });
   assert.strictEqual(setStatRes.success, true);
   // 驗證 transferred_out 狀態下無法登入（因為已移出）
   assert.strictEqual(gas.sandbox.getUser('1234560088'), null);
   // 恢復為 active
-  gas.post({ action: 'setStatus', apikey: KEY, ymis: '1234560088', status: 'active' });
+  gas.post({ action: 'setStatus', apikey: KEY, scoutId: '1234560088', status: 'active' });
   assert.notStrictEqual(gas.sandbox.getUser('1234560088'), null);
   console.log('  [PASS] setPw、verifyPw 及 setStatus 運作正常');
 
@@ -319,7 +319,7 @@ async function run() {
   // 1234560088 使用 setPw 更新的密碼直接本地登入（唔經 1234+mustChangePw）
   const directLogin = gas.post({ action: 'login', login_id: '1234560088', password: newSecret, apikey: KEY });
   assert.strictEqual(directLogin.success, true, '開口後直插密碼應能正常登入: ' + JSON.stringify(directLogin));
-  assert.strictEqual(directLogin.user.ymis, '1234560088');
+  assert.strictEqual(directLogin.user.scoutId, '1234560088');
   assert.strictEqual(directLogin.user.force_change_password, false, '直插密碼不應被強制要求改密碼');
   console.log('  [PASS] 重新開放後，匯入／直插密碼之帳戶可直接登入，密碼照用毋須 1234');
 

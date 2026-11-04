@@ -3,69 +3,69 @@
   "troopId": "0082",
   "members": [
     {
-      "ymis": "1234560001",
+      "scoutId": "1234560001",
       "name": "陳大文",
       "role": "member",
       "joinDate": "2024-09-01"
     },
     {
-      "ymis": "1234560002",
+      "scoutId": "1234560002",
       "name": "李小明",
       "role": "member",
       "joinDate": "2024-09-01"
     },
     {
-      "ymis": "1234560003",
+      "scoutId": "1234560003",
       "name": "張美玲",
       "role": "member",
       "joinDate": "2024-09-15"
     },
     {
-      "ymis": "1234560004",
+      "scoutId": "1234560004",
       "name": "王志強",
       "role": "member",
       "joinDate": "2024-10-01"
     },
     {
-      "ymis": "1234560005",
+      "scoutId": "1234560005",
       "name": "黃淑儀",
       "role": "member",
       "joinDate": "2024-10-01"
     },
     {
-      "ymis": "1234560006",
+      "scoutId": "1234560006",
       "name": "林俊傑",
       "role": "member",
       "joinDate": "2025-01-10"
     },
     {
-      "ymis": "1234560007",
+      "scoutId": "1234560007",
       "name": "何詩敏",
       "role": "member",
       "joinDate": "2025-01-10"
     },
     {
-      "ymis": "1234560008",
+      "scoutId": "1234560008",
       "name": "劉浩然",
       "role": "member",
       "joinDate": "2025-02-01"
     },
     {
-      "ymis": "1234560009",
+      "scoutId": "1234560009",
       "name": "周凱琪",
       "role": "member",
       "joinDate": "2025-02-01"
     },
     {
-      "ymis": "1234560010",
+      "scoutId": "1234560010",
       "name": "吳卓希",
       "role": "member",
       "joinDate": "2025-03-01"
     }
   ],
   "login": {
-    "note": "MOCK成員密碼統一為 123456，YMIS即帳號",
-    "example": "YMIS 1234560001 / 密碼 123456"
+    "note": "MOCK成員密碼統一為 123456，SCOUT ID即帳號",
+    "example": "SCOUT ID 1234560001 / 密碼 123456"
   },
   "progress_mock": {
     "說明": "以下為模擬進度，用於測試全團一眼睇會員章、批量剔等（項目編號依 2026《童軍支部訓練綱要》：L1-M1～L1-M11）",

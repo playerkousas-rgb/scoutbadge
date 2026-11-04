@@ -30,12 +30,12 @@ function pbkdf2HexNode(pw, saltHex, iter) {
   return crypto.pbkdf2Sync(Buffer.from(String(pw), 'utf8'), Buffer.from(saltHex, 'hex'), iter, 32, 'sha256').toString('hex');
 }
 
-function getUserRow(gas, ymis) {
+function getUserRow(gas, scoutId) {
   const sh = gas.sheets.get('Users');
   const rows = sh._rows;
   const headers = rows[0].map((h) => String(h).trim());
   for (let i = 1; i < rows.length; i++) {
-    if (String(rows[i][0]).trim() === String(ymis)) {
+    if (String(rows[i][0]).trim() === String(scoutId)) {
       const obj = { _rowNumber: i + 1 };
       headers.forEach((h, idx) => { obj[h] = rows[i][idx]; });
       return obj;
@@ -109,7 +109,7 @@ console.log('1. A3 PBKDF2-HMAC-SHA256 密碼雜湊、全寫入入口與舊版 64
   // Create leader & get token to test all password-setting paths
   assert.strictEqual(gas.post({
     action: 'addUser', apikey: API_KEY,
-    ymis: '1234560010', name: '團長甲', email: 'gsl@troop.org', role: 'group_leader', password: 'GslInit!1'
+    scoutId: '1234560010', name: '團長甲', email: 'gsl@troop.org', role: 'group_leader', password: 'GslInit!1'
   }).success, true);
   assert.strictEqual(Number(gas.sandbox.storedHashIterations_(getUserRow(gas, '1234560010').password_hash)), KDF_ITERATIONS);
 
@@ -119,17 +119,17 @@ console.log('1. A3 PBKDF2-HMAC-SHA256 密碼雜湊、全寫入入口與舊版 64
   // Bulk onboarding writes PBKDF2
   assert.strictEqual(gas.post({
     action: 'bulkAddUsers', apikey: API_KEY, token: gslLogin.token,
-    users: [{ ymis: '1234560011', name: '批量成員', role: 'member', password: 'Bulk!123' }]
+    users: [{ scoutId: '1234560011', name: '批量成員', role: 'member', password: 'Bulk!123' }]
   }).created, 1);
   assert.strictEqual(Number(gas.sandbox.storedHashIterations_(getUserRow(gas, '1234560011').password_hash)), KDF_ITERATIONS);
 
   // Application + approval writes PBKDF2
   assert.strictEqual(gas.post({
     action: 'apply', apikey: API_KEY,
-    ymis: '1234560012', name: '申請成員', email: 'app12@troop.org', requested_role: 'member', branch: '紅隊'
+    scoutId: '1234560012', name: '申請成員', email: 'app12@troop.org', requested_role: 'member', branch: '紅隊'
   }).success, true);
   const apps = gas.post({ action: 'getApplications', apikey: API_KEY, token: gslLogin.token });
-  const appId = apps.applications.find((a) => a.ymis === '1234560012').app_id;
+  const appId = apps.applications.find((a) => a.scoutId === '1234560012').app_id;
   assert.strictEqual(gas.post({
     action: 'reviewApplication', apikey: API_KEY, token: gslLogin.token,
     app_id: appId, decision: 'approved', final_role: 'member', temp_password: 'Approve!9'
@@ -140,7 +140,7 @@ console.log('1. A3 PBKDF2-HMAC-SHA256 密碼雜湊、全寫入入口與舊版 64
   const legacyPw = 'LegacyScout2024';
   const legacyHex = sha256HexNode(legacyPw);
   assert.strictEqual(gas.post({
-    action: 'setPw', apikey: API_KEY, ymis: '1234560011', password_hash: legacyHex
+    action: 'setPw', apikey: API_KEY, scoutId: '1234560011', password_hash: legacyHex
   }).success, true);
   assert.strictEqual(getUserRow(gas, '1234560011').password_hash, legacyHex);
 
@@ -163,13 +163,13 @@ console.log('1. A3 PBKDF2-HMAC-SHA256 密碼雜湊、全寫入入口與舊版 64
   const v2Hash = gas.sandbox.hashPasswordV2('ImportV2Pass');
   assert.strictEqual(gas.post({
     action: 'upsertUser', apikey: API_KEY,
-    user: { ymis: '1234560013', name: '匯入V2', role: 'member', password_hash: v2Hash }
+    user: { scoutId: '1234560013', name: '匯入V2', role: 'member', password_hash: v2Hash }
   }).success, true);
   assert.strictEqual(gas.post({ action: 'login', apikey: API_KEY, login_id: '1234560013', password: 'ImportV2Pass' }).success, true);
 
   assert.strictEqual(gas.post({
     action: 'upsertUser', apikey: API_KEY,
-    user: { ymis: '1234560014', name: '壞雜湊', role: 'member', password_hash: 'not-a-valid-hash' }
+    user: { scoutId: '1234560014', name: '壞雜湊', role: 'member', password_hash: 'not-a-valid-hash' }
   }).success, false);
   ok('upsertUser 同時相容 PBKDF2 新格式與舊 64-hex 格式，並拒絕無效 hash');
 }
@@ -183,7 +183,7 @@ console.log('\n2. A5 連續 5 次錯密鎖定 15 分鐘與自行改密踢走其�
   gas.sandbox.initializeSheets();
   gas.post({
     action: 'addUser', apikey: API_KEY,
-    ymis: '1234560021', name: '測試鎖定成員', email: 'lock21@troop.org', role: 'member', password: 'Correct#21'
+    scoutId: '1234560021', name: '測試鎖定成員', email: 'lock21@troop.org', role: 'member', password: 'Correct#21'
   });
 
   // 4 failures -> generic error, not locked yet
@@ -218,7 +218,7 @@ console.log('\n2. A5 連續 5 次錯密鎖定 15 分鐘與自行改密踢走其�
   // Multi-session invalidation on changePassword: keep current token, kick all other sessions
   gas.post({
     action: 'addUser', apikey: API_KEY,
-    ymis: '1234560022', name: '多裝置領袖', email: 'multi@troop.org', role: 'branch_leader', password: 'OldLeader#1'
+    scoutId: '1234560022', name: '多裝置領袖', email: 'multi@troop.org', role: 'branch_leader', password: 'OldLeader#1'
   });
   const devA = gas.post({ action: 'login', apikey: API_KEY, login_id: 'multi@troop.org', password: 'OldLeader#1' });
   const devB = gas.post({ action: 'login', apikey: API_KEY, login_id: 'multi@troop.org', password: 'OldLeader#1' });
@@ -246,7 +246,7 @@ console.log('\n3. A17 公開登入反枚舉（統一訊息＋dummy KDF）與領�
   gas.sandbox.initializeSheets();
   gas.post({
     action: 'addUser', apikey: API_KEY,
-    ymis: '1234560031', name: '存在成員', email: 'exist31@troop.org', role: 'branch_leader', password: 'RealPass#31'
+    scoutId: '1234560031', name: '存在成員', email: 'exist31@troop.org', role: 'branch_leader', password: 'RealPass#31'
   });
 
   // Instrument HMAC call count to prove dummy KDF runs on non-existent accounts
@@ -261,8 +261,8 @@ console.log('\n3. A17 公開登入反枚舉（統一訊息＋dummy KDF）與領�
   gas.post({ action: 'login', apikey: API_KEY, login_id: '9999999999', password: 'AnyPassword' });
 
   hmacCalls = 0;
-  const rMissingYmis = gas.post({ action: 'login', apikey: API_KEY, login_id: '8888888888', password: 'GuessPassword' });
-  const missingYmisHmacs = hmacCalls;
+  const rMissingScoutId = gas.post({ action: 'login', apikey: API_KEY, login_id: '8888888888', password: 'GuessPassword' });
+  const missingScoutIdHmacs = hmacCalls;
 
   hmacCalls = 0;
   const rMissingEmail = gas.post({ action: 'login', apikey: API_KEY, login_id: 'nobody@troop.org', password: 'GuessPassword' });
@@ -276,26 +276,26 @@ console.log('\n3. A17 公開登入反枚舉（統一訊息＋dummy KDF）與領�
   const rCentralId = gas.post({ action: 'login', apikey: API_KEY, login_id: 'sheep', password: 'GuessPassword' });
   const centralIdHmacs = hmacCalls;
 
-  assert.deepStrictEqual(rMissingYmis, { success: false, error: '帳號或密碼錯誤' });
+  assert.deepStrictEqual(rMissingScoutId, { success: false, error: '帳號或密碼錯誤' });
   assert.deepStrictEqual(rMissingEmail, { success: false, error: '帳號或密碼錯誤' });
   assert.deepStrictEqual(rWrongPw, { success: false, error: '帳號或密碼錯誤' });
   assert.deepStrictEqual(rCentralId, { success: false, error: '帳號或密碼錯誤' });
   // 每次登入最多一個 PBKDF2（dummy 雜湊已快取）：等於 KDF_ITERATIONS 次 HMAC。
-  assert.strictEqual(missingYmisHmacs, KDF_ITERATIONS, '帳號不存在亦必須執行完整一次 dummy KDF');
+  assert.strictEqual(missingScoutIdHmacs, KDF_ITERATIONS, '帳號不存在亦必須執行完整一次 dummy KDF');
   assert.strictEqual(missingEmailHmacs, KDF_ITERATIONS);
   assert.strictEqual(wrongPwHmacs, KDF_ITERATIONS);
   assert.strictEqual(centralIdHmacs, KDF_ITERATIONS);
-  ok(`公開 login 對不存在 YMIS／不存在電郵／保留帳號／錯密碼回傳完全一致訊息並均執行一次（${KDF_ITERATIONS} 次）KDF`);
+  ok(`公開 login 對不存在 SCOUT ID／不存在電郵／保留帳號／錯密碼回傳完全一致訊息並均執行一次（${KDF_ITERATIONS} 次）KDF`);
 
   // Leader backend queries MUST still accurately show whether members/emails exist
   const leaderSession = gas.post({ action: 'login', apikey: API_KEY, login_id: 'exist31@troop.org', password: 'RealPass#31' });
   const allUsers = gas.post({ action: 'getAllUsers', apikey: API_KEY, token: leaderSession.token });
   assert.strictEqual(allUsers.success, true);
-  assert.ok(allUsers.users.some((u) => u.ymis === '1234560031' && u.email === 'exist31@troop.org'));
-  assert.strictEqual(allUsers.users.some((u) => u.ymis === '8888888888'), false);
+  assert.ok(allUsers.users.some((u) => u.scoutId === '1234560031' && u.email === 'exist31@troop.org'));
+  assert.strictEqual(allUsers.users.some((u) => u.scoutId === '8888888888'), false);
   const dupCheck = gas.post({
     action: 'addUser', apikey: API_KEY, token: leaderSession.token,
-    ymis: '1234560099', name: '撞電郵', email: 'exist31@troop.org', role: 'member', password: '1234'
+    scoutId: '1234560099', name: '撞電郵', email: 'exist31@troop.org', role: 'member', password: '1234'
   });
   assert.strictEqual(dupCheck.success, false);
   assert.match(dupCheck.error, /電郵|Email/i, '領袖後台新增用戶仍須明確提示電郵已存在');
@@ -315,44 +315,44 @@ console.log('\n4 & 5. 重設密碼職級矩陣（含上游 sig 防冒充）與�
   // Verify non-super_admin cannot create an admin account either!
   assert.strictEqual(gas.post({
     action: 'addUser', apikey: API_KEY,
-    ymis: '1234560101', name: '管理員A', email: 'adminA@troop.org', role: 'admin', password: 'AdminA#101'
+    scoutId: '1234560101', name: '管理員A', email: 'adminA@troop.org', role: 'admin', password: 'AdminA#101'
   }).success, false, '非 SUPER_ADMIN 不可建立 ADMIN 帳號');
 
   // Seed a full hierarchy of accounts using super_admin session
   const accounts = [
-    { ymis: '1234560101', name: '管理員A', email: 'adminA@troop.org', role: 'admin', pw: 'AdminA#101' },
-    { ymis: '1234560102', name: '管理員B', email: 'adminB@troop.org', role: 'admin', pw: 'AdminB#102' },
-    { ymis: '1234560103', name: '團長A', email: 'gslA@troop.org', role: 'group_leader', pw: 'GslA#103' },
-    { ymis: '1234560104', name: '支部領袖A', email: 'blA@troop.org', role: 'branch_leader', pw: 'BlA#104' },
-    { ymis: '1234560105', name: '支部領袖B', email: 'blB@troop.org', role: 'branch_leader', pw: 'BlB#105' },
-    { ymis: '1234560106', name: '團員A', email: 'memA@troop.org', role: 'member', pw: 'MemA#106' },
-    { ymis: '1234560107', name: '團員B', email: 'memB@troop.org', role: 'member', pw: 'MemB#107' }
+    { scoutId: '1234560101', name: '管理員A', email: 'adminA@troop.org', role: 'admin', pw: 'AdminA#101' },
+    { scoutId: '1234560102', name: '管理員B', email: 'adminB@troop.org', role: 'admin', pw: 'AdminB#102' },
+    { scoutId: '1234560103', name: '團長A', email: 'gslA@troop.org', role: 'group_leader', pw: 'GslA#103' },
+    { scoutId: '1234560104', name: '支部領袖A', email: 'blA@troop.org', role: 'branch_leader', pw: 'BlA#104' },
+    { scoutId: '1234560105', name: '支部領袖B', email: 'blB@troop.org', role: 'branch_leader', pw: 'BlB#105' },
+    { scoutId: '1234560106', name: '團員A', email: 'memA@troop.org', role: 'member', pw: 'MemA#106' },
+    { scoutId: '1234560107', name: '團員B', email: 'memB@troop.org', role: 'member', pw: 'MemB#107' }
   ];
   for (const a of accounts) {
     assert.strictEqual(gas.post({
       action: 'addUser', apikey: API_KEY, token: superToken,
-      ymis: a.ymis, name: a.name, email: a.email, role: a.role, password: a.pw
+      scoutId: a.scoutId, name: a.name, email: a.email, role: a.role, password: a.pw
     }).success, true);
     // Clear initial force_change_password so we can verify resetPassword flips it back to true!
-    const row = getUserRow(gas, a.ymis);
+    const row = getUserRow(gas, a.scoutId);
     gas.sheets.get('Users').getRange(row._rowNumber, 16).setValue(false);
   }
 
   const tok = {};
   for (const a of accounts) {
-    const l = gas.post({ action: 'login', apikey: API_KEY, login_id: a.ymis, password: a.pw });
+    const l = gas.post({ action: 'login', apikey: API_KEY, login_id: a.scoutId, password: a.pw });
     assert.strictEqual(l.success, true);
-    tok[a.ymis] = l.token;
+    tok[a.scoutId] = l.token;
   }
 
-  function assertRejectedUnchanged(callerToken, targetYmis, label) {
-    const beforeHash = getUserRow(gas, targetYmis).password_hash;
+  function assertRejectedUnchanged(callerToken, targetScoutId, label) {
+    const beforeHash = getUserRow(gas, targetScoutId).password_hash;
     const res = gas.post({
       action: 'resetPassword', apikey: API_KEY, token: callerToken,
-      target_ymis: targetYmis, new_password: 'Hacked!99'
+      targetScoutId: targetScoutId, new_password: 'Hacked!99'
     });
     assert.strictEqual(res.success, false, `應拒絕：${label} (${JSON.stringify(res)})`);
-    assert.strictEqual(getUserRow(gas, targetYmis).password_hash, beforeHash, `被拒時目標 password_hash 絕不可變動：${label}`);
+    assert.strictEqual(getUserRow(gas, targetScoutId).password_hash, beforeHash, `被拒時目標 password_hash 絕不可變動：${label}`);
   }
 
   // Forbidden resets across every role level
@@ -368,33 +368,33 @@ console.log('\n4 & 5. 重設密碼職級矩陣（含上游 sig 防冒充）與�
   assertRejectedUnchanged(tok['1234560101'], '1234560101', 'ADMIN 重設自己');
   const superAttempt = gas.post({
     action: 'resetPassword', apikey: API_KEY, token: tok['1234560101'],
-    target_ymis: 'sheep', new_password: 'Hacked!99'
+    targetScoutId: 'sheep', new_password: 'Hacked!99'
   });
   assert.strictEqual(superAttempt.success, false, '任何人不可重設保留帳號 sheep');
   ok('職級矩陣阻擋全部越權／同級重設（ADMIN 不可改 ADMIN、同級不可互改、member 全拒），且目標 hash 原封不動');
 
   // Handler-level enforcement & upstream sig entrypoint check:
-  // (a) Calling handleResetPassword with a raw string managerYmis ('1111111111') must be rejected
+  // (a) Calling handleResetPassword with a raw string managerScoutId ('1111111111') must be rejected
   const rawCallRes = JSON.parse(gas.sandbox.handleResetPassword('1234560106', '1111111111', 'Bypass!1').getContent());
-  assert.strictEqual(rawCallRes.success, false, 'handleResetPassword 必須拒絕未驗明 role 的純字串 managerYmis');
+  assert.strictEqual(rawCallRes.success, false, 'handleResetPassword 必須拒絕未驗明 role 的純字串 managerScoutId');
 
-  // (b) Upstream sig with on_behalf='1111111111' (local admin YMIS!) + on_behalf_role='branch_leader' trying to reset group_leader -> REJECTED!
+  // (b) Upstream sig with on_behalf='1111111111' (local admin SCOUT ID!) + on_behalf_role='branch_leader' trying to reset group_leader -> REJECTED!
   const beforeGslHash = getUserRow(gas, '1234560103').password_hash;
   const sigSpoof = gas.post(signUpstreamBody({
     action: 'resetPassword',
-    target_ymis: '1234560103',
+    targetScoutId: '1234560103',
     new_password: 'SigSpoof!1',
     on_behalf: '1111111111',
     on_behalf_role: 'branch_leader'
   }, API_KEY));
-  assert.strictEqual(sigSpoof.success, false, '上游 sig 自報較低角色時絕不可借本地同 YMIS 管理員提權');
+  assert.strictEqual(sigSpoof.success, false, '上游 sig 自報較低角色時絕不可借本地同 SCOUT ID 管理員提權');
   assert.strictEqual(getUserRow(gas, '1234560103').password_hash, beforeGslHash);
 
   // (c) Upstream sig with default/admin role trying to reset another admin -> REJECTED!
   const beforeAdminBHash = getUserRow(gas, '1234560102').password_hash;
   const sigAdminPeer = gas.post(signUpstreamBody({
     action: 'resetPassword',
-    target_ymis: '1234560102',
+    targetScoutId: '1234560102',
     new_password: 'SigPeer!1',
     on_behalf: 'upstream_admin',
     on_behalf_role: 'admin'
@@ -419,7 +419,7 @@ console.log('\n4 & 5. 重設密碼職級矩陣（含上游 sig 防冒充）與�
   // branch_leader resets member '1234560106'
   const blResetMem = gas.post({
     action: 'resetPassword', apikey: API_KEY, token: tok['1234560104'],
-    target_ymis: '1234560106', new_password: 'TempMem#88'
+    targetScoutId: '1234560106', new_password: 'TempMem#88'
   });
   assert.strictEqual(blResetMem.success, true);
 
@@ -450,19 +450,19 @@ console.log('\n4 & 5. 重設密碼職級矩陣（含上游 sig 防冒充）與�
   // Verify group_leader -> branch_leader, admin -> group_leader, and SUPER_ADMIN -> ADMIN (both normal admin and default 1111111111)
   assert.strictEqual(gas.post({
     action: 'resetPassword', apikey: API_KEY, token: tok['1234560103'],
-    target_ymis: '1234560104', new_password: 'TempBl#88'
+    targetScoutId: '1234560104', new_password: 'TempBl#88'
   }).success, true);
   assert.strictEqual(gas.post({
     action: 'resetPassword', apikey: API_KEY, token: tok['1234560101'],
-    target_ymis: '1234560103', new_password: 'TempGsl#88'
+    targetScoutId: '1234560103', new_password: 'TempGsl#88'
   }).success, true);
   assert.strictEqual(gas.post({
     action: 'resetPassword', apikey: API_KEY, token: superToken,
-    target_ymis: '1234560102', new_password: 'SuperSetAdmin#1'
+    targetScoutId: '1234560102', new_password: 'SuperSetAdmin#1'
   }).success, true);
   assert.strictEqual(gas.post({
     action: 'resetPassword', apikey: API_KEY, token: superToken,
-    target_ymis: '1111111111', new_password: 'SuperResetDefault#1'
+    targetScoutId: '1111111111', new_password: 'SuperResetDefault#1'
   }).success, true);
   assert.strictEqual(getUserRow(gas, '1111111111').force_change_password, true);
   ok('合法上級重設（含 SUPER_ADMIN 重設 ADMIN／預設管理員）全部通過，並完整執行解鎖＋踢舊 session＋強制改密');

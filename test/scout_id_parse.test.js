@@ -1,8 +1,8 @@
 const assert = require('assert');
-const Y = require('../assets/ymis-parse.js');
+const Y = require('../assets/scout-id-parse.js');
 
 function run() {
-  console.log('=== YMIS PDF / 文字解析測試 ===\n');
+  console.log('=== SCOUT ID PDF / 文字解析測試 ===\n');
 
   // Test 1: pdf.js text items（3 欄：編號 / 中文姓名 / 電郵）
   console.log('Test 1: pdf.js items → 成員');
@@ -21,7 +21,7 @@ function run() {
   const r1 = Y.parseItems(items);
   assert.strictEqual(r1.members.length, 2, '應解析出 2 名成員');
   assert.deepStrictEqual(r1.members[0], {
-    ymis: '1234560001', name: '陳大文', email: 'chan@example.org', warn: [], raw: r1.members[0].raw
+    scoutId: '1234560001', name: '陳大文', email: 'chan@example.org', warn: [], raw: r1.members[0].raw
   });
   assert.strictEqual(r1.members[1].name, '李小明');
   console.log('  [PASS] 抬頭/頁尾略過，3 欄對應正確');
@@ -51,10 +51,10 @@ function run() {
   assert.strictEqual(r3.members.length, 2);
   assert.strictEqual(r3.members[1].email, '');
   assert.ok(r3.members[1].warn.includes('no_email'));
-  assert.ok(r3.skipped.some(s => s.reason === 'no_ymis'));
+  assert.ok(r3.skipped.some(s => s.reason === 'no_scoutId'));
   console.log('  [PASS] 缺電郵有 warn，無編號的行被略過');
 
-  // Test 4: 重複 YMIS 只取一次
+  // Test 4: 重複 SCOUT ID 只取一次
   console.log('\nTest 4: 重複編號');
   const r4 = Y.parseText('1234560006 林俊傑 lam@example.org\n1234560006 林俊傑 lam@example.org');
   assert.strictEqual(r4.members.length, 1);
@@ -64,9 +64,9 @@ function run() {
   // Test 5: 非 10 位編號 → warn，可選補零
   console.log('\nTest 5: 編號長度');
   const r5 = Y.parseText('2885846 陳小強 keung@example.org');
-  assert.ok(r5.members[0].warn.includes('ymis_len'));
+  assert.ok(r5.members[0].warn.includes('scoutId_len'));
   const r5b = Y.parseText('2885846 陳小強 keung@example.org', { padTo10: true });
-  assert.strictEqual(r5b.members[0].ymis, '0002885846');
+  assert.strictEqual(r5b.members[0].scoutId, '0002885846');
   assert.deepStrictEqual(r5b.members[0].warn, []);
   assert.strictEqual(Y.padTo10('M12345678'.replace(/\D/g, '')), '0012345678');
   console.log('  [PASS] 長度不足會提示，亦可自動補零至 10 位');
@@ -85,13 +85,13 @@ function run() {
 run();
 
 /* =============================================================
- * 真實 YMIS 自訂報表版面測試（依領袖提供的報表截圖版面重建；姓名／電郵已改為虛構測試資料）
+ * 真實 SCOUT ID 自訂報表版面測試（依領袖提供的報表截圖版面重建；姓名／電郵已改為虛構測試資料）
  * 版面：香港童軍總會 / Scout Association of Hong Kong / XXth Hong Kong Group
  *       欄名為中英雙行：童軍成員編號 Scout ID / 中文姓名 Name in Chinese / 電郵地址 Email
  *       成員編號為 10 位數（示範假號 `123456` 開頭），部分帶「*」標記，部分成員無電郵
  * ============================================================= */
 function runRealLayout() {
-  console.log('\n=== 真實 YMIS 報表版面（多頁）測試 ===\n');
+  console.log('\n=== 真實 SCOUT ID 報表版面（多頁）測試 ===\n');
 
   const header = (yTop) => ([
     { str: '香港童軍總會', x: 250, y: yTop, width: 60 },
@@ -135,7 +135,7 @@ function runRealLayout() {
     [{ str: '202608210505', x: 50, y: 25, width: 60 }] // 頁尾流水號（獨立一行），不可當成成員
   );
 
-  const Y2 = require('../assets/ymis-parse.js');
+  const Y2 = require('../assets/scout-id-parse.js');
   const pages = [page1, page2].map(items => Y2.itemsToRows(items));
   const res = Y2.parsePages(pages);
 
@@ -143,19 +143,19 @@ function runRealLayout() {
   assert.strictEqual(res.pages, 2, '應處理 2 頁');
   assert.strictEqual(res.members.length, 9, '兩頁合共 9 位成員');
 
-  const byId = Object.fromEntries(res.members.map(m => [m.ymis, m]));
+  const byId = Object.fromEntries(res.members.map(m => [m.scoutId, m]));
   assert.strictEqual(byId['1234560101'].name, '陳大文');
   assert.strictEqual(byId['1234560101'].email, 'a.chan@example.com');
   assert.strictEqual(byId['1234560103'].email, '', '無電郵者留空');
   assert.ok(byId['1234560103'].warn.includes('no_email'));
   // 「*」標記不會混入姓名，編號仍為純 10 位數
   assert.strictEqual(byId['1234560106'].name, '劉子彤');
-  assert.ok(/^\d{10}$/.test(byId['1234560106'].ymis));
+  assert.ok(/^\d{10}$/.test(byId['1234560106'].scoutId));
   // 續行電郵補回上一位成員
   assert.strictEqual(byId['1234560106'].email, 'e.lau@example.com');
   assert.ok(!byId['1234560106'].warn.includes('no_email'));
-  // 每位編號均為 10 位、無 warn ymis_len
-  res.members.forEach(m => assert.ok(/^\d{10}$/.test(m.ymis), '編號應為10位: ' + m.ymis));
+  // 每位編號均為 10 位、無 warn scoutId_len
+  res.members.forEach(m => assert.ok(/^\d{10}$/.test(m.scoutId), '編號應為10位: ' + m.scoutId));
   // 頁尾流水號 / 重複抬頭不會變成成員
   assert.ok(!byId['202608210505'], '頁尾流水號不可當成成員');
   assert.ok(res.skipped.some(s => s.reason === 'no_name_email'));

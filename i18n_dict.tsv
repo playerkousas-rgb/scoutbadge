@@ -1,11 +1,11 @@
 童軍進度追蹤系統	Scout Progress Tracker
 童軍進度追蹤	Scout Progress Tracker
-童軍進度追蹤系統 v5.1 - 手機友善・批量開戶・全前端控制	Scout Progress Tracker v5.1 - Mobile friendly · Bulk onboarding · Full front-end control
-童軍進度追蹤 v5.1	Scout Progress Tracker v5.1
-Scout Progress Tracker v5.1 • 總領袖獎章 + 第11版綱要（中英對照）	Scout Progress Tracker v5.1 • Chief Scout's Award + 11th ed. Scheme (bilingual 中/EN)
+童軍進度追蹤系統 v5.2 - 手機友善・批量開戶・全前端控制	Scout Progress Tracker v5.2 - Mobile friendly · Bulk onboarding · Full front-end control
+童軍進度追蹤 v5.2	Scout Progress Tracker v5.2
+Scout Progress Tracker v5.2 • 總領袖獎章 + 第11版綱要（中英對照）	Scout Progress Tracker v5.2 • Chief Scout's Award + 11th ed. Scheme (bilingual 中/EN)
 基於《童軍支部訓練綱要》（第11版） • 支援離線暫存 • 批量寫入 • 活動履歷（服務／活動／訓練班） • 保護兒童 Safe from Harm	Based on the Scout Training Scheme (11th ed., 2026) with the official English version built in | Offline caching • batch writes • activity records (service / activity / training) • Safe from Harm
-COPYRIGHT 2026 Scout System • 童軍進度追蹤系統 v5.1	COPYRIGHT 2026 Scout System • Scout Progress Tracker v5.1
-最新：v5.1	Latest: v5.1
+COPYRIGHT 2026 Scout System • 童軍進度追蹤系統 v5.2	COPYRIGHT 2026 Scout System • Scout Progress Tracker v5.2
+最新：v5.2	Latest: v5.2
 🐛💬 回報 · 意見	🐛💬 Report · Feedback
 問題回報 / 意見回饋（經 Scout Admin 統一回收，可匿名）	Report an issue / send feedback (via Scout Admin, anonymous welcome)
 ⚠️ 非官方聲明：本系統為獨立開發的非官方工具，並非香港童軍總會官方產品，與總會並無隸屬或贊助關係。	⚠️ Unofficial notice: this system is an independently developed unofficial tool. It is NOT an official product of the Scout Association of Hong Kong and has no affiliation with or sponsorship from the Association.
@@ -34,7 +34,7 @@ Developed for 82 Troop • <a href="https://www.scout.org.hk" target="_blank" re
 提交失敗	Submit failed
 權限不足	Insufficient permission
 🔑 忘記密碼？	🔑 Forgot password?
-童軍編號（YMIS）或登記電郵	Scout ID (YMIS) or registered email
+童軍編號（SCOUT ID）或登記電郵	Scout ID (SCOUT ID) or registered email
 只需填其中一項；重設碼有效期為 15 分鐘。	Enter either one; reset codes stay valid for 15 minutes.
 📨 發送 8 位重設碼	📨 Send 8-character reset code
 已收到重設碼？直接輸入 →	Already have a code? Enter it now →

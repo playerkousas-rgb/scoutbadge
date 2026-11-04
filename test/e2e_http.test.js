@@ -118,15 +118,15 @@ async function run() {
     // loopback override the tests may also set through the legacy action.
     verifyUrl: `${BASE}/api/verify-super-ticket`,
     users: [
-      { ymis: '1234567890', name: '陳大文', email: 'leader@example.org', role: 'group_leader', password: 'PassA!234567' },
-      { ymis: '1234560001', name: '成員甲', email: 'member@example.org', role: 'member', password: 'MemberA!234' },
-      { ymis: 'S1', name: '中央管代', email: '', role: 'super_admin', password: 'irrelevant' }
+      { scoutId: '1234567890', name: '陳大文', email: 'leader@example.org', role: 'group_leader', password: 'PassA!234567' },
+      { scoutId: '1234560001', name: '成員甲', email: 'member@example.org', role: 'member', password: 'MemberA!234' },
+      { scoutId: 'S1', name: '中央管代', email: '', role: 'super_admin', password: 'irrelevant' }
     ]
   });
   const mockB = await startMockGas({
     port: MOCK_B_PORT, name: '旅團B', apikey: 'KEY_B',
     execUrl: `http://127.0.0.1:${MOCK_B_PORT}/exec`,
-    users: [{ ymis: '9999999999', name: '旅團B成員', email: '', role: 'member', password: 'B!pass' }]
+    users: [{ scoutId: '9999999999', name: '旅團B成員', email: '', role: 'member', password: 'B!pass' }]
   });
   const inbox = await startAdminInbox(ADMIN_PORT);
   const blockedBackend = await startBlockedBackend(BLOCKED_PORT);
@@ -224,7 +224,7 @@ async function run() {
     // --- save with server-injected apikey ---
     const save = await proxy(BASE, {
       troopId: '0082', action: 'save',
-      changes: [{ ymis: '1234560001', item: 'X', done: true }],
+      changes: [{ scoutId: '1234560001', item: 'X', done: true }],
       confirmer: '陳大文'
     });
     assert.strictEqual(save.status, 200);

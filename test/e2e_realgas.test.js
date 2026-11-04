@@ -29,10 +29,10 @@ function hmacHex(key, msg) {
   return crypto.createHmac('sha256', key).update(msg, 'utf8').digest('hex');
 }
 // scope 必須以「原始字串」入簽（同 GAS 端 verifyPortalSig）
-function sign({ childId = 'PROG_0082S', sub, role, children_ids, targetYmis, exp, key = KEY }) {
+function sign({ childId = 'PROG_0082S', sub, role, children_ids, targetScoutId, exp, key = KEY }) {
   const scopeObj = { role };
   if (children_ids) scopeObj.children_ids = children_ids;
-  if (targetYmis) scopeObj.targetYmis = targetYmis;
+  if (targetScoutId) scopeObj.targetScoutId = targetScoutId;
   const scope = JSON.stringify(scopeObj);
   const sig = hmacHex(key, `${childId}|${sub}|${scope}|${exp}`);
   return { childId, sub, scope, exp, sig };
@@ -77,8 +77,8 @@ function seed(gas) {
   const users = gas.sheets.get('Users');
   const roster = gas.sheets.get('成員名單');
   const hash = gas.sandbox.hashPassword;
-  const row = (ymis, name, email, role, pass, canTick) => [
-    ymis, name, email, role, hash(pass), '', canTick, 'test', '2026-01-01', '2026-01-01', '', 'active', '', 'A隊', 'member', false
+  const row = (scoutId, name, email, role, pass, canTick) => [
+    scoutId, name, email, role, hash(pass), '', canTick, 'test', '2026-01-01', '2026-01-01', '', 'active', '', 'A隊', 'member', false
   ];
   users.appendRow(row('1234567890', '陳大文', 'leader@example.org', 'group_leader', 'PassA!234567', true));
   users.appendRow(row('1234560001', '成員甲', '', 'member', 'MemberA!234', false));
@@ -153,7 +153,7 @@ async function run() {
     const reg = await proxy({ troopId: '0082', action: 'getRegistrySafe' });
     assert.strictEqual(reg.data.success, true);
     assert(Array.isArray(reg.data.members));
-    assert(reg.data.members.some((m) => m.ymis === '1234560001'));
+    assert(reg.data.members.some((m) => m.scoutId === '1234560001'));
     for (const m of reg.data.members) {
       assert.strictEqual(m.password_hash, undefined);
       assert.strictEqual(m.token, undefined);
@@ -166,10 +166,10 @@ async function run() {
     const pLogin = await proxy({ troopId: '0082', action: 'portalLogin', ...memberSig });
     assert.strictEqual(pLogin.data.success, true, JSON.stringify(pLogin.data));
     assert.strictEqual(pLogin.data.auth_mode, 'token');
-    assert.strictEqual(pLogin.data.user.ymis, '1234560001');
+    assert.strictEqual(pLogin.data.user.scoutId, '1234560001');
     const sigLoad = await proxy({ troopId: '0082', action: 'load', token: pLogin.data.token });
     assert.strictEqual(sigLoad.data.success, true);
-    ok('sig（成員 YMIS）→ portalLogin 發本地 token → load');
+    ok('sig（成員 SCOUT ID）→ portalLogin 發本地 token → load');
 
     // ---- 信任鏈 sig：領袖（EMAIL）----
     const leaderSig = sign({ sub: 'leader@example.org', role: 'group_leader', exp: nowS + 600 });
@@ -194,15 +194,15 @@ async function run() {
     const parLoad = await proxy({ troopId: '0082', action: 'load', ...parentSig });
     assert.strictEqual(parLoad.data.success, true, JSON.stringify(parLoad.data).slice(0, 200));
     assert.strictEqual(parLoad.data.view_as, 'parent');
-    const parYmises = parLoad.data.members.map((m) => m.ymis).sort();
-    assert.deepStrictEqual(parYmises, ['1234560001', '1234560002']);
+    const parScoutIdes = parLoad.data.members.map((m) => m.scoutId).sort();
+    assert.deepStrictEqual(parScoutIdes, ['1234560001', '1234560002']);
     assert.deepStrictEqual(Object.keys(parLoad.data.progress).sort(), ['1234560001', '1234560002']);
     assert.deepStrictEqual(Object.keys(parLoad.data.otherBadges).sort(), ['1234560001', '1234560002']);
     ok('家長 load：名冊／進度／其他獎章收縮到子女聯集');
 
-    const obOk = await proxy({ troopId: '0082', action: 'getOtherBadges', target_ymis: '1234560001', ...parentSig });
+    const obOk = await proxy({ troopId: '0082', action: 'getOtherBadges', targetScoutId: '1234560001', ...parentSig });
     assert.strictEqual(obOk.data.success, true);
-    const obNo = await proxy({ troopId: '0082', action: 'getOtherBadges', target_ymis: '1234560003', ...parentSig });
+    const obNo = await proxy({ troopId: '0082', action: 'getOtherBadges', targetScoutId: '1234560003', ...parentSig });
     assert.strictEqual(obNo.data.success, false);
     assert.strictEqual(obNo.data.code, 403);
     ok('家長定向讀：子女 OK，非子女 → 403');

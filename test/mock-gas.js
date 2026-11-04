@@ -33,9 +33,9 @@ class MockGas {
     this.name = name;
     this.apikey = apikey;
     this.execUrl = execUrl || 'http://127.0.0.1:0/exec';
-    this.users = new Map(); // ymis -> { ymis, name, email, role, password, status }
-    this.tokens = new Map(); // token -> ymis
-    for (const u of users) this.users.set(u.ymis, { ...u, status: 'active' });
+    this.users = new Map(); // scoutId -> { scoutId, name, email, role, password, status }
+    this.tokens = new Map(); // token -> scoutId
+    for (const u of users) this.users.set(u.scoutId, { ...u, status: 'active' });
     this.requests = [];
     this.calls = [];
     // Loopback verifier override, exactly like the Code.gs Script Property a
@@ -111,9 +111,9 @@ class MockGas {
     res.end(body);
   }
 
-  _tokenFor(ymis) {
-    const token = 'gas_' + Math.random().toString(36).slice(2) + ymis;
-    this.tokens.set(token, ymis);
+  _tokenFor(scoutId) {
+    const token = 'gas_' + Math.random().toString(36).slice(2) + scoutId;
+    this.tokens.set(token, scoutId);
     return token;
   }
 
@@ -137,7 +137,7 @@ class MockGas {
       return this._json(res, 200, {
         success: true,
         troop: this.name,
-        members: [...this.users.values()].map(({ ymis, name: n, email, role }) => ({ ymis, name: n, email, role })),
+        members: [...this.users.values()].map(({ scoutId, name: n, email, role }) => ({ scoutId, name: n, email, role })),
         progress: {},
         config: { member_progress_scope: 'private', allow_member_requests: 'true' }
       });
@@ -178,13 +178,13 @@ class MockGas {
 
     if (action === 'upsertUser') {
       const u = body.user || body;
-      const ymis = String(u.ymis || u.scout_id || '');
-      this.users.set(ymis, { ymis, name: u.name || ymis, role: u.role || 'member', password: u.password || '1234' });
-      return this._json(res, 200, { success: true, action: 'created', ymis });
+      const scoutId = String(u.scoutId || u.scout_id || '');
+      this.users.set(scoutId, { scoutId, name: u.name || scoutId, role: u.role || 'member', password: u.password || '1234' });
+      return this._json(res, 200, { success: true, action: 'created', scoutId });
     }
 
     if (action === 'setPw') {
-      const u = this.users.get(body.ymis || body.sub);
+      const u = this.users.get(body.scoutId || body.sub);
       if (u) u.password = body.password_hash || body.new_password;
       return this._json(res, 200, { success: Boolean(u) });
     }
@@ -194,7 +194,7 @@ class MockGas {
     }
 
     if (action === 'verifyPw') {
-      const u = this.users.get(body.ymis || body.sub);
+      const u = this.users.get(body.scoutId || body.sub);
       return this._json(res, 200, { success: Boolean(u), match: u ? (u.password === (body.password_hash || body.password)) : false });
     }
 
@@ -206,15 +206,15 @@ class MockGas {
       const pw = String(body.password || '');
       let user = null;
       for (const u of this.users.values()) {
-        if (u.ymis === lid || (u.email && u.email.toLowerCase() === lid.toLowerCase())) user = u;
+        if (u.scoutId === lid || (u.email && u.email.toLowerCase() === lid.toLowerCase())) user = u;
       }
       if (!user) return this._json(res, 200, { success: false, error: '找不到此帳號' });
       if (user.password !== pw) return this._json(res, 200, { success: false, error: '密碼錯誤' });
-      const token = this._tokenFor(user.ymis);
+      const token = this._tokenFor(user.scoutId);
       return this._json(res, 200, {
         success: true,
         token,
-        user: { ymis: user.ymis, name: user.name, email: user.email, role: user.role }
+        user: { scoutId: user.scoutId, name: user.name, email: user.email, role: user.role }
       });
     }
 
@@ -229,8 +229,8 @@ class MockGas {
       if (!body.apikey || body.apikey !== this.apikey) {
         return this._json(res, 200, { success: false, error: '未授權' });
       }
-      const cfgYmis = this._validate(body.token);
-      const cfgUser = cfgYmis ? this.users.get(cfgYmis) : null;
+      const cfgScoutId = this._validate(body.token);
+      const cfgUser = cfgScoutId ? this.users.get(cfgScoutId) : null;
       const roleLevel = { member: 0, branch_leader: 40, group_leader: 60, admin: 80, super_admin: 100 }[cfgUser ? cfgUser.role : ''] || 0;
       if (!cfgUser || roleLevel < 40) return this._json(res, 200, { success: false, error: '需領袖權限' });
       if (action === 'configureTrustedTicketVerifier') {
@@ -249,28 +249,28 @@ class MockGas {
     // to the verifier. The troop API key alone is no longer enough.
     if (action === 'superLogin') {
       const superUser = [...this.users.values()].find((u) => u.role === 'super_admin');
-      if (!superUser || String(body.login_id) !== superUser.ymis) {
+      if (!superUser || String(body.login_id) !== superUser.scoutId) {
         return this._json(res, 200, { success: false, error: '登入失敗', code: 401, central: 'callback' });
       }
-      const checked = await this._redeemTicket(String(body.super_ticket || ''), superUser.ymis);
+      const checked = await this._redeemTicket(String(body.super_ticket || ''), superUser.scoutId);
       if (!checked.ok) {
         return this._json(res, 200, checked.infra
           ? { success: false, error: '中央登入驗票失敗：' + String(checked.detail || ''), code: 503, reason: 'central_verify_unreachable', central: 'callback' }
           : { success: false, error: '登入失敗', code: 401, central: 'callback' });
       }
-      const token = this._tokenFor(superUser.ymis);
+      const token = this._tokenFor(superUser.scoutId);
       return this._json(res, 200, {
         success: true,
         token,
         central: 'callback',
-        user: { ymis: superUser.ymis, name: superUser.name, email: superUser.email, role: superUser.role }
+        user: { scoutId: superUser.scoutId, name: superUser.name, email: superUser.email, role: superUser.role }
       });
     }
 
     if (action === 'apply') {
       this.requests.push({
         app_id: 'APP' + (this.requests.length + 1),
-        ymis: body.ymis || '',
+        scoutId: body.scoutId || '',
         name: body.name || '',
         email: body.email || '',
         requested_role: body.requested_role || 'member',
@@ -293,9 +293,9 @@ class MockGas {
         return this._json(res, 200, { success: true, saved: changes.length, confirmer: body.confirmer || '' });
       }
       if (action === 'addMember') {
-        if (this.users.has(String(body.ymis))) return this._json(res, 200, { success: false, error: '成員已存在' });
-        this.users.set(String(body.ymis), {
-          ymis: String(body.ymis),
+        if (this.users.has(String(body.scoutId))) return this._json(res, 200, { success: false, error: '成員已存在' });
+        this.users.set(String(body.scoutId), {
+          scoutId: String(body.scoutId),
           name: body.name || '',
           email: '',
           role: body.squad_role === 'leader' ? 'branch_leader' : 'member',
@@ -307,9 +307,9 @@ class MockGas {
     }
 
     // token-gated actions
-    const ymis = this._validate(body.token);
-    if (!ymis) return this._json(res, 200, { success: false, error: 'Token 無效或過期' });
-    const user = this.users.get(ymis);
+    const scoutId = this._validate(body.token);
+    if (!scoutId) return this._json(res, 200, { success: false, error: 'Token 無效或過期' });
+    const user = this.users.get(scoutId);
     if (!user) return this._json(res, 200, { success: false, error: '找不到用戶' });
 
     switch (action) {
@@ -327,10 +327,10 @@ class MockGas {
       case 'getAllUsers':
         return this._json(res, 200, {
           success: true,
-          users: [...this.users.values()].map(({ ymis: y, name, email, role, status }) => ({ ymis: y, name, email, role, status }))
+          users: [...this.users.values()].map(({ scoutId: y, name, email, role, status }) => ({ scoutId: y, name, email, role, status }))
         });
       case 'resetPassword': {
-        const target = this.users.get(String(body.target_ymis));
+        const target = this.users.get(String(body.targetScoutId));
         if (!target) return this._json(res, 200, { success: false, error: '找不到成員' });
         target.password = String(body.new_password || '');
         return this._json(res, 200, { success: true });
