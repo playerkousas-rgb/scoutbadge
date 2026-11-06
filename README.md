@@ -48,7 +48,7 @@ TROOP_0082_BACKEND=https://script.google.com/macros/s/DEPLOYMENT_ID/exec
 TROOP_0082_APIKEY=...
 ```
 
-三項必須完整。`0082` 和 `82` 是不同的識別字；系統不會補零、去零或建立別名。公開的 `/api/troops` 只會回傳旅團編號與顯示名稱。
+三項必須完整。`0082` 和 `82` 是不同的識別字；系統不會補零、去零或建立別名。公開的 `/api/troops` 只回傳旅團編號、顯示名稱，以及（若有改過編號）`legacyIds`；不含後端 URL 或 API Key。編號必須穩定。與 SCOUTBOOK 的配合及三項決定見 [docs/partner-scoutbook.md](docs/partner-scoutbook.md)。
 
 新旅團與既有旅團接入請見 [TROOP_ONBOARDING.md](TROOP_ONBOARDING.md)；Vercel 與 Portal 設定見 [VERCEL_ENV_SETUP.md](VERCEL_ENV_SETUP.md)。
 
@@ -92,11 +92,11 @@ ScoutBadge 係底層**支部進度追蹤系統（leaf）**，可被上層容器�
 
 ## 升級既有旅團
 
-更新既有 Apps Script 時，覆蓋 `apps-script/Code.gs`，然後必須在 Apps Script「部署 →
+更新既有 Apps Script 時，用純文字開啟 `apps-script/Code.gs`，全選複製，在 Apps Script 編輯器全選蓋掉原本 SCRIPT 再貼上（不要用 Google 文件或 Word 打開，不要附加在舊程式後面），然後必須在 Apps Script「部署 →
 管理部署作業」為**既有 Web App** 建立**新版本**（`/exec` URL 會保持不變）。只覆寫編輯器
 內的程式碼並不會改變 `/exec` 所提供的版本，這是升級後功能「似有冇效」最常見的原因。
 
-**最新版本（2026-11-05，GS 6.5.0）需要執行一次初始化**：按選單「🔗 旅系統 → 🔧 初始化／更新」一次
+**最新版本（2026-11-06，GS 6.6.0）需要執行一次初始化**：按選單「🔗 旅系統 → 🔧 初始化／更新」一次
 （等同 `initializeSheets()`），補齊缺失工作表及設定，並在 Script Properties 記錄初始化版本。
 呢個選單動作係**唯一嘅更新入口**：貼上任何新版本 `Code.gs` 後再按一次即可，只增不刪、可重跑，
 唔會刪改既有資料或更換 API Key，亦唔需要搵 `repairSheets()` 等其他按鈕。前端首頁、登入頁及登入後主頁會

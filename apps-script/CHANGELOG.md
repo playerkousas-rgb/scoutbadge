@@ -3,6 +3,19 @@
 版號、歷史更新及開發背景集中保留在 Git，不放入可下載的 GS 或用戶提示。
 本文件不納入網站部署：`build.js` 只發布本目錄的 `Code.gs`，`.vercelignore` 亦排除其餘檔案。
 
+## 2026-11-06：SCOUTBOOK 待批冪等（GS 6.6.0）
+
+- **`requestComplete` 冪等**：以登入身分的 SCOUT ID（舊稱 ymis）＋ `itemId` ＋ `requested_date` 為鍵。
+  已有同鍵且仍是 `pending` 的列，回 `{ success:true, duplicate:true, request_id, status:'pending' }`，不再追加。
+  已拒絕的同一鍵可以再申報。寫入仍然只進「待批完成」，不會寫入「進度追蹤」。
+  用 `LockService` 擋住露營收訊重試同時打進來的兩筆。
+- **全文獎章／AYP 分項不收**：`OT-LD`／`OT-SF`／`OT-VS`／`OT-RG`／`OT-CM`（及分項）與 `AYP-*` 回 `VALIDATION`，
+  並附整章官方編號（`SC-OTH-002`／`001`／`008`／`005`／`004`／`009`）。`L1-*`…`L5-*`、`SC-*-*` 不改名。
+- **錯誤碼**：token 過期回 `code: 'AUTH_EXPIRED'`（數字 401 留在 `legacyCode`，ecportal 的 `code:403` 不變）。
+- **版本**：`GS_VERSION` = `6.6.0`、`GS_RELEASE_DATE` = `2026-11-06`、`GS_INIT_REQUIRED` = `true`
+  （沒有新工作表；仍按選單「🔧 初始化／更新」一次，讓版本標記對上。只增不刪）。
+  冪等要各旅團貼上本版 `Code.gs` 並為既有 Web App 建立新版本才生效。Vercel 的 CORS／錯誤碼不需動 Sheet。
+
 ## 2026-11-05：YMIS → SCOUT ID 改名（GS 6.5.0，前端 v5.2）
 
 - **改名理由**：YMIS 是童軍總會（青少年成員資訊系統）的名字，本系統只用它裡面那 10 位數字的

@@ -3,6 +3,11 @@
 ## A. 建立新旅團（僅新 Sheet）
 
 1. 建立 Google Sheet，開啟 Apps Script，貼上 `apps-script/Code.gs`。
+   **貼上方法做漏，選單不會出現，後面全部做不了：**
+   - 下載的 `Code.gs` 要用**純文字**打開（記事本、VS Code、文字編輯器）。不要用 Google 文件、Word 或 Pages——那些會改掉引號，貼上後程式會壞。
+   - 在純文字檔**全選複製**。
+   - 在 Apps Script 編輯器**全選**原本的 SCRIPT（包括預設的 `function myFunction() {}`），刪掉，再貼上**蓋掉**。不要附加在舊程式後面，不要只貼一半。
+   - 儲存。檔名可以仍叫 `Code.gs`。
 2. 儲存後按選單 **「🔗 旅系統 → 🔧 初始化／更新」** 一次（等同在編輯器執行 `initializeSheets()`），並完成授權。
    完成後會彈「✅ 初始化完成」視窗，入面有 **API Key（`API Key = …`）**，**仲有預設管理員帳號（SCOUT ID `1111111111`／密碼 `changeme`）**——
    呢個就係 §C 首次登入用嘅帳號。冇抄低都唔緊要：只要未登入改過密碼，預設值係固定嘅。
@@ -67,6 +72,8 @@ TROOP_0082_APIKEY=Apps Script 既有 API Key
 ```
 
 如旅團編號是 `0015`，三項名稱就是 `TROOP_0015_NAME`、`TROOP_0015_BACKEND`、`TROOP_0015_APIKEY`。三項缺一不會被登記；編號按原字串處理，所以 `0082` 與 `82` 不會互相取代。
+
+編號一經公開就不要改：SCOUTBOOK 會把 `/api/troops` 的 `id` 存在成員本機。若必須改，在新編號上加 `TROOP_<新編號>_LEGACYIDS=舊編號`（多個用逗號）再 Redeploy，舊編號會出現在該旅團的 `legacyIds` 及頂層對照表，成員不用重選。`LEGACYIDS` 若指向另一個仍在登記的旅團，會被忽略，避免兩個旅團併成一個。
 
 後端 URL 與 API Key 僅由 Vercel 函式使用，不能放進前端程式、靜態 JSON、網址參數或 Git。重新部署後，首頁會從 `/api/troops` 取得只含編號與名稱的清單。
 

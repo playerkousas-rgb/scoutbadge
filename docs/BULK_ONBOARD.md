@@ -74,7 +74,7 @@ auth_date, created_at, last_login, status, allowed_badges, squad, squad_role, fo
 1. 在 Google Sheets 新建試算表。
 2. **檔案 > 匯入 > 上載 > 選取本機 CSV**，選 `data/members_template.csv`（或從 app 下載的同一份）。
 3. 填寫資料。
-4. **擴充套件 > Apps Script**，把 [`assets/batch-onboard/Code.gs`](../assets/batch-onboard/Code.gs) 的內容貼上並儲存。
+4. **擴充套件 > Apps Script**。用純文字打開 [`assets/batch-onboard/Code.gs`](../assets/batch-onboard/Code.gs)，全選複製，在編輯器全選蓋掉原本 SCRIPT 再貼上並儲存（不要用 Google 文件或 Word，不要附加在舊程式後面）。
 5. 修改檔首 `CONFIG`：
    - `MAIN_SHEET_ID`：我們的 Sheet 的 ID（直接寫入時需要，出現在網址 `/d/.../` 之間）。
    - `APIKEY`：與 app 登入相同的 apikey（用「推送後端」時需要）。
