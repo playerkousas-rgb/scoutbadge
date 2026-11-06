@@ -52,7 +52,12 @@ async function run() {
   const troopsRes = response();
   troopsHandler({}, troopsRes);
   assert.deepStrictEqual(troopsRes.body, {
-    troops: { '82': { name: '第 82 短編號旅' }, '0082': { name: '第 82 旅' } }
+    success: true,
+    troops: {
+      '82': { id: '82', name: '第 82 短編號旅', legacyIds: [] },
+      '0082': { id: '0082', name: '第 82 旅', legacyIds: [] }
+    },
+    legacyIds: {}
   });
   assert(!JSON.stringify(troopsRes.body).includes('server-key-a'));
   assert(!JSON.stringify(troopsRes.body).includes('script.google.com'));

@@ -24,8 +24,8 @@ const SUPER_VERIFY_URL = 'https://scoutbadge.vercel.app/api/verify-super-ticket'
 // INITIALIZED_GS_VERSION（Script Property）只在 initializeSheets() 成功走完最後一步才寫入，
 // 表示「此 GS 版本的初始化已完成」。initializeSheets() 只做增補（缺表／缺欄位標題／缺預設管理員），
 // 不刪除、不改寫任何既有用戶、進度、紀錄或金鑰資料（見 docs/LEADER_GUIDE.md「資料保全規則」）。
-const GS_VERSION = '6.5.0';
-const GS_RELEASE_DATE = '2026-11-05';
+const GS_VERSION = '6.6.0';
+const GS_RELEASE_DATE = '2026-11-06';
 const GS_INIT_REQUIRED = true;
 const GS_INIT_PROP = 'INITIALIZED_GS_VERSION';
 function gsVersionInfo_(){
@@ -1691,7 +1691,7 @@ function doGet(e){
     const reqKey=params.apikey;
     const reqToken=params.token;
     if(reqKey && reqKey!==getApiKey()) return jsonResponse({success:false,error:'Invalid API Key',code:403});
-    if(reqToken && !validateToken(reqToken)) return jsonResponse({success:false,error:'Token 無效或過期',code:401});
+    if(reqToken && !validateToken(reqToken)) return jsonResponse({success:false,error:'Token 無效或過期',code:'AUTH_EXPIRED',errorCode:'AUTH_EXPIRED',legacyCode:401});
     let loadUser=null;
     if(reqToken){ const ly=validateToken(reqToken); if(ly) loadUser=getUser(ly); }
     if(!loadUser && auth.identity && auth.identity.kind==='parent'){
@@ -1895,7 +1895,7 @@ function doPost(e){
         if(auth.identity.kind==='member') scoutId=auth.identity.scoutId;
       }
       if(!scoutId && body.apikey && body.apikey===getApiKey()){ scoutId=body.scoutId; } // standalone mode
-      if(!scoutId) return jsonResponse({success:false,error:'未授權',code:401});
+      if(!scoutId) return jsonResponse({success:false,error:'未授權',code:'AUTH_EXPIRED',errorCode:'AUTH_EXPIRED',legacyCode:401});
       return handleRequestComplete(body, scoutId);
     }
 
@@ -1915,7 +1915,7 @@ function doPost(e){
       }
       if(user) scoutId=user.scoutId;
     }
-    if(!user) return jsonResponse({success:false,error:'Token 無效或過期',code:401});
+    if(!user) return jsonResponse({success:false,error:'Token 無效或過期',code:'AUTH_EXPIRED',errorCode:'AUTH_EXPIRED',legacyCode:401});
 
     if(action==='getAllUsers') {
       if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足，只有領袖可管理用戶'});
@@ -3334,12 +3334,62 @@ function handleDeactivateUser(body){
   return jsonResponse({success:true,message:'已停用'});
 }
 
+// SCOUTBOOK 全文獎章／AYP 分項只存本機，不是本目錄的項目編號。與 lib/book-sync.js 保持同一組規則。
+function bookLocalOnlyItem_(itemId){
+  const id=String(itemId||'').trim();
+  if(/^OT-LD(?:-|$)/.test(id)) return {officialId:'SC-OTH-002',name:'領導才獎章',verifier:'團長'};
+  if(/^OT-SF(?:-|$)/.test(id)) return {officialId:'SC-OTH-001',name:'服務獎章',verifier:'團長'};
+  if(/^OT-VS(?:-|$)/.test(id)) return {officialId:'SC-OTH-008',name:'深資童軍先修章',verifier:'團長'};
+  if(/^OT-RG(?:-|$)/.test(id)) return {officialId:'SC-OTH-005',name:'宗教章',verifier:'團長（可安排神職或導師考核後記錄）'};
+  if(/^OT-CM(?:-|$)/.test(id)) return {officialId:'SC-OTH-004',name:'社區參與章',verifier:'團長'};
+  if(/^AYP-/.test(id)) return {officialId:'SC-OTH-009',name:'香港青年獎勵計劃',verifier:'AYP 評核員（不是團長在進度表按 CONFIRM）'};
+  return null;
+}
+function bookLocalOnlyError_(itemId){
+  const info=bookLocalOnlyItem_(itemId);
+  if(!info) return null;
+  return {success:false,code:'VALIDATION',errorCode:'VALIDATION',localOnly:true,officialId:info.officialId,error:'此項目尚未納入旅團同步，只可留在紀錄冊本機。整章官方編號是 '+info.officialId+'（'+info.name+'），核實者：'+info.verifier+'。'};
+}
+function normalizeRequestedDate_(value){
+  if(value instanceof Date && !isNaN(value.getTime())) return formatDate(value);
+  const s=String(value==null?'':value).trim();
+  const m=s.match(/^(\d{4}-\d{2}-\d{2})/);
+  if(m) return m[1];
+  const head=s.split(' ')[0];
+  return head||'';
+}
+// 冪等鍵＝(登入身分的 SCOUT ID／舊稱 ymis, itemId, requested_date)。
+// 只合併仍是 pending 的同一鍵；已拒絕的可以再申報。不寫入「進度追蹤」。
 function handleRequestComplete(body, requesterScoutId){
-  const sheet=getSheet().getSheetByName('待批完成'); if(!sheet) return jsonResponse({success:false,error:'Sheet not found'});
-  const reqId='REQ_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);
-  const user=getUser(requesterScoutId)||{name:body.name||requesterScoutId};
-  sheet.appendRow([reqId,requesterScoutId,user.name||body.name,body.itemId,body.itemName||body.itemId,body.requested_date||formatDate(new Date()),body.evidence||'','pending',now(),'','','', '']);
-  return jsonResponse({success:true,request_id:reqId});
+  const sheet=getSheet().getSheetByName('待批完成');
+  if(!sheet) return jsonResponse({success:false,error:'Sheet not found',code:'NOT_FOUND',errorCode:'NOT_FOUND'});
+  const itemId=String((body&&(body.itemId||body.item_id))||'').trim();
+  if(!itemId) return jsonResponse({success:false,error:'缺少項目編號',code:'VALIDATION',errorCode:'VALIDATION'});
+  const blocked=bookLocalOnlyError_(itemId);
+  if(blocked) return jsonResponse(blocked);
+  const requested=normalizeRequestedDate_(body&&(body.requested_date||body.requestedDate))||formatDate(new Date());
+  if(!requested) return jsonResponse({success:false,error:'缺少申報日期',code:'VALIDATION',errorCode:'VALIDATION'});
+  const memberId=normalizeScoutId(requesterScoutId);
+  const lock=LockService.getScriptLock();
+  if(!lock.tryLock(15000)) return jsonResponse({success:false,error:'系統正處理另一項寫入，請稍後重試'});
+  try{
+    const data=sheet.getDataRange().getValues();
+    for(let i=1;i<data.length;i++){
+      if(String(data[i][7])!=='pending') continue;
+      const rowMemberId=normalizeScoutId(data[i][1]);
+      const rowItem=String(data[i][3]||'').trim();
+      const rowDate=normalizeRequestedDate_(data[i][5]);
+      if(rowMemberId===memberId && rowItem===itemId && rowDate===requested){
+        return jsonResponse({success:true,duplicate:true,request_id:String(data[i][0]||''),status:'pending'});
+      }
+    }
+    const reqId='REQ_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);
+    const user=getUser(requesterScoutId)||{name:(body&&body.name)||requesterScoutId};
+    sheet.appendRow([reqId,requesterScoutId,user.name||(body&&body.name)||'',itemId,(body&&(body.itemName||body.itemId))||itemId,requested,(body&&body.evidence)||'','pending',now(),'','','','']);
+    return jsonResponse({success:true,request_id:reqId,status:'pending'});
+  }finally{
+    lock.releaseLock();
+  }
 }
 function handleGetPendingRequests(){
   const sheet=getSheet().getSheetByName('待批完成'); const list=[];

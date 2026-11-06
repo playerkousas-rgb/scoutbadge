@@ -64,7 +64,7 @@ GAS Script Properties（而家仲用嘅）：`API_KEY`（自動產生）、
 curl https://<你的部署域名>/api/troops
 ```
 
-回應應該**只**係旅團編號同顯示名稱，例如 `{"0082":{"name":"第 82 旅"}}`。
+回應應該係旅團編號同顯示名稱（`troops` 係物件，不是陣列），例如 `{"success":true,"troops":{"0082":{"id":"0082","name":"第 82 旅","legacyIds":[]}},"legacyIds":{}}`。
 
 - 見唔到你個旅團 → 三條變數有嘢唔夾（名／大小寫／底線／缺一），或者未重新部署。
 - 見到 → 旅團登記冇問題，問題喺中央登入嗰條路（`SUPER_KEY`、部署版本、後端網址、`SUPER_VERIFY_URL` 常數）。
@@ -82,3 +82,8 @@ curl https://<你的部署域名>/api/troops
 5. 用 Portal 卡片連結檢查旅團預選與 `embed=1` 顯示；身份仍應由可驗證流程決定。
 
 既有 Apps Script 升級時，部署同一 Web App 的新版本，以保留 `/exec` URL；不要因這些設定變更而對既有 Sheet 執行初始化。
+
+## SCOUTBOOK 白名單與舊編號
+
+- `SCOUTBOOK_ORIGINS`：額外允許從瀏覽器呼叫 `/api/troops` 與 `/api/proxy` 的 https origin，逗號分隔。預設已放行 `https://scoutbook-five.vercel.app` 與 `https://scoutbook.vercel.app`。不要設成 `*`。
+- `TROOP_<編號>_LEGACYIDS`：只有改過公開編號才需要。值是舊編號（逗號分隔）。改完要 Redeploy。`0082` 與 `82` 不會自動當成同一個旅團。

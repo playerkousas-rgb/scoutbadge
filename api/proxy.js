@@ -1,6 +1,9 @@
 'use strict';
 
 const { getTroopConfig, isTrustedBackend, canonicalBackendUrl } = require('../lib/registry');
+const { applyCors, handlePreflight } = require('../lib/cors');
+const { annotatePartnerCode } = require('../lib/error-codes');
+const { localOnlyError } = require('../lib/book-sync');
 const {
   centralSubject,
   passwordMatches,
@@ -132,8 +135,13 @@ function attachResponseHelpers(res) {
   }
 }
 
-function fail(res, status, error) {
-  return res.status(status).json({ success: false, error });
+function fail(res, status, error, code) {
+  const body = { success: false, error };
+  if (code) {
+    body.code = code;
+    body.errorCode = code;
+  }
+  return res.status(status).json(body);
 }
 
 function parsePayload(body) {
@@ -368,14 +376,14 @@ async function handleRegistration(res, payload, startedAt) {
     note: taggedNote
   };
   if (!regPayload.troopId || !regPayload.backendUrl || !regPayload.apiKey) {
-    return fail(res, 400, '申請資料不完整');
+    return fail(res, 400, '申請資料不完整', 'VALIDATION');
   }
   // Only Apps Script web-app URLs are ever registered (registry.js enforces
   // the same rule), so refuse anything else before probing — that also keeps
   // this public entry point from fetching a host of the caller's choosing.
   if (!isTrustedBackend(regPayload.backendUrl)) {
     logResult({ troopId: 'REG', action: 'submitContact', status: 400, startedAt, success: false, central: false });
-    return fail(res, 400, '請提供 Apps Script Web App 的 https://script.google.com/…/exec 網址');
+    return fail(res, 400, '請提供 Apps Script Web App 的 https://script.google.com/…/exec 網址', 'VALIDATION');
   }
 
   // Prove the deployment answers anonymously *before* the application reaches
@@ -520,11 +528,14 @@ async function handleFeedback(res, payload, startedAt) {
 
 module.exports = async function handler(req, res) {
   attachResponseHelpers(res);
+  // SCOUTBOOK calls this from the browser (and probes with OPTIONS).
+  if (handlePreflight(req, res)) return;
+  applyCors(req, res);
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
 
   if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
+    res.setHeader('Allow', 'POST, OPTIONS');
     return fail(res, 405, '請求方法不被支援');
   }
 
@@ -540,10 +551,10 @@ module.exports = async function handler(req, res) {
       ? String(payload.troopId).trim().toUpperCase()
       : '';
     action = safeAction(payload.action);
-    if (!action) return fail(res, 400, '請求資料不完整');
+    if (!action) return fail(res, 400, '請求資料不完整', 'VALIDATION');
     // 統一回報可匿名、未揀旅團都可送出（其餘 action 一律要有旅團編號）。
     if (action === 'submitFeedback') return handleFeedback(res, payload, startedAt);
-    if (!troopId) return fail(res, 400, '請求資料不完整');
+    if (!troopId) return fail(res, 400, '請求資料不完整', 'VALIDATION');
 
     if (action === 'superLogin') return fail(res, 403, '未授權請求');
     // Registration applies to a troop that is NOT registered yet, so it must
@@ -551,11 +562,11 @@ module.exports = async function handler(req, res) {
     // server-side, never the troop's own backend).
     if (action === 'submitContact') return handleRegistration(res, payload, startedAt);
     if (!PUBLIC_ACTIONS.has(action) && !AUTH_ACTIONS.has(action)) {
-      return fail(res, 400, '不支援的請求動作');
+      return fail(res, 400, '不支援的請求動作', 'VALIDATION');
     }
 
     const troopConfig = getTroopConfig(troopId);
-    if (!troopConfig) return fail(res, 404, '找不到指定旅團');
+    if (!troopConfig) return fail(res, 404, '找不到指定旅團', 'NOT_FOUND');
 
     centralSubjectId = action === 'login' ? centralSubject(payload.login_id) : null;
     central = centralSubjectId !== null;
@@ -563,7 +574,7 @@ module.exports = async function handler(req, res) {
 
     if (central) {
       if (!loginRateLimit.allowed(req)) {
-        return fail(res, 429, '登入嘗試次數過多，請稍後再試');
+        return fail(res, 429, '登入嘗試次數過多，請稍後再試', 'RATE_LIMITED');
       }
       // A short or missing key is rejected locally. No request reaches GAS.
       if (!superConfigured()) {
@@ -619,8 +630,18 @@ module.exports = async function handler(req, res) {
           backend: troopConfig.backend,
           apikey: troopConfig.apikey
         });
-        if (!session.valid) return fail(res, 401, '登入狀態無效或已過期');
+        if (!session.valid) return fail(res, 401, '登入狀態無效或已過期', 'AUTH_EXPIRED');
         forwardPayload.token = session.gasToken;
+      }
+    }
+
+    // Itemized full-text badges and AYP stay on the record book. Refuse
+    // before the troop sheet can grow a pending row the leader cannot match.
+    if (action === 'requestComplete') {
+      const blocked = localOnlyError(forwardPayload.itemId || forwardPayload.item_id);
+      if (blocked) {
+        logResult({ troopId, action, status: 400, startedAt, success: false, central });
+        return res.status(400).json(blocked);
       }
     }
 
@@ -699,7 +720,7 @@ module.exports = async function handler(req, res) {
       success: result && result.success !== false,
       central
     });
-    return res.status(200).json(result);
+    return res.status(200).json(annotatePartnerCode(result, upstream.status));
   } catch (error) {
     if (error && error.name === 'AbortError') {
       console.error(`[proxy] upstream_timeout troop=${troopId || 'unknown'} action=${action || 'unknown'} limit=${upstreamTimeoutMs(action)}ms duration=${Date.now() - startedAt}ms`);
