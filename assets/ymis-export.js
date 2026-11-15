@@ -17,7 +17,7 @@
   // 四欄：次序及寫法必須與 YMIS 範本完全一致
   var headers = Object.freeze(['Scout ID', 'Badge-Section', 'Badge-Badge', 'Badge-award date (YYYYMMDD)']);
 
-  // 支部固定值（童軍支部）
+  // 支部固定值（童軍支部；寫法已由使用者確認）
   var section = 'Scout';
 
   // [介面中文名, YMIS Badge-Badge 值]；只限會員章及四個進度性獎章
