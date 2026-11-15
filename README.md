@@ -8,6 +8,9 @@ ScoutBadge 是為香港童軍支部設計的進度紀錄、專科徽章及領袖
 - 訓練綱要過渡安排（2017 → 2026）：章級對照、細項比對參考、保留舊清單紀錄 ID、領袖核實後自行記錄舊獎章過渡等同（不刪改舊進度、不自動勾選新細項），見 `docs/SCHEME_TRANSITION.md`
 - 回報／意見即時傳送狀態：顯示「傳送中 → 已確認收到／未接收／未能確認」，傳送中防重複點擊、內容保留、未確認時須確認才重送
 - 成員完成申請與領袖審批、批量開戶及 SCOUT ID 匯入
+- **YMIS 獎章匯出（試行版）**：領袖在「全團總覽 → 匯出 YMIS 獎章（試行）」自行選成員、獎章及實際獲獎日期，下載 YMIS「新增支部獎章紀錄」上傳用 `.xlsx`
+  （四欄：`Scout ID`／`Badge-Section`／`Badge-Badge`／`Badge-award date (YYYYMMDD)`；支部固定 `Scout`；只限會員章及四個進度性獎章）。
+  不由考核完成度推斷已頒章、不寫回進度、不需更新 GS。**尚未以真實資料在 YMIS 實測**，匯出不等於匯入成功，見 [docs/YMIS_BADGE_EXPORT.md](docs/YMIS_BADGE_EXPORT.md)
 - **SCOUT ID 命名（GS `6.5.0`）**：系統統一叫 **SCOUT ID**（即童軍總會 YMIS 內那 10 位數字童軍成員編號），
   API／JSON 正式欄位為 `scoutId`。舊稱呼 `ymis` 仍**完全向後相容**：舊請求照收、回應同時附上 `ymis` 鏡像、
   舊旅團 Sheet 的 `ymis` 表頭照讀照寫（見「舊資料相容」）

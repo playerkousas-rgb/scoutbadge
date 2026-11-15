@@ -881,6 +881,8 @@ html[lang="en"] body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","No
 
 <!-- SCOUT ID 自訂報表解析器（同時供單元測試 test/scout_id_parse.test.js 使用） -->
 <script src="assets/scout-id-parse.js"></script>
+<!-- YMIS「新增支部獎章紀錄」上傳檔（試行版；同時供單元測試 test/ymis-export.test.cjs 使用），說明見 docs/YMIS_BADGE_EXPORT.md -->
+<script src="assets/ymis-export.js"></script>
 <!-- Scout Admin 統一回報 widget（統一回報格式 v1，見 SCOUT_ADMIN.md）：問題回報／意見回饋直達 scout-admin 後台。
      data-app="進度追蹤"＝來源系統正式名稱；本 APP 的「🐛💬 回報 · 意見」按鈕（登入前 welcome-nav／登入頁連結／登入後 header 常駐）
      一律經 openScoutReport() 開啟這個 widget 的 modal；widget 載入失敗時 fallback 到獨立回報頁 report.html -->
@@ -931,6 +933,20 @@ zh:{
   batch_desc:'例如剛去完考驗營，可一鍵幫有去的成員全剔。先暫存瀏覽器，底部按確認才寫入。',
   batch_sel_members:'全選成員', batch_unsel_members:'取消全選', batch_sel_items:'全選項目', batch_unsel_items:'取消全選', batch_run:'✅ 一鍵標記完成',
   batch_members_title:'1. 選擇成員 (可搜尋過濾後批量)', batch_items_title:'2. 選擇項目 (當前篩選進度項目內)',
+  /* YMIS 獎章匯出（試行） */
+  ymis_btn:'⬇️ 匯出 YMIS 獎章（試行）', ymis_card_title:'📤 YMIS 獎章紀錄匯出（試行版・領袖專用）',
+  ymis_card_desc:'為已正式獲頒會員章／進度性獎章的成員，製作 YMIS「新增支部獎章紀錄」上傳用的 Excel 檔。尚未經 YMIS 實測；匯出不等於匯入成功。',
+  ymis_title:'匯出 YMIS 獎章 — 試行版',
+  ymis_beta:'⚠️ <b>試行版</b>：尚未以真實資料在 YMIS 實測，不保證 YMIS 接受此檔案。<b>匯出不代表已匯入</b>；上傳後請在 YMIS 核對紀錄，若出錯請經「回報 · 意見」告知。',
+  ymis_explicit:'只選擇<b>已正式獲頒</b>此獎章的成員 —— 完成考核不等於已頒章。日期請填<b>實際獲獎日期</b>（沒有預設值）。此操作不會更改本系統任何進度。',
+  ymis_award:'獎章', ymis_scope:'每次匯出一款獎章，其他獎章請另行匯出。不包括專科徽章、活動徽章、其他獎章及 2017 制過渡等同紀錄。',
+  ymis_col_pick:'選擇', ymis_col_member:'成員／SCOUT ID', ymis_col_date:'實際獲獎日期',
+  ymis_bad_id:'SCOUT ID 並非 10 位數字，不能匯出', ymis_no_members:'未有成員資料。',
+  ymis_confirm:'我已核對成員 SCOUT ID、實際頒章及獲獎日期，並已檢查 YMIS 現有紀錄以免重複。',
+  ymis_upload_hint:'下載後登入 YMIS：<b>成員註冊 → 資料檔案上傳 → 新增支部獎章紀錄</b>，上傳此檔並按系統指示確認。本系統不會偵測跨次重複上傳。檔案含成員編號，請妥善保管。',
+  ymis_download:'⬇️ 下載 XLSX', ymis_need_confirm:'請先勾選確認已核對紀錄。', ymis_need_date:'請為「{0}」填寫實際獲獎日期。', ymis_loading:'正在準備 Excel 元件…',
+  ymis_xlsx_fail:'Excel 元件未能載入，請檢查網絡後再試。', ymis_stale:'成員資料已變更，請關閉後重新開啟。',
+  ymis_done:'已匯出 {0} 筆（{1}）。尚未確認已匯入 YMIS —— 請到 YMIS 上傳並核對，切勿重複上傳。',
   all_items:'全部項目', all_squads:'全部小隊', search_member_ph:'搜尋成員姓名/ SCOUT ID', search_item_ph:'搜尋項目名稱/編號', all_badges:'全部獎章', download_report:'⬇️ 下載報表',
   ov_by_member:'👥 按成員總覽 (一眼睇會員章)', ov_by_item:'🔍 按項目統計 (百分比)', ov_pick_hint:'選擇進度項目以查看詳細矩陣。',
   ov_none_found:'無成員符合搜尋', batch_first50:'僅顯示前50項，更多請分進度項目篩選', batch_no_items:'無項目',
@@ -1367,6 +1383,20 @@ en:{
   batch_desc:'e.g. right after an assessment camp, tick everyone who attended in one go. Changes are cached in the browser first — press confirm at the bottom to write to the cloud.',
   batch_sel_members:'Select all members', batch_unsel_members:'Clear members', batch_sel_items:'Select all items', batch_unsel_items:'Clear items', batch_run:'✅ Mark all complete',
   batch_members_title:'1. Select members (filter first, then batch)', batch_items_title:'2. Select items (within the current filter)',
+  /* YMIS award export (beta) */
+  ymis_btn:'⬇️ Export YMIS awards (Beta)', ymis_card_title:'📤 YMIS award record export (Beta · leaders only)',
+  ymis_card_desc:'Builds the Excel file for YMIS "Add section badge records" for members who have actually been presented the Membership Badge or a progressive award. Not yet tested against YMIS; exporting does not mean imported.',
+  ymis_title:'Export YMIS awards — Beta',
+  ymis_beta:'⚠️ <b>Beta</b>: not yet tested in YMIS with real data, so YMIS is not guaranteed to accept this file. <b>Exported does NOT mean imported</b> — check the records in YMIS after uploading and tell us about any error via "Report · Feedback".',
+  ymis_explicit:'Select only members who have <b>actually been presented</b> this award — completing the checklist is not an award. Enter the <b>actual award date</b> (there is no default). Nothing is written back to progress in this system.',
+  ymis_award:'Award', ymis_scope:'One award per export; export other awards separately. Proficiency badges, activity badges, other awards and 2017-scheme transition records are not included.',
+  ymis_col_pick:'Select', ymis_col_member:'Member / SCOUT ID', ymis_col_date:'Actual award date',
+  ymis_bad_id:'SCOUT ID is not 10 digits — cannot be exported', ymis_no_members:'No members yet.',
+  ymis_confirm:'I have verified the SCOUT IDs, the actual awards and award dates, and checked existing YMIS records to avoid duplicates.',
+  ymis_upload_hint:'After downloading, sign in to YMIS: <b>成員註冊 (Registration) → 資料檔案上傳 (Data file upload) → 新增支部獎章紀錄 (Add section badge records)</b>, upload this file and confirm as prompted. This system does not detect repeated uploads. The file contains member IDs — store it securely.',
+  ymis_download:'⬇️ Download XLSX', ymis_need_confirm:'Please tick the confirmation first.', ymis_need_date:'Enter the actual award date for {0}.', ymis_loading:'Preparing the Excel component…',
+  ymis_xlsx_fail:'The Excel component could not be loaded — check your network and try again.', ymis_stale:'The member list has changed — close and reopen this window.',
+  ymis_done:'Exported {0} record(s) ({1}). Import into YMIS is NOT confirmed — upload and check in YMIS, and do not upload twice.',
   all_items:'All items', all_squads:'All patrols', search_member_ph:'Search member name / SCOUT ID', search_item_ph:'Search item name / ID', all_badges:'All badges', download_report:'⬇️ Download report',
   ov_by_member:'👥 By member (Membership at a glance)', ov_by_item:'🔍 By item (percentages)', ov_pick_hint:'Choose a badge to see the detailed matrix.',
   ov_none_found:'No members match the search', batch_first50:'Showing first 50 items only — filter by badge for more', batch_no_items:'No items',
@@ -3700,6 +3730,11 @@ function renderOverviewTab(){
       <div><b style="font-size:12px">${t('batch_items_title')}</b><div id="batchItemList" style="max-height:200px;overflow-y:auto;background:#fff;border:1px solid var(--border);border-radius:8px;padding:6px;margin-top:4px"></div></div>
     </div>
   </div>
+  ${(currentUser&&canUserTickRole(currentUser.role))?`<div class="info-section" style="border-left:4px solid var(--orange);background:#FFFBEB;padding:12px">
+    <h3 style="color:var(--text);font-size:14px">${t('ymis_card_title')}</h3>
+    <p style="font-size:12px;color:var(--text-light);margin-bottom:8px">${t('ymis_card_desc')}</p>
+    <button class="btn btn-sm btn-secondary" onclick="openYmisExport()">${t('ymis_btn')}</button>
+  </div>`:''}
   <div class="filter-bar" style="margin-top:12px">
     <select id="overviewBadgeSelect" onchange="renderOverviewTable()">${badgeOptions}</select>
     <select id="overviewSegmentSelect" onchange="renderOverviewTable()"><option value="">${t('all_items')}</option></select>
@@ -3725,6 +3760,105 @@ function renderOverviewTab(){
   renderByItemListInner();
   const badgeSel=document.getElementById('overviewBadgeSelect');
   if(badgeSel){ badgeSel.addEventListener('change', updateSegmentOptions); updateSegmentOptions(); }
+}
+/* ---------- YMIS 獎章匯出（試行版，由 CUBSBADGE 移植；說明見 docs/YMIS_BADGE_EXPORT.md） ----------
+   匯出是領袖的明確聲明：只輸出領袖勾選的成員、所選獎章及逐人填寫的實際獲獎日期。
+   不讀取考核進度、不由考核完成度推斷已頒章，不寫回任何進度，亦不呼叫後端。 */
+const SHEETJS_SRCS=[
+  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+  'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+  'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'
+];
+// xlsx@0.18.5 dist/xlsx.full.min.js 的 SRI（以 npm 套件檔案計算）；檔案內容不符即不執行，改試下一個來源
+const SHEETJS_SRI='sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA==';
+let _sheetJsPromise=null;
+let ymisExportMembers=[];          // 開啟視窗時的成員快照（之後 members 重新載入亦不會錯位）
+function sheetJsReady(){ return !!(window.XLSX && window.XLSX.utils && typeof window.XLSX.writeFile==='function'); }
+// 只在領袖開啟匯出視窗時才載入 SheetJS（平時不增加頁面負擔）
+function loadSheetJs(){
+  if(sheetJsReady()) return Promise.resolve(window.XLSX);
+  if(_sheetJsPromise) return _sheetJsPromise;
+  _sheetJsPromise=new Promise((resolve,reject)=>{
+    let i=0;
+    const tryNext=()=>{
+      if(i>=SHEETJS_SRCS.length){ _sheetJsPromise=null; reject(new Error('xlsx_load_fail')); return; }
+      const s=document.createElement('script');
+      s.src=SHEETJS_SRCS[i++]; s.async=true; s.setAttribute('integrity',SHEETJS_SRI); s.setAttribute('crossorigin','anonymous');
+      s.onload=()=>{ if(sheetJsReady()) resolve(window.XLSX); else tryNext(); };
+      s.onerror=tryNext;
+      document.head.appendChild(s);
+    };
+    tryNext();
+  });
+  return _sheetJsPromise;
+}
+function closeYmisExport(){ const el=document.getElementById('ymisExportModal'); if(el) el.remove(); ymisExportMembers=[]; }
+function openYmisExport(){
+  if(!currentUser||!canUserTickRole(currentUser.role)) return showToast(t('no_permission'),'warning');
+  if(!window.YmisExport){ showToast('assets/ymis-export.js not loaded','error'); return; }
+  closeYmisExport();
+  ymisExportMembers=(members||[]).slice();
+  const cell='padding:6px;border-bottom:1px solid var(--border);vertical-align:middle';
+  const head='padding:7px 6px;background:var(--maroon-light);color:var(--maroon);position:sticky;top:0;z-index:1';
+  const rows=ymisExportMembers.map((m,i)=>{
+    const id=String(m.scoutId==null?'':m.scoutId).trim();
+    const okId=/^\d{10}$/.test(id);
+    const label=escapeHtmlText(m.name||id);
+    return `<tr>
+      <td style="${cell};text-align:center"><input type="checkbox" class="ymis-export-member" value="${i}" ${okId?'':'disabled'} aria-label="${t('ymis_col_pick')} ${label}" style="width:18px;height:18px;accent-color:var(--maroon)"></td>
+      <td style="${cell};text-align:left">${label}${m.squad?` <small style="color:var(--text-light)">${escapeHtmlText(m.squad)}</small>`:''}<br><small style="color:var(--text-light)">${escapeHtmlText(id||'—')}</small>${okId?'':`<br><small style="color:var(--red)">${t('ymis_bad_id')}</small>`}</td>
+      <td style="${cell}"><input type="date" id="ymisExportDate_${i}" ${okId?'':'disabled'} aria-label="${t('ymis_col_date')} ${label}" style="width:100%;min-width:130px;padding:8px;border:2px solid var(--border);border-radius:8px;font-family:inherit"></td>
+    </tr>`;
+  }).join('');
+  const modal=document.createElement('div');
+  modal.id='ymisExportModal'; modal.className='modal active';
+  modal.innerHTML=`<div class="modal-content" style="max-width:700px">
+    <h3>${t('ymis_title')}</h3>
+    <div style="background:#FFFBEB;border-left:3px solid var(--orange);padding:8px 10px;border-radius:6px;font-size:12px;margin-bottom:8px">${t('ymis_beta')}</div>
+    <p style="font-size:12px;margin-bottom:10px">${t('ymis_explicit')}</p>
+    <div class="form-group"><label for="ymisExportBadge">${t('ymis_award')}</label>
+      <select id="ymisExportBadge">${YmisExport.badges.map(b=>`<option value="${escapeHtmlText(b[1])}">${escapeHtmlText(inEn()?b[1]:b[0]+'（'+b[1]+'）')}</option>`).join('')}</select>
+      <p style="font-size:11px;color:var(--text-light);margin-top:4px">${t('ymis_scope')}</p>
+    </div>
+    <div style="max-height:300px;overflow:auto;border:1px solid var(--border);border-radius:8px">
+      ${rows?`<table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr><th style="${head}">${t('ymis_col_pick')}</th><th style="${head};text-align:left">${t('ymis_col_member')}</th><th style="${head}">${t('ymis_col_date')}</th></tr></thead><tbody>${rows}</tbody></table>`:`<p style="padding:14px;text-align:center;color:var(--text-light);font-size:12px">${t('ymis_no_members')}</p>`}
+    </div>
+    <label style="display:flex;gap:8px;align-items:flex-start;margin:12px 0;font-size:12px"><input type="checkbox" id="ymisExportConfirm" style="margin-top:2px"> <span>${t('ymis_confirm')}</span></label>
+    <p style="font-size:11px;color:var(--text-light)">${t('ymis_upload_hint')}</p>
+    <div id="ymisExportStatus" role="status" aria-live="polite" style="font-size:12px;font-weight:600;margin-top:8px;min-height:18px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-sm btn-primary" style="flex:1" id="ymisExportDownloadBtn" onclick="downloadYmisAwards()">${t('ymis_download')}</button>
+      <button class="btn btn-sm btn-secondary" style="flex:1" onclick="closeYmisExport()">${t('close')}</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+  loadSheetJs().catch(()=>{});   // 預先載入；失敗時按下載會再試並顯示提示
+}
+async function downloadYmisAwards(){
+  if(!currentUser||!canUserTickRole(currentUser.role)) return;
+  const status=document.getElementById('ymisExportStatus');
+  const btn=document.getElementById('ymisExportDownloadBtn');
+  if(!status||!btn||btn.disabled) return;
+  const say=(msg,color)=>{ status.style.color=color||'var(--red)'; status.textContent=msg; };
+  try{
+    if(!document.getElementById('ymisExportConfirm').checked) throw new Error(t('ymis_need_confirm'));
+    const badge=document.getElementById('ymisExportBadge').value;
+    const records=Array.from(document.querySelectorAll('#ymisExportModal .ymis-export-member:checked')).map(el=>{
+      const m=ymisExportMembers[Number(el.value)];
+      if(!m) throw new Error(t('ymis_stale'));
+      const dateEl=document.getElementById('ymisExportDate_'+el.value);
+      if(!dateEl.value){ try{ dateEl.focus(); }catch(e){} throw new Error(tf('ymis_need_date', m.name||m.scoutId)); }
+      return {scoutId:m.scoutId, badge, date:dateEl.value};
+    });
+    const rows=YmisExport.buildRows(records);   // 先驗證，全部通過才產生檔案
+    btn.disabled=true; say(t('ymis_loading'),'var(--text-light)');
+    let XLSX_;
+    try{ XLSX_=await loadSheetJs(); }catch(e){ throw new Error(t('ymis_xlsx_fail')); }
+    const d=new Date(); const stamp=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    XLSX_.writeFile(YmisExport.workbook(XLSX_,rows),'YMIS-badges-'+stamp+'.xlsx',{bookType:'xlsx'});
+    say(tf('ymis_done',rows.length,badge),'var(--green)');
+  }catch(e){ say(e.message); }
+  finally{ btn.disabled=false; }
 }
 function showOverviewSubTab(which){
   const mv=document.getElementById('overviewMemberView');
@@ -4594,7 +4728,7 @@ const EMBEDDED_GUIDES={
   leader: `<h2>👨‍💼 領袖使用教學 (Leader)</h2>
   <blockquote>你擁有全部權限</blockquote>
   <h3>1. 我的進度</h3><ul><li>選任何成員看所有紀錄</li><li>直接勾選+日期，離線暫存確認寫入</li></ul>
-  <h3>2. 全團總覽</h3><ul><li>卡片一眼睇會員章✓</li><li>表格矩陣最多30欄</li><li>🚀考驗營批量：選成員+選項目→一鍵標記→暫存→確認寫入</li><li>子切換：按成員/按項目</li></ul>
+  <h3>2. 全團總覽</h3><ul><li>卡片一眼睇會員章✓</li><li>表格矩陣最多30欄</li><li>🚀考驗營批量：選成員+選項目→一鍵標記→暫存→確認寫入</li><li>⬇️ 匯出 YMIS 獎章（試行）：自行選已獲頒的成員、獎章及實際獲獎日期→下載 XLSX→到 YMIS「成員註冊 → 資料檔案上傳 → 新增支部獎章紀錄」上傳。完成考核不等於已頒章；尚未經 YMIS 實測，匯出不等於匯入成功（<a href="docs/YMIS_BADGE_EXPORT.md" target="_blank" rel="noopener">說明</a>）</li><li>子切換：按成員/按項目</li></ul>
   <h3>3. 審批中心</h3><ul><li>🏅獎章審批+👤用戶審批合併</li></ul>
   <h3>4. 📅 活動履歷（v5.0 新增；v5.2 加入成員申報）</h3><ul><li>領袖可為成員記錄服務、活動、訓練班三類活動，支援批量、編輯、刪除</li><li>v5.2 起成員可在「📅 活動履歷」按「📝 申報紀錄」自行申報；領袖在「✅ 審批中心 → 📅 履歷申報」批准／拒絕</li><li>成員對已批紀錄按 ✏️ 可提交「修改申報」，批准後以同一紀錄更新（即重批機制）；批准前成員可取消</li><li>進度獎章、其他獎章流程不變：批了只有領袖可改</li><li>後端需升級至 v5.2（執行 initializeSheets() 補建「待批履歷」表）</li></ul>
   <h3>5. 表格列印</h3><p>自動填入，官方 PT/18、P120A1 童軍支部表格格式（PT/65、PT/19 屬深資童軍支部，本系統不提供）</p>
@@ -4638,7 +4772,7 @@ const EMBEDDED_GUIDES_EN={
   leader: `<h2>👨‍💼 Leader Guide</h2>
   <blockquote>You have full permissions</blockquote>
   <h3>1. My Progress</h3><ul><li>Select any member to view all records</li><li>Tick directly with a date — saved offline first, then confirm to write</li></ul>
-  <h3>2. Troop Overview</h3><ul><li>Cards show Membership Badge ✓ at a glance</li><li>Matrix table up to 30 columns</li><li>🚀 Assessment camp batch: pick members + items → one-tap mark → staged → confirm</li><li>Sub-views: by member / by item</li></ul>
+  <h3>2. Troop Overview</h3><ul><li>Cards show Membership Badge ✓ at a glance</li><li>Matrix table up to 30 columns</li><li>🚀 Assessment camp batch: pick members + items → one-tap mark → staged → confirm</li><li>⬇️ Export YMIS awards (Beta): pick the members who were actually presented an award, the award and the actual award date → download the XLSX → upload it in YMIS under 成員註冊 → 資料檔案上傳 → 新增支部獎章紀錄. Completing the checklist is not an award; not yet tested against YMIS, and exporting does not mean imported (<a href="docs/YMIS_BADGE_EXPORT.md" target="_blank" rel="noopener">details</a>)</li><li>Sub-views: by member / by item</li></ul>
   <h3>3. Approval Centre</h3><ul><li>🏅 Badge approvals + 👤 user approvals combined</li></ul>
   <h3>4. 📅 Activity Log (v5.0; member claims added in v5.2)</h3><ul><li>Leaders record service, activities and training courses for members, with batch / edit / delete</li><li>From v5.2, members tap "📝 Claim a record" in "📅 Activity Log"; leaders approve/reject under "✅ Approval Centre → 📅 Log claims"</li><li>Members can tap ✏️ on an approved own record to submit an edit claim; on approval it updates the SAME record (re-approval flow); members may cancel while pending</li><li>Progressive badges and other awards are unchanged: once approved, only leaders may change them</li><li>Backend must be on v5.2 (run initializeSheets() to create the "待批履歷" sheet)</li></ul>
   <h3>5. Forms</h3><p>Auto-filled, official Scout Section PT/18 and P120A1 formats (PT/65 and PT/19 are Venture Scout forms and are not provided)</p>

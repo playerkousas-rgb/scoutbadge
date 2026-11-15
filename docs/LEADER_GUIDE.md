@@ -36,6 +36,9 @@
 - 卡片一眼看到會員章 ✓。
 - 表格矩陣最多 30 欄。
 - 🚀 **考驗營批量**：選成員＋選項目 → 一鍵標記 → 暫存 → 確認寫入。
+- ⬇️ **匯出 YMIS 獎章（試行）**：自行選已正式獲頒的成員、獎章（會員章／探索／標準／高級／總領袖獎章）及**實際獲獎日期** → 下載 XLSX →
+  到 YMIS「成員註冊 → 資料檔案上傳 → 新增支部獎章紀錄」上傳。完成考核**不等於**已頒章，系統不會代你推斷；
+  **尚未經 YMIS 實測**，匯出不等於匯入成功，亦不會偵測重複上傳。詳見 [YMIS_BADGE_EXPORT.md](YMIS_BADGE_EXPORT.md)。
 - 子切換：按成員／按項目。
 
 ## 3. 審批中心
@@ -119,6 +122,9 @@
 - Cards show the Membership Badge ✓ at a glance.
 - Matrix table up to 30 columns.
 - 🚀 Assessment camp batch: pick members + items → one-tap mark → staged → confirm.
+- ⬇️ **Export YMIS awards (Beta)**: pick the members who were actually presented an award, the award (Membership Badge / Pathfinder / Standard / Advanced / Chief Scout's Award)
+  and the **actual award date** → download the XLSX → upload it in YMIS under 成員註冊 → 資料檔案上傳 → 新增支部獎章紀錄. Completing the checklist is **not** an award and is never inferred;
+  **not yet tested against YMIS** — exporting does not mean imported, and repeated uploads are not detected. See [YMIS_BADGE_EXPORT.md](YMIS_BADGE_EXPORT.md).
 - Sub-views: by member / by item.
 
 ### 3. Approval Centre
