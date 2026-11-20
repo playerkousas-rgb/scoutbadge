@@ -24,14 +24,16 @@ const SUPER_VERIFY_URL = 'https://scoutbadge.vercel.app/api/verify-super-ticket'
 // INITIALIZED_GS_VERSION（Script Property）只在 initializeSheets() 成功走完最後一步才寫入，
 // 表示「此 GS 版本的初始化已完成」。initializeSheets() 只做增補（缺表／缺欄位標題／缺預設管理員），
 // 不刪除、不改寫任何既有用戶、進度、紀錄或金鑰資料（見 docs/LEADER_GUIDE.md「資料保全規則」）。
-const GS_VERSION = '6.6.0';
-const GS_RELEASE_DATE = '2026-11-06';
-const GS_INIT_REQUIRED = true;
+const GS_VERSION = '6.7.0';
+const GS_RELEASE_DATE = '2026-11-20';
+const GS_INIT_REQUIRED = false;
 const GS_INIT_PROP = 'INITIALIZED_GS_VERSION';
 function gsVersionInfo_(){
   let initialized='';
   try{ initialized=String(PropertiesService.getScriptProperties().getProperty(GS_INIT_PROP)||''); }catch(e){}
-  return {gsVersion:GS_VERSION, gsReleaseDate:GS_RELEASE_DATE, initRequired:GS_INIT_REQUIRED, initializedGsVersion:initialized};
+  const ss=getSheet();
+  const missingSheets=!ss.getSheetByName('Users') || !ss.getSheetByName('Tokens');
+  return {gsVersion:GS_VERSION, gsReleaseDate:GS_RELEASE_DATE, initRequired:GS_INIT_REQUIRED || missingSheets, initializedGsVersion:initialized};
 }
 // 表頭只在「該格完全空白」時才寫入，絕不覆蓋既有欄名
 function setHeaderIfEmpty_(sheet, col, label){
@@ -138,7 +140,7 @@ function normalizeScoutId(v){
   let s=String(v).trim();
   if(/^\d+\.0+$/.test(s)) s=s.replace(/\.0+$/,'');
   if(/e/i.test(s) && isFinite(Number(s))) s=String(Math.round(Number(s)));
-  return s;
+  return /^l\d+$/i.test(s) ? s.toUpperCase() : s;
 }
 function normalizeEmail(v){
   return String(v||'').trim().toLowerCase();
@@ -639,14 +641,16 @@ function safeSheetText(v,maxLen){
 }
 
 const ROLE_HIERARCHY = { 'super_admin':100,'admin':80,'group_leader':60,'branch_leader':40,'member':0 };
-const CAN_TICK_ROLES = ['admin','group_leader','branch_leader','super_admin'];
+const CAN_TICK_ROLES = ['member','admin','group_leader','branch_leader','super_admin'];
+const TICK_PERMISSION_ERROR = '未有勾選權限，請聯絡旅長在用戶管理按「授權勾選」';
 const CAN_MANAGE_ROLES = {
   'super_admin': ['admin','group_leader','branch_leader','member'],
   'admin': ['group_leader','branch_leader','member'],
   'group_leader': ['branch_leader','member'],
   'branch_leader': ['member']
 };
-function canUserTick(r){ return CAN_TICK_ROLES.indexOf(r)>=0; }
+function canUserTick(r){ return r!=='member' && CAN_TICK_ROLES.indexOf(r)>=0; }
+function canTickUser_(u){ return !!u && CAN_TICK_ROLES.indexOf(u.role)>=0 && u.can_tick===true; }
 function getRoleLevel(r){ return ROLE_HIERARCHY[r]||0; }
 function canManageRole(m,t){ return (CAN_MANAGE_ROLES[m]||[]).indexOf(t)>=0; }
 function canManageUser(manager,targetRole){ return !!(manager && canManageRole(manager.role,targetRole)); }
@@ -881,6 +885,8 @@ function getUser(scoutId){
   }
   if(typeof scoutId === 'string' && (scoutId.includes('@') || scoutId.indexOf('SIG_LEADER_') === 0)){
     const email = scoutId.replace(/^SIG_LEADER_/, '');
+    const localAccount=findUsersAccountByEmail(email);
+    if(localAccount) return getUserByEmail(email);
     return {scoutId: scoutId, name: email, email: email, role: 'branch_leader', can_tick: true, branch: '', allowed_badges: '*', squad: '', squad_role: '', status: 'active', force_change_password: false};
   }
   const sheet=getSheet().getSheetByName('Users'); if(!sheet) return null;
@@ -1371,7 +1377,7 @@ function setDownstreamLocalLogin(downstreamId,allow){
 function linkManager(body){
   const onBehalf=linkActorLabel(body&&body.on_behalf);
   const rawRole=String((body&&body.on_behalf_role)||'');
-  const role=(rawRole==='super_admin'||VALID_ROLES.indexOf(rawRole)>=0)?rawRole:'admin';
+  const role=(rawRole==='super_admin'||VALID_ROLES.indexOf(rawRole)>=0)?rawRole:(rawRole?'':'admin');
   return {scoutId:onBehalf,name:'上游同步（'+onBehalf+'）',email:'',role:role,can_tick:true};
 }
 // 少數管理 handler（改角色／改權限）會用 getUser(managerScoutId) 再核對本地權限；
@@ -1391,6 +1397,13 @@ function handleSignedRequest(action,body){
   }
   const manager=linkManager(body);
   const actor=manager.scoutId;
+  const tickActions=['save','saveOtherBadge','saveLogRecord','deleteLogRecord','reviewRequest','reviewLogRequest'];
+  // 已知本地帳戶以當前 Users 權限為準；其他上游身分由受信簽章提供。
+  const localActor=(actor.indexOf('@')>=0?getUserByEmail(actor):getUser(actor));
+  const knownAccount=actor.indexOf('@')>=0?findUsersAccountByEmail(actor):findUsersAccountByScoutId(actor);
+  const trustedSystem=!body.on_behalf && !body.on_behalf_role;
+  const tickActor=knownAccount ? localActor : Object.assign({},manager,{role:trustedSystem || body.on_behalf_role ? manager.role : '',can_tick:trustedSystem || body.on_behalf_can_tick===true});
+  if(tickActions.indexOf(action)>=0 && !canTickUser_(tickActor)) return jsonResponse({success:false,error:TICK_PERMISSION_ERROR});
   if(LINK_SIG_WRITE_ACTIONS.indexOf(action)>=0){
     writeAudit('upstream','link_signed_'+action,actor,safeSheetText(body.on_behalf_name,80)+'（sig 已驗證）');
   }
@@ -1581,7 +1594,7 @@ function linkUpsertUser(raw,actor){
     const branch=safeSheetText(raw.branch,100);
     const squad=safeSheetText(raw.squad,100);
     const status=['active','inactive','transferred_out','disabled','deleted'].indexOf(String(raw.status||''))>=0?String(raw.status):'active';
-    const canTick=canUserTick(role)&&(raw.can_tick===undefined?role!=='member':linkIsTrue(raw.can_tick));
+    const canTick=raw.can_tick===undefined ? canUserTick(role) : linkIsTrue(raw.can_tick);
     const allowed=String(raw.allowed_badges===undefined||raw.allowed_badges===null?'':raw.allowed_badges);
     const force=raw.force_change_password===undefined?(row>0?linkIsTrue(linkCell(data[row-1],map,'force_change_password')):false):linkIsTrue(raw.force_change_password);
     if(!name) return {success:false,scoutId:scoutId,error:'姓名不可留空'};
@@ -1686,14 +1699,15 @@ function doGet(e){
   // 保留帳號 token 與旅系統閘門無關（閂口後仍可進入救援，超管唔經旅團登記 Sheet）
   if(!localLoginAllowed() && !isSuperAdminToken(params.token)) return jsonResponse(linkClosedResponse(action));
   const auth=requireAuthParams(params);
-  if(!auth.ok) return jsonResponse({success:false,error:'未授權：缺少 API Key 或有效簽名',code:403});
+  if(!auth.ok) return params.token ? jsonResponse({success:false,error:'Token 無效或過期',code:'AUTH_EXPIRED',errorCode:'AUTH_EXPIRED',legacyCode:401}) : jsonResponse({success:false,error:'未授權：缺少 API Key 或有效簽名',code:403});
   if(action==='load'){
     const reqKey=params.apikey;
     const reqToken=params.token;
     if(reqKey && reqKey!==getApiKey()) return jsonResponse({success:false,error:'Invalid API Key',code:403});
     if(reqToken && !validateToken(reqToken)) return jsonResponse({success:false,error:'Token 無效或過期',code:'AUTH_EXPIRED',errorCode:'AUTH_EXPIRED',legacyCode:401});
     let loadUser=null;
-    if(reqToken){ const ly=validateToken(reqToken); if(ly) loadUser=getUser(ly); }
+    if(reqToken){ const ly=validateToken(reqToken); if(ly) loadUser=getUser(ly); if(!loadUser) return jsonResponse({success:false,error:'Token 無效或過期',code:'AUTH_EXPIRED',errorCode:'AUTH_EXPIRED',legacyCode:401}); }
+    if(!reqToken && auth.identity && auth.identity.kind!=='parent') loadUser=auth.identity.kind==='member'?getUser(auth.identity.scoutId):(getUserByEmail(auth.identity.email)||auth.identity);
     if(!loadUser && auth.identity && auth.identity.kind==='parent'){
       loadUser={scoutId:null, role:'parent', can_tick:false, children:auth.identity.children};
     }
@@ -1720,7 +1734,7 @@ function doPost(e){
     if(!localLoginAllowed() && !isSuperAdminToken(body.token) && !isLinkExemptLocalAction(action) && !isSuperLogin) return jsonResponse(linkClosedResponse(action));
 
     const auth=requireAuthBody(body);
-    if(!auth.ok) return jsonResponse({success:false,error:'未授權：缺少 API Key 或有效簽名',code:403});
+    if(!auth.ok) return body.token ? jsonResponse({success:false,error:'Token 無效或過期',code:'AUTH_EXPIRED',errorCode:'AUTH_EXPIRED',legacyCode:401}) : jsonResponse({success:false,error:'未授權：缺少 API Key 或有效簽名',code:403});
 
     const isSig = auth.identity !== null;
 
@@ -1879,9 +1893,21 @@ function doPost(e){
     if(action==='save' || action==='addMember' || action==='addUser' || action==='bulkAddUsers' || action==='saveOtherBadge'){
       const reqKey=body.apikey;
       if(reqKey && reqKey!==getApiKey()) return jsonResponse({success:false,error:'Invalid API Key'});
-      if(!reqKey && body.token){
+      if(!reqKey && body.token && action!=='save' && action!=='saveOtherBadge'){
         const tk=validateToken(body.token);
         if(!tk && action!=='addMember') return jsonResponse({success:false,error:'未授權 - 需 API Key 或有效 Token'});
+      }
+      if(action==='save' || action==='saveOtherBadge'){
+        // API key-only callers retain the legacy integration path; a supplied token
+        // is always authoritative even when the proxy also supplies an API key.
+        if(body.token){
+          const id=validateToken(body.token);
+          const tickUser=id?getUser(id):null;
+          if(!tickUser) return jsonResponse({success:false,error:'Token 無效或過期',code:'AUTH_EXPIRED',errorCode:'AUTH_EXPIRED',legacyCode:401});
+          if(!canTickUser_(tickUser)) return jsonResponse({success:false,error:TICK_PERMISSION_ERROR});
+        }else if(auth.identity){
+          if(!canTickUser_(auth.identity)) return jsonResponse({success:false,error:TICK_PERMISSION_ERROR});
+        }else if(!reqKey || reqKey!==getApiKey()) return jsonResponse({success:false,error:'Token 無效或過期',code:'AUTH_EXPIRED',errorCode:'AUTH_EXPIRED',legacyCode:401});
       }
       if(action==='save') return handleSave(body.changes, body.confirmer||'');
       if(action==='addMember'){ let my=body.token?validateToken(body.token):null; let mgr=my?getUser(my):null; if(!mgr && body.apikey && body.apikey===getApiKey()) mgr={role:'admin'}; if(!mgr || getRoleLevel(mgr.role)<40) return jsonResponse({success:false,error:'只有領袖可以新增成員'}); return handleAddMember(body.scoutId,body.name,body.squad||'',body.squad_role||'member'); }
@@ -1901,6 +1927,7 @@ function doPost(e){
 
     let scoutId=body.token?validateToken(body.token):null;
     let user=scoutId?getUser(scoutId):null;
+    if(body.token && !user) return jsonResponse({success:false,error:'Token 無效或過期',code:'AUTH_EXPIRED',errorCode:'AUTH_EXPIRED',legacyCode:401});
     if(!user && auth.identity && auth.identity.kind!=='parent'){
       user=(auth.identity.kind==='member')?getUser(auth.identity.scoutId):getUserByEmail(auth.identity.email);
       if(!user && auth.identity.kind==='leader'){
@@ -1923,7 +1950,7 @@ function doPost(e){
     }
     if(action==='getMembers'){ return jsonResponse({success:true,members:getMembers()}); }
     if(action==='getPendingRequests'){ if(getRoleLevel(user.role)<0) return jsonResponse({success:false,error:'權限不足'}); return handleGetPendingRequests(); }
-    if(action==='reviewRequest'){ if(!canUserTick(user.role)) return jsonResponse({success:false,error:'權限不足，需領袖權限'}); return handleReviewRequest(body.request_id, body.decision, body.review_note, scoutId, body.confirmed_date); }
+    if(action==='reviewRequest'){ if(!canTickUser_(user)) return jsonResponse({success:false,error:TICK_PERMISSION_ERROR}); return handleReviewRequest(body.request_id, body.decision, body.review_note, scoutId, body.confirmed_date); }
     if(action==='getOtherBadges'){ return handleGetOtherBadges(body.targetScoutId||scoutId); }
     if(action==='getApplications'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足，需團長/支部領袖'}); return handleGetApplications(); }
     if(action==='reviewApplication'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'}); return handleReviewApplication(body.app_id,body.decision,body.review_note,user,body.temp_password); }
@@ -1934,7 +1961,7 @@ function doPost(e){
     if(action==='changePassword') return handleChangePassword(scoutId,body.old_password,body.new_password,body.token);
     if(action==='resetPassword'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'}); return handleResetPassword(body.targetScoutId,user,body.new_password); }
     if(action==='addServiceRecord'){
-  if(!canUserTick(user.role)) return jsonResponse({success:false,error:'權限不足'});
+  if(!canTickUser_(user)) return jsonResponse({success:false,error:TICK_PERMISSION_ERROR});
   return handleAddServiceRecord(body.record,scoutId);
 }
     if(action==='getServiceRecords'){ return handleGetServiceRecords(body.targetScoutId||scoutId); }
@@ -1946,7 +1973,7 @@ function doPost(e){
     }
     if(action==='updatePermissions'){
       if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'});
-      return handleUpdateUserRole(body.targetScoutId,body.new_role||null,body.can_tick,scoutId, body.allowed_badges);
+      return handleUpdateUserRole(body.targetScoutId,body.new_role,body.can_tick,scoutId, body.allowed_badges);
     }
     if(action==='updateConfig'){
       // allow_member_view_others 可由團長以上設定，其他設定需管理員
@@ -1961,17 +1988,17 @@ function doPost(e){
     if(action==='deactivateUser'){ if(getRoleLevel(user.role)<40) return jsonResponse({success:false,error:'權限不足'}); return handleDeactivateUser(body); }
     if(action==='getLogRecords') return handleGetLogRecords(user);
     if(action==='saveLogRecord'){
-      if(!canUserTick(user.role)) return jsonResponse({success:false,error:'權限不足，需領袖權限'});
+      if(!canTickUser_(user)) return jsonResponse({success:false,error:TICK_PERMISSION_ERROR});
       return handleSaveLogRecord(body.records||(body.record?[body.record]:[]), scoutId, body.recorder_name||'');
     }
     if(action==='deleteLogRecord'){
-      if(!canUserTick(user.role)) return jsonResponse({success:false,error:'權限不足，需領袖權限'});
+      if(!canTickUser_(user)) return jsonResponse({success:false,error:TICK_PERMISSION_ERROR});
       return handleDeleteLogRecord(body.record_id, scoutId);
     }
     if(action==='requestLogRecord') return handleRequestLogRecord(body, user);
     if(action==='getLogRequests') return handleGetLogRequests(user);
     if(action==='reviewLogRequest'){
-      if(!canUserTick(user.role)) return jsonResponse({success:false,error:'權限不足，需領袖權限'});
+      if(!canTickUser_(user)) return jsonResponse({success:false,error:TICK_PERMISSION_ERROR});
       return handleReviewLogRequest(body.request_id, body.decision, body.review_note, user);
     }
     if(action==='cancelLogRequest') return handleCancelLogRequest(body.request_id, user);
@@ -3102,7 +3129,12 @@ function handleReviewApplication(appId,decision,note,manager,tempPassword){
 function handleUpdateUserRole(targetScoutId,newRole,canTick,managerScoutId, allowedBadges, squad, squadRole){
   const manager=getUser(managerScoutId);
   if(!manager) return jsonResponse({success:false,error:'找不到管理員'});
-  if(manager.role!=='super_admin' && !canManageRole(manager.role,newRole) && manager.role!=='admin') return jsonResponse({success:false,error:'權限不足，你的等級不可設定此角色'});
+  if(newRole!==undefined && (typeof newRole!=='string' || VALID_ROLES.indexOf(newRole)<0)) return jsonResponse({success:false,error:'無效角色：'+String(newRole)});
+  if(canTick!==undefined && typeof canTick!=='boolean' && canTick!=='TRUE' && canTick!=='FALSE' && canTick!=='true' && canTick!=='false') return jsonResponse({success:false,error:'無效勾選權限'});
+  if(allowedBadges!==undefined && typeof allowedBadges!=='string') return jsonResponse({success:false,error:'無效獎章權限'});
+  if(newRole!==undefined && !canManageRole(manager.role,newRole)) return jsonResponse({success:false,error:'權限不足，你的等級不可設定此角色'});
+  const targetUser=getUser(targetScoutId);
+  if(targetUser && !canManageRole(manager.role,targetUser.role)) return jsonResponse({success:false,error:'權限不足，你的等級不可管理此用戶'});
   if(newRole==='group_leader'){
     const cur=findActiveGroupLeader(targetScoutId);
     if(cur) return jsonResponse({success:false,error:gslLockMsg(cur.name)});
@@ -3114,7 +3146,7 @@ function handleUpdateUserRole(targetScoutId,newRole,canTick,managerScoutId, allo
     for(let i=1;i<data.length;i++){
       if(normalizeScoutId(data[i][0])===targetScoutId && isActiveStatus(data[i][11])){
         if(newRole) sheet.getRange(i+1,4).setValue(newRole);
-        if(canTick!==undefined && canTick!==null) sheet.getRange(i+1,7).setValue(canTick);
+        if(canTick!==undefined) sheet.getRange(i+1,7).setValue(canTick===true||canTick==='TRUE'||canTick==='true');
         sheet.getRange(i+1,8).setValue(sheetActor(managerScoutId));
         sheet.getRange(i+1,9).setValue(now());
         if(sheet.getLastColumn()>=14 && squad!==undefined) sheet.getRange(i+1,14).setValue(squad||'');
@@ -3122,12 +3154,10 @@ function handleUpdateUserRole(targetScoutId,newRole,canTick,managerScoutId, allo
         if(sheet.getLastColumn()>=13){
           if(allowedBadges!==undefined && allowedBadges!==null){
             sheet.getRange(i+1,13).setValue(allowedBadges);
-          } else if(!data[i][12]){
-            sheet.getRange(i+1,13).setValue(newRole==='member'?'':'*');
           }
         }
         if(squad!==undefined) syncRosterRow(targetScoutId,{squad:squad||''});
-        return jsonResponse({success:true});
+        return jsonResponse({success:true,role:newRole===undefined?String(data[i][3]||'member'):newRole,can_tick:canTick===undefined?(data[i][6]===true||data[i][6]==='TRUE'):(canTick===true||canTick==='TRUE'||canTick==='true')});
       }
     }
   }
@@ -3138,14 +3168,14 @@ function handleUpdateUserRole(targetScoutId,newRole,canTick,managerScoutId, allo
   appendUserRow({
     scoutId:targetScoutId, name:roster.name, email:roster.email||'', role:finalRole,
     password_hash:'', branch:squad!==undefined?squad:(roster.squad||''),
-    can_tick:canTick===true||canTick==='TRUE'||finalRole!=='member',
+    can_tick:canTick===true||canTick==='TRUE'||canTick==='true',
     auth_by:sheetActor(managerScoutId), auth_date:nowStr, created_at:nowStr, last_login:'',
-    status:'active', allowed_badges:allowedBadges!=null?allowedBadges:(finalRole==='member'?'':'*'),
+    status:'active', allowed_badges:allowedBadges===undefined?'':allowedBadges,
     squad:squad!==undefined?squad:(roster.squad||''), squad_role:squadRole||'member',
     force_change_password:true
   });
   if(squad!==undefined) syncRosterRow(targetScoutId,{squad:squad||''});
-  return jsonResponse({success:true});
+  return jsonResponse({success:true,role:finalRole,can_tick:canTick===true||canTick==='TRUE'||canTick==='true'});
 }
 function handleUpdateConfig(key,value,scoutId){
   const sheet=getSheet().getSheetByName('SystemConfig'); const data=sheet.getDataRange().getValues();
@@ -3184,7 +3214,7 @@ function handleLoad(loadUser){
   if(oSheet){ const data=oSheet.getDataRange().getValues(); for(let i=1;i<data.length;i++){ const y=data[i][0].toString(); if(!y) continue; if(!other[y]) other[y]={}; other[y][data[i][1].toString()]={name:data[i][2]?data[i][2].toString():'',date:data[i][3]?formatDate(data[i][3]):'',cert:data[i][4]?data[i][4].toString():''}; } }
   const lSheet=ss.getSheetByName(LOG_SHEET_NAME);
   const lrSheet=ss.getSheetByName(LOG_REQ_SHEET_NAME);
-  const isLogReviewer=!!(loadUser && canUserTick(loadUser.role));
+  const isLogReviewer=canTickUser_(loadUser);
   const isParent=!!(loadUser && loadUser.role==='parent');
   let parentSet=null;
   if(isParent){
@@ -3199,9 +3229,9 @@ function handleLoad(loadUser){
   }
   // 未登入（apikey 載入）→ 不回傳待批申報；領袖 → 全部；團員 → 只見自己；家長 → 只見子女
   const logReqList=(lrSheet && loadUser) ? getLogRequestsList(isParent?null:(isLogReviewer?null:loadUser.scoutId), parentSet) : [];
-  const logsViewerScoutId=loadUser?(isParent?null:(canUserTick(loadUser.role)?null:loadUser.scoutId)):null;
+  const logsViewerScoutId=loadUser?(isParent?null:(canTickUser_(loadUser)?null:loadUser.scoutId)):null;
   const gsInfo=gsVersionInfo_();
-  return jsonResponse({success:true,members:members,progress:progress,flatProgress:flat,pendingRequests:pending,otherBadges:other,logs:getLogRecordsList(logsViewerScoutId, !!loadUser&&canUserTick(loadUser.role), parentSet),logsSupported:!!lSheet,logRequests:logReqList,logRequestsSupported:!!lrSheet,view_as:isParent?'parent':(loadUser?loadUser.role:'anonymous'),gsVersion:gsInfo.gsVersion,gsReleaseDate:gsInfo.gsReleaseDate,initRequired:gsInfo.initRequired,initializedGsVersion:gsInfo.initializedGsVersion});
+  return jsonResponse({success:true,me:loadUser&&loadUser.role!=='parent'?{scoutId:loadUser.scoutId,name:loadUser.name||'',role:loadUser.role,can_tick:loadUser.can_tick===true,allowed_badges:loadUser.allowed_badges||''}:null,members:members,progress:progress,flatProgress:flat,pendingRequests:pending,otherBadges:other,logs:getLogRecordsList(logsViewerScoutId, canTickUser_(loadUser), parentSet),logsSupported:!!lSheet,logRequests:logReqList,logRequestsSupported:!!lrSheet,view_as:isParent?'parent':(loadUser?loadUser.role:'anonymous'),gsVersion:gsInfo.gsVersion,gsReleaseDate:gsInfo.gsReleaseDate,initRequired:gsInfo.initRequired,initializedGsVersion:gsInfo.initializedGsVersion});
 }
 function handleSave(changes, confirmer){
   confirmer = sheetActor(confirmer);
@@ -3438,7 +3468,7 @@ function getLogRecordsList(viewerScoutId,isReviewer,allowedSet){
 }
 function handleGetLogRecords(user){
   if(!getSheet().getSheetByName(LOG_SHEET_NAME)) return jsonResponse({success:false,error:'\u300c'+LOG_SHEET_NAME+'\u300d工作表不存在：請在 Apps Script 執行 initializeSheets() 補建'});
-  const isReviewer=!user || canUserTick(user.role);
+  const isReviewer=!user || canTickUser_(user);
   return jsonResponse({success:true,logs:getLogRecordsList(user&&!isReviewer?user.scoutId:null, isReviewer)});
 }
 function sanitizeLogRecord(r){
@@ -3567,7 +3597,7 @@ function handleRequestLogRecord(body, user){
 }
 function handleGetLogRequests(user){
   if(!getSheet().getSheetByName(LOG_REQ_SHEET_NAME)) return jsonResponse({success:false,error:'「'+LOG_REQ_SHEET_NAME+'」工作表不存在：請在 Apps Script 執行 initializeSheets() 補建'});
-  const isReviewer=canUserTick(user.role); // 與進度審批一致：領袖角色即可
+  const isReviewer=canTickUser_(user);
   return jsonResponse({success:true,requests:getLogRequestsList(isReviewer?null:user.scoutId)});
 }
 function handleReviewLogRequest(requestId, decision, note, reviewer){
@@ -3618,7 +3648,7 @@ function handleCancelLogRequest(requestId, user){
   for(let i=1;i<data.length;i++){
     if(String(data[i][0])===requestId){
       if(String(data[i][12])!=='pending') return jsonResponse({success:false,error:'此申報已被審批，不能取消'});
-      const isReviewer=canUserTick(user.role); // 與進度審批一致：領袖角色即可
+      const isReviewer=canTickUser_(user);
       if(!isReviewer && String(data[i][4])!==String(user.scoutId)) return jsonResponse({success:false,error:'只可取消自己的申報'});
       const label=String(data[i][3]||'')+': '+String(data[i][7]||'')+' '+String(data[i][6]||'');
       sheet.deleteRow(i+1);

@@ -42,7 +42,9 @@ function snapshotRows(backend, names) {
   assert.equal(release[2], GS_VERSION);
   assert.equal(release[2], GS_VERSION);
   assert.equal(release[2], gs[1], 'frontend required GS and backend reported GS must match');
-  assert.equal(release[3], 'true', 'this release explicitly requires initializeSheets()');
+  const init = gas.match(/const GS_INIT_REQUIRED = (true|false)/);
+  assert.ok(init);
+  assert.equal(release[3], init[1], 'frontend and backend initialization requirement match');
   assert.match(gas, /setProperty\(GS_INIT_PROP,\s*GS_VERSION\)/);
   assert.doesNotMatch(gas, /GS_VERSION_HISTORY|SEQUENTIAL_PATCH/);
   console.log('[PASS] 前端 GS_LATEST 與 Code.gs GS_VERSION 一致');
@@ -83,7 +85,7 @@ function snapshotRows(backend, names) {
   assert.equal(before.success, true);
   assert.equal(before.gsVersion, GS_VERSION);
   assert.equal(before.initializedGsVersion, '', 'new Code.gs alone must not count as initialized');
-  assert.equal(before.initRequired, true);
+  assert.equal(before.initRequired, false);
   console.log('[PASS] ecStatus 回報 gsVersion 和 initializedGsVersion（未初始化）');
 
   // ---- initializeSheets()：成功後才寫入標記 ----
@@ -114,7 +116,7 @@ function snapshotRows(backend, names) {
   assert.equal(after.success, true);
   assert.equal(after.gsVersion, before.gsVersion);
   assert.equal(after.initializedGsVersion, before.gsVersion);
-  assert.equal(after.initRequired, true);
+  assert.equal(after.initRequired, false);
   console.log('[PASS] ecStatus 回報已初始化版本');
 
   // ---- load 回報 gsVersion 和 initializedGsVersion ----
@@ -122,7 +124,7 @@ function snapshotRows(backend, names) {
   assert.equal(load.success, true);
   assert.equal(load.gsVersion, before.gsVersion);
   assert.equal(load.initializedGsVersion, before.gsVersion);
-  assert.equal(load.initRequired, true);
+  assert.equal(load.initRequired, false);
   console.log('[PASS] load 回報 gsVersion 和 initializedGsVersion');
 
   // ---- 重複初始化安全 ----
@@ -155,7 +157,7 @@ function snapshotRows(backend, names) {
   console.log('[PASS] 前端分辨「GS 未更新」');
 
   // GS 已更新但未初始化
-  const needsInit = sandbox.gsReleaseStatusOf({ gsVersion: GS_VERSION, initializedGsVersion: '' });
+  const needsInit = sandbox.gsReleaseStatusOf({ gsVersion: GS_VERSION, initRequired: true, initializedGsVersion: '' });
   assert.equal(needsInit.code, 'needs_init');
   console.log('[PASS] 前端分辨「GS 已更新但未初始化」');
 

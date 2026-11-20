@@ -197,6 +197,7 @@ async function run() {
   console.log('\n4. requestComplete is idempotent and does not confirm progress');
   const gas = makeGas({ apiKey: 'KEYBOOK' });
   gas.sandbox.initializeSheets();
+  gas.sheets.get('Users').appendRow(['1234567890','Member','member@example.org','member','hash','',false,'','','','','active','','','member',false]);
   const token = gas.sandbox.createToken('1234567890');
   const progressBefore = gas.sheets.get('進度追蹤')._rows.length;
   function post(extra) {
