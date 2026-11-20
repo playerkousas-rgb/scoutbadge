@@ -3,6 +3,15 @@
 版號、歷史更新及開發背景集中保留在 Git，不放入可下載的 GS 或用戶提示。
 本文件不納入網站部署：`build.js` 只發布本目錄的 `Code.gs`，`.vercelignore` 亦排除其餘檔案。
 
+## 2026-11-20：勾選授權及登入修正（GS 6.7.0）
+
+- **已核實**：舊版 save／saveOtherBadge 未檢查登入帳戶的角色或 can_tick，API Key 與 token 同時存在時尤其容易繞過；其餘勾選／審批路徑只檢查角色。前端授權及修改小隊時會強制改成 member。
+- **修正**：進度、其他獎章、服務／活動紀錄及審批寫入檢查當前帳戶角色與 can_tick；獲授權成員亦可勾選，但不因此獲得用戶管理權限；前端空白的 allowed_badges 對已授權用戶視為全部，NONE 仍為無。撤權後既有 token 下一次請求即受限制，錯誤與無效 token 分開。僅帶有效 API Key 而沒有 token 的舊整合路徑保留，請妥善保管 API Key。
+- **簽章**：本地可識別操作者使用 Users 的即時權限；其他具名上游操作者須在簽章 payload 明確提供 on_behalf_can_tick: true 和有效角色。無操作者的舊系統到系統簽章保留。此變更可能需要上游整合更新。
+- **介面**：授權及小隊操作不再更改角色或其他權限；load 同步帳戶及 session；登入接受 SCOUT ID 或 Email、L 編號不區分大小寫；加入自行更改密碼按鈕，保留當前 token。
+- **版本**：GS_VERSION = 6.7.0、GS_RELEASE_DATE = 2026-11-20、GS_INIT_REQUIRED = false。從 6.6.0 升級無須初始化，須為既有 Web App 建立新版本；不更改現有資料、URL、API Key 或 Script Properties。全新安裝及缺表仍須初始化。
+- **回歸測試**：test/tick-permission.test.js，已納入 npm test。
+
 ## 2026-11-06：SCOUTBOOK 待批冪等（GS 6.6.0）
 
 - **`requestComplete` 冪等**：以登入身分的 SCOUT ID（舊稱 ymis）＋ `itemId` ＋ `requested_date` 為鍵。
